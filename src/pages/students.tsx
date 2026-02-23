@@ -79,6 +79,20 @@ export default function StudentsPage() {
     return diffDays > 10;
   };
 
+  const formatPhoneForWhatsApp = (phone: string) => {
+    // Remove all non-numeric characters
+    const cleaned = phone.replace(/\D/g, "");
+    // If it starts with 0, replace with 90 (Turkey country code)
+    if (cleaned.startsWith("0")) {
+      return "90" + cleaned.substring(1);
+    }
+    // If it doesn't start with country code, add 90
+    if (!cleaned.startsWith("90")) {
+      return "90" + cleaned;
+    }
+    return cleaned;
+  };
+
   return (
     <>
       <SEO title="Öğrenci Yönetimi - Futbol Okulu" />
@@ -181,11 +195,11 @@ export default function StudentsPage() {
                 <Card key={student.id} className={`hover:shadow-md transition-shadow ${isHealthReportMissing(student) ? 'border-l-4 border-l-red-500' : ''}`}>
                   <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row items-start justify-between gap-4">
-                      <div className="flex items-start gap-4">
+                      <div className="flex items-start gap-4 flex-1">
                         <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
                           {student.name.split(" ").map(n => n[0]).join("")}
                         </div>
-                        <div>
+                        <div className="flex-1">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <h3 className="text-lg font-semibold text-gray-900">{student.name}</h3>
                             <Badge variant={student.status === "Aktif" ? "default" : "secondary"}>
@@ -199,7 +213,7 @@ export default function StudentsPage() {
                             )}
                           </div>
                           
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-sm text-gray-600">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-gray-600">
                             <div className="flex items-center gap-2">
                               <UserCircle2 className="w-4 h-4" />
                               <span>{calculateAge(student.birth_date)} yaşında</span>
@@ -226,6 +240,28 @@ export default function StudentsPage() {
                               </div>
                             )}
                           </div>
+
+                          {/* Mobile Contact Buttons */}
+                          {student.parent_phone && (
+                            <div className="flex items-center gap-2 mt-3">
+                              <a
+                                href={`tel:${student.parent_phone}`}
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
+                              >
+                                <Phone className="w-4 h-4" />
+                                <span>Ara</span>
+                              </a>
+                              <a
+                                href={`https://wa.me/${formatPhoneForWhatsApp(student.parent_phone)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                                <span>WhatsApp</span>
+                              </a>
+                            </div>
+                          )}
                         </div>
                       </div>
                       
