@@ -1,10 +1,24 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3, Bell, Settings, CalendarCheck, UserCircle2 } from "lucide-react";
+import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3, Bell, Settings, CalendarCheck, UserCircle2, LogOut } from "lucide-react";
+import { userService } from "@/services/userService";
+import { useToast } from "@/hooks/use-toast";
 
 export function Navigation() {
   const router = useRouter();
+  const { toast } = useToast();
+  const currentUser = userService.getCurrentUser();
+  const isAdmin = userService.isAdmin();
+
+  const handleLogout = () => {
+    userService.logout();
+    toast({
+      title: "Çıkış Yapıldı",
+      description: "Başarıyla çıkış yaptınız.",
+    });
+    router.push("/login");
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -57,18 +71,32 @@ export function Navigation() {
                   Raporlar
                 </Button>
               </Link>
-              <Link href="/settings">
-                <Button variant={router.pathname === "/settings" ? "default" : "ghost"} className="gap-2">
-                  <Settings className="w-4 h-4" />
-                  Ayarlar
-                </Button>
-              </Link>
+              {isAdmin && (
+                <Link href="/settings">
+                  <Button variant={router.pathname === "/settings" ? "default" : "ghost"} className="gap-2">
+                    <Settings className="w-4 h-4" />
+                    Ayarlar
+                  </Button>
+                </Link>
+              )}
             </nav>
           </div>
 
-          <Button className="bg-emerald-600 hover:bg-emerald-700">
-            Giriş Yap
-          </Button>
+          <div className="flex items-center gap-3">
+            {currentUser && (
+              <span className="text-sm text-slate-600 dark:text-slate-400 hidden md:block">
+                {currentUser.full_name}
+              </span>
+            )}
+            <Button 
+              variant="ghost" 
+              className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+              onClick={handleLogout}
+            >
+              <LogOut className="w-4 h-4" />
+              Çıkış
+            </Button>
+          </div>
         </div>
       </div>
     </header>
