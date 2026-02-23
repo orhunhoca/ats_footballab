@@ -9,8 +9,7 @@ export type Database = DB;
 // Re-export commonly used types for convenience
 export type Tables<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Row'];
 export type Enums<T extends keyof Database['public']['Enums']> = Database['public']['Enums'][T];
-export type TablesInsert<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Insert'];
-export type TablesUpdate<T extends keyof Database['public']['Tables']> = Database['public']['Tables'][T]['Update'];
+export type Functions<T extends keyof Database['public']['Functions']> = Database['public']['Functions'][T];
 
 // Project reference: mhkvdpqwnuzvbuezrwgf
-// Last updated: 2026-02-23T21:32:13.613945
+// Last updated: 2026-02-23T21:45:44.561167

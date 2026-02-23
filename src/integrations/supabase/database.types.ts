@@ -192,6 +192,45 @@ export type Database = {
           },
         ]
       }
+      payment_plans: {
+        Row: {
+          created_at: string | null
+          display_order: number | null
+          duration_months: number
+          id: string
+          installment_price: number | null
+          installments: number | null
+          is_active: boolean | null
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          display_order?: number | null
+          duration_months: number
+          id?: string
+          installment_price?: number | null
+          installments?: number | null
+          is_active?: boolean | null
+          name: string
+          price: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          display_order?: number | null
+          duration_months?: number
+          id?: string
+          installment_price?: number | null
+          installments?: number | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -219,6 +258,33 @@ export type Database = {
           id?: string
           role?: string | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          key: string
+          updated_at: string | null
+          value: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key: string
+          updated_at?: string | null
+          value: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          key?: string
+          updated_at?: string | null
+          value?: string
         }
         Relationships: []
       }
