@@ -6,16 +6,14 @@ type GroupInsert = TablesInsert<"groups">;
 type GroupUpdate = TablesUpdate<"groups">;
 
 export const groupService = {
-  // Get all groups with coach and students
+  // Get all groups with coach and students count
   async getAllGroups() {
     const { data, error } = await supabase
       .from("groups")
       .select(`
         *,
         coaches!groups_coach_id_fkey(*),
-        student_groups!student_groups_group_id_fkey(
-          students!student_groups_student_id_fkey(*)
-        )
+        student_groups!student_groups_group_id_fkey(count)
       `)
       .order("name", { ascending: true });
 
@@ -24,7 +22,11 @@ export const groupService = {
       throw error;
     }
 
-    return data || [];
+    // Transform data to include student_count
+    return data?.map(group => ({
+      ...group,
+      student_count: group.student_groups?.[0]?.count || 0
+    })) || [];
   },
 
   // Get group by ID

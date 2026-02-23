@@ -1,241 +1,196 @@
 import { SEO } from "@/components/SEO";
 import { Navigation } from "@/components/Navigation";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, Users, Calendar, Download, BarChart3 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useUserRole } from "@/hooks/useUserRole";
+import { studentService } from "@/services/studentService";
+import { Loader2, TrendingUp, Users, DollarSign, Wallet, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+interface FinancialStats {
+  totalRevenue: number;
+  newRegistrationRevenue: number;
+  renewalRevenue: number;
+  clothingRevenue: number;
+  newRegistrationsCount: number;
+  renewalsCount: number;
+}
 
 export default function ReportsPage() {
-  // Mock data
-  const monthlyStats = [
-    { month: "Ocak", attendance: 92, students: 48 },
-    { month: "Şubat", attendance: 95, students: 52 },
-    { month: "Mart", attendance: 88, students: 54 },
-    { month: "Nisan", attendance: 91, students: 56 },
-    { month: "Mayıs", attendance: 94, students: 58 },
-    { month: "Haziran", attendance: 96, students: 60 },
-  ];
+  const { isAdmin, loading: roleLoading } = useUserRole();
+  const [loading, setLoading] = useState(true);
+  const [financials, setFinancials] = useState<{
+    weekly: FinancialStats;
+    monthly: FinancialStats;
+  }>({
+    weekly: { totalRevenue: 0, newRegistrationRevenue: 0, renewalRevenue: 0, clothingRevenue: 0, newRegistrationsCount: 0, renewalsCount: 0 },
+    monthly: { totalRevenue: 0, newRegistrationRevenue: 0, renewalRevenue: 0, clothingRevenue: 0, newRegistrationsCount: 0, renewalsCount: 0 }
+  });
 
-  const topStudents = [
-    { name: "Ahmet Yılmaz", group: "U13", attendance: 100, performance: 95 },
-    { name: "Mehmet Demir", group: "U12", attendance: 98, performance: 92 },
-    { name: "Can Öztürk", group: "U14", attendance: 96, performance: 94 },
-    { name: "Ege Kaya", group: "U11", attendance: 100, performance: 90 },
-    { name: "Eren Aydın", group: "U14", attendance: 95, performance: 93 },
-  ];
+  useEffect(() => {
+    if (isAdmin) {
+      loadFinancials();
+    } else {
+      setLoading(false);
+    }
+  }, [isAdmin]);
 
-  const groupStats = [
-    { name: "U13 - Yeşil Takım", students: 15, attendance: 94, avgPerformance: 88 },
-    { name: "U12 - Mavi Takım", students: 18, attendance: 96, avgPerformance: 85 },
-    { name: "U14 - Kırmızı Takım", students: 14, attendance: 91, avgPerformance: 92 },
-    { name: "U11 - Sarı Takım", students: 13, attendance: 98, avgPerformance: 87 },
-  ];
+  const loadFinancials = async () => {
+    try {
+      setLoading(true);
+      const [weekly, monthly] = await Promise.all([
+        studentService.getFinancialReport("weekly"),
+        studentService.getFinancialReport("monthly")
+      ]);
+      setFinancials({ weekly, monthly });
+    } catch (error) {
+      console.error("Error loading financials:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (roleLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(amount);
+  };
 
   return (
     <>
-      <SEO title="Raporlar ve İstatistikler - Futbol Okulu" />
+      <SEO title="Raporlar - Futbol Okulu" />
       
       <div className="min-h-screen bg-gray-50">
         <Navigation />
 
         <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Raporlar & İstatistikler</h1>
-              <p className="text-gray-600 mt-1">Detaylı performans ve devam analizleri</p>
-            </div>
-            <div className="flex gap-3">
-              <Select defaultValue="thisMonth">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="thisWeek">Bu Hafta</SelectItem>
-                  <SelectItem value="thisMonth">Bu Ay</SelectItem>
-                  <SelectItem value="lastMonth">Geçen Ay</SelectItem>
-                  <SelectItem value="thisYear">Bu Yıl</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline">
-                <Download className="w-4 h-4 mr-2" />
-                Rapor İndir
-              </Button>
-            </div>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900">Raporlar & İstatistikler</h1>
+            <p className="text-gray-600 mt-1">Mali durum, katılım oranları ve performans analizleri</p>
           </div>
 
-          {/* Key Metrics */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-            <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-white">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-emerald-700">Ortalama Devam</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between">
-                  <div className="text-4xl font-bold text-emerald-600">94%</div>
-                  <div className="flex items-center text-emerald-600 text-sm font-medium">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    +3%
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <Tabs defaultValue={isAdmin ? "financial" : "attendance"} className="space-y-6">
+            <TabsList>
+              {isAdmin && <TabsTrigger value="financial">Mali Raporlar</TabsTrigger>}
+              <TabsTrigger value="attendance">Katılım Raporları</TabsTrigger>
+              <TabsTrigger value="performance">Performans</TabsTrigger>
+            </TabsList>
 
-            <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-white">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-blue-700">Toplam Öğrenci</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between">
-                  <div className="text-4xl font-bold text-blue-600">60</div>
-                  <div className="flex items-center text-blue-600 text-sm font-medium">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    +8
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {isAdmin && (
+              <TabsContent value="financial" className="space-y-6">
+                {loading ? (
+                  <Card className="p-12 text-center">
+                    <Loader2 className="w-8 h-8 animate-spin mx-auto text-emerald-600" />
+                  </Card>
+                ) : (
+                  <div className="grid gap-6">
+                    <Alert className="bg-blue-50 border-blue-200">
+                      <AlertCircle className="h-4 w-4 text-blue-600" />
+                      <AlertTitle>Admin Yetkisi</AlertTitle>
+                      <AlertDescription className="text-blue-700">
+                        Bu raporları sadece yönetici yetkisine sahip kullanıcılar görebilir.
+                      </AlertDescription>
+                    </Alert>
 
-            <Card className="border-purple-200 bg-gradient-to-br from-purple-50 to-white">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-purple-700">Aktif Grup</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between">
-                  <div className="text-4xl font-bold text-purple-600">4</div>
-                  <div className="flex items-center text-gray-500 text-sm font-medium">
-                    Sabit
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-white">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-amber-700">Ortalama Performans</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-end justify-between">
-                  <div className="text-4xl font-bold text-amber-600">89%</div>
-                  <div className="flex items-center text-amber-600 text-sm font-medium">
-                    <TrendingUp className="w-4 h-4 mr-1" />
-                    +2%
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6 mb-6">
-            {/* Monthly Attendance Chart */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5 text-emerald-600" />
-                  Aylık Devam Oranı
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {monthlyStats.map((stat, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-gray-700">{stat.month}</span>
-                        <span className="text-emerald-600 font-semibold">{stat.attendance}%</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div
-                          className="bg-gradient-to-r from-emerald-500 to-green-600 h-2.5 rounded-full transition-all"
-                          style={{ width: `${stat.attendance}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Top Students */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
-                  En İyi Performans
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {topStudents.map((student, index) => (
-                    <div key={index} className="flex items-center gap-4">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-green-600 text-white font-bold text-sm">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900">{student.name}</div>
-                        <div className="text-sm text-gray-600">{student.group}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm font-semibold text-emerald-600">
-                          {student.attendance}% Devam
+                    {/* Weekly Report */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5 text-emerald-600" />
+                          Haftalık Mali Rapor (Son 7 Gün)
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid md:grid-cols-4 gap-6">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-600 mb-1">Toplam Ciro</p>
+                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(financials.weekly.totalRevenue)}</p>
+                          </div>
+                          <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                            <p className="text-sm text-emerald-700 mb-1">Yeni Kayıt ({financials.weekly.newRegistrationsCount})</p>
+                            <p className="text-xl font-bold text-emerald-700">{formatCurrency(financials.weekly.newRegistrationRevenue)}</p>
+                          </div>
+                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                            <p className="text-sm text-blue-700 mb-1">Yenileme ({financials.weekly.renewalsCount})</p>
+                            <p className="text-xl font-bold text-blue-700">{formatCurrency(financials.weekly.renewalRevenue)}</p>
+                          </div>
+                          <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                            <p className="text-sm text-purple-700 mb-1">Kıyafet Geliri</p>
+                            <p className="text-xl font-bold text-purple-700">{formatCurrency(financials.weekly.clothingRevenue)}</p>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-600">
-                          {student.performance}% Performans
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                      </CardContent>
+                    </Card>
 
-          {/* Group Statistics */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="w-5 h-5 text-purple-600" />
-                Grup Bazlı İstatistikler
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700">Grup Adı</th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Öğrenci Sayısı</th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Devam Oranı</th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700">Ort. Performans</th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-700">Durum</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupStats.map((group, index) => (
-                      <tr key={index} className="border-b hover:bg-gray-50 transition-colors">
-                        <td className="py-4 px-4 font-medium text-gray-900">{group.name}</td>
-                        <td className="py-4 px-4 text-center text-gray-700">{group.students}</td>
-                        <td className="py-4 px-4 text-center">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-emerald-100 text-emerald-800">
-                            {group.attendance}%
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-center">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                            {group.avgPerformance}%
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 text-right">
-                          <Button variant="outline" size="sm">
-                            Detay Gör
-                          </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                    {/* Monthly Report */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <Wallet className="w-5 h-5 text-blue-600" />
+                          Aylık Mali Rapor (Son 30 Gün)
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="grid md:grid-cols-4 gap-6">
+                          <div className="p-4 bg-gray-50 rounded-lg">
+                            <p className="text-sm text-gray-600 mb-1">Toplam Ciro</p>
+                            <p className="text-2xl font-bold text-gray-900">{formatCurrency(financials.monthly.totalRevenue)}</p>
+                          </div>
+                          <div className="p-4 bg-emerald-50 rounded-lg border border-emerald-100">
+                            <p className="text-sm text-emerald-700 mb-1">Yeni Kayıt ({financials.monthly.newRegistrationsCount})</p>
+                            <p className="text-xl font-bold text-emerald-700">{formatCurrency(financials.monthly.newRegistrationRevenue)}</p>
+                          </div>
+                          <div className="p-4 bg-blue-50 rounded-lg border border-blue-100">
+                            <p className="text-sm text-blue-700 mb-1">Yenileme ({financials.monthly.renewalsCount})</p>
+                            <p className="text-xl font-bold text-blue-700">{formatCurrency(financials.monthly.renewalRevenue)}</p>
+                          </div>
+                          <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                            <p className="text-sm text-purple-700 mb-1">Kıyafet Geliri</p>
+                            <p className="text-xl font-bold text-purple-700">{formatCurrency(financials.monthly.clothingRevenue)}</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </TabsContent>
+            )}
+
+            <TabsContent value="attendance">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Katılım İstatistikleri</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                    <Users className="w-16 h-16 mb-4 opacity-20" />
+                    <p>Detaylı katılım raporları yakında eklenecek.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            
+            <TabsContent value="performance">
+               <Card>
+                <CardHeader>
+                  <CardTitle>Performans Analizi</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                    <TrendingUp className="w-16 h-16 mb-4 opacity-20" />
+                    <p>Performans metrikleri yakında eklenecek.</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </>

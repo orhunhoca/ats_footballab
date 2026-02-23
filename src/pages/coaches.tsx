@@ -25,7 +25,7 @@ export default function CoachesPage() {
   const loadCoaches = async () => {
     try {
       setLoading(true);
-      const data = await coachService.getAll();
+      const data = await coachService.getAllCoaches();
       setCoaches(data);
     } catch (error) {
       console.error("Error loading coaches:", error);
@@ -36,7 +36,7 @@ export default function CoachesPage() {
 
   const loadStats = async () => {
     try {
-      const data = await coachService.getStats();
+      const data = await coachService.getCoachStats();
       setStats(data);
     } catch (error) {
       console.error("Error loading stats:", error);

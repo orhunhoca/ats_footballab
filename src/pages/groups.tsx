@@ -8,7 +8,10 @@ import { Users, Plus, TrendingUp, UserCircle, Clock, Loader2 } from "lucide-reac
 import { groupService } from "@/services/groupService";
 import type { Tables } from "@/integrations/supabase/types";
 
-type Group = Tables<"groups">;
+type Group = Tables<"groups"> & {
+  student_count?: number;
+  coaches?: Tables<"coaches"> | null;
+};
 
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -21,7 +24,7 @@ export default function GroupsPage() {
   const loadGroups = async () => {
     try {
       setLoading(true);
-      const data = await groupService.getAll();
+      const data = await groupService.getAllGroups();
       setGroups(data);
     } catch (error) {
       console.error("Error loading groups:", error);
@@ -42,7 +45,8 @@ export default function GroupsPage() {
   const parseSchedule = (schedule: string | null) => {
     if (!schedule) return [];
     try {
-      return JSON.parse(schedule);
+      const parsed = JSON.parse(schedule);
+      return Array.isArray(parsed) ? parsed : [];
     } catch {
       return [];
     }
@@ -176,6 +180,13 @@ export default function GroupsPage() {
                           {group.description && (
                             <div className="pt-3 border-t">
                               <p className="text-sm text-gray-600">{group.description}</p>
+                            </div>
+                          )}
+
+                          {group.coaches && (
+                            <div className="pt-3 border-t text-sm">
+                              <span className="text-gray-500">Antrenör:</span> 
+                              <span className="ml-2 font-medium">{group.coaches.name}</span>
                             </div>
                           )}
                         </TabsContent>
