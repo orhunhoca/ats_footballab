@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { studentService } from "@/services/studentService";
+import { settingsService, type PaymentPlan } from "@/services/settingsService";
 import { useToast } from "@/hooks/use-toast";
 
 interface StudentFormProps {
@@ -18,6 +19,9 @@ interface StudentFormProps {
 export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
+  const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
+  
   const [formData, setFormData] = useState({
     name: "",
     birth_date: "",
@@ -32,26 +36,40 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
     payment_status: "Bekliyor"
   });
 
-  const handlePaymentPlanChange = (value: string) => {
-    let amount = "";
-    let months = 0;
+  useEffect(() => {
+    loadPaymentPlans();
+  }, []);
 
-    if (value === "6 Aylık") {
-      amount = "24000";
-      months = 6;
-    } else if (value === "12 Aylık Peşin") {
-      amount = "44000";
-      months = 12;
-    } else if (value === "12 Aylık Taksitli") {
-      amount = "23000"; // First installment
-      months = 12;
+  const loadPaymentPlans = async () => {
+    try {
+      const plans = await settingsService.getPaymentPlans();
+      setPaymentPlans(plans);
+    } catch (error) {
+      console.error("Ödeme planları yüklenemedi:", error);
     }
-    
-    setFormData(prev => ({
-      ...prev,
-      payment_plan: value,
-      payment_amount: amount
-    }));
+  };
+
+  const handlePaymentPlanChange = (value: string) => {
+    // Check for manual/custom types first
+    if (value === "Bireysel" || value === "Atletik Performans") {
+      setSelectedPlan(null);
+      setFormData(prev => ({
+        ...prev,
+        payment_plan: value,
+        payment_amount: ""
+      }));
+      return;
+    }
+
+    const plan = paymentPlans.find(p => p.name === value);
+    if (plan) {
+      setSelectedPlan(plan);
+      setFormData(prev => ({
+        ...prev,
+        payment_plan: value,
+        payment_amount: plan.price.toString()
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -59,16 +77,21 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
     setLoading(true);
 
     try {
-      // Calculate membership end date
+      // Calculate membership end date based on selected plan duration
       let membershipEndDate = null;
-      if (formData.payment_plan.includes("6 Aylık")) {
+      let secondInstallmentAmount = 0;
+      let installmentDate = null;
+
+      if (selectedPlan) {
         const date = new Date();
-        date.setMonth(date.getMonth() + 6);
+        date.setMonth(date.getMonth() + selectedPlan.duration_months);
         membershipEndDate = date.toISOString().split('T')[0];
-      } else if (formData.payment_plan.includes("12 Aylık")) {
-        const date = new Date();
-        date.setMonth(date.getMonth() + 12);
-        membershipEndDate = date.toISOString().split('T')[0];
+
+        if (selectedPlan.installments > 1 && selectedPlan.installment_price) {
+          secondInstallmentAmount = selectedPlan.installment_price;
+          // Default 45 days for second installment
+          installmentDate = new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString();
+        }
       }
 
       await studentService.createStudent({
@@ -85,10 +108,8 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
         payment_status: formData.payment_status,
         status: "Aktif",
         membership_end_date: membershipEndDate,
-        second_installment_amount: formData.payment_plan === "12 Aylık Taksitli" ? 23000 : 0,
-        installment_date: formData.payment_plan === "12 Aylık Taksitli" 
-          ? new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString() 
-          : null
+        second_installment_amount: secondInstallmentAmount,
+        installment_date: installmentDate
       } as any);
 
       toast({
@@ -97,6 +118,21 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
       });
       onSuccess();
       onOpenChange(false);
+      // Reset form
+      setFormData({
+        name: "",
+        birth_date: "",
+        parent_phone: "",
+        clothing_size: "",
+        work_group_hour: "",
+        health_report_submitted: false,
+        registration_type: "Yeni Kayıt",
+        payment_plan: "",
+        payment_amount: "",
+        clothing_payment_status: "Ödenmedi",
+        payment_status: "Bekliyor"
+      });
+      setSelectedPlan(null);
     } catch (error) {
       console.error(error);
       toast({
@@ -222,9 +258,11 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
                     <SelectValue placeholder="Plan Seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="6 Aylık">6 Aylık (24.000 TL)</SelectItem>
-                    <SelectItem value="12 Aylık Peşin">12 Aylık Peşin (44.000 TL)</SelectItem>
-                    <SelectItem value="12 Aylık Taksitli">12 Aylık Taksitli (23.000 + 23.000 TL)</SelectItem>
+                    {paymentPlans.map(plan => (
+                      <SelectItem key={plan.id} value={plan.name}>
+                        {plan.name} ({plan.price.toLocaleString('tr-TR')} TL)
+                      </SelectItem>
+                    ))}
                     <SelectItem value="Bireysel">Bireysel (Manuel)</SelectItem>
                     <SelectItem value="Atletik Performans">Atletik Performans (Manuel)</SelectItem>
                   </SelectContent>
@@ -273,9 +311,9 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
               </div>
             </div>
             
-            {formData.payment_plan === "12 Aylık Taksitli" && (
+            {selectedPlan?.installments && selectedPlan.installments > 1 && (
               <div className="mt-4 p-3 bg-blue-50 text-blue-800 rounded-md text-sm">
-                ℹ️ 2. Taksit (23.000 TL) 45 gün sonrası için planlanacak.
+                ℹ️ 2. Taksit ({selectedPlan.installment_price?.toLocaleString('tr-TR')} TL) 45 gün sonrası için planlanacak.
               </div>
             )}
           </div>
