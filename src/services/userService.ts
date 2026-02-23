@@ -62,6 +62,7 @@ export const userService = {
    * Logout current user
    */
   logout(): void {
+    if (typeof window === "undefined") return;
     localStorage.removeItem("currentUser");
   },
 
@@ -69,6 +70,8 @@ export const userService = {
    * Get current logged in user
    */
   getCurrentUser(): User | null {
+    if (typeof window === "undefined") return null;
+    
     const userStr = localStorage.getItem("currentUser");
     if (!userStr) return null;
     
@@ -172,9 +175,11 @@ export const userService = {
       }
 
       // Update localStorage if current user
-      const currentUser = this.getCurrentUser();
-      if (currentUser?.id === id) {
-        localStorage.setItem("currentUser", JSON.stringify(data));
+      if (typeof window !== "undefined") {
+        const currentUser = this.getCurrentUser();
+        if (currentUser?.id === id) {
+          localStorage.setItem("currentUser", JSON.stringify(data));
+        }
       }
 
       return data;

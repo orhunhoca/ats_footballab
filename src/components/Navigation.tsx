@@ -2,14 +2,20 @@ import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3, Bell, Settings, CalendarCheck, UserCircle2, LogOut } from "lucide-react";
-import { userService } from "@/services/userService";
+import { userService, type User } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 
 export function Navigation() {
   const router = useRouter();
   const { toast } = useToast();
-  const currentUser = userService.getCurrentUser();
-  const isAdmin = userService.isAdmin();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    setCurrentUser(userService.getCurrentUser());
+    setIsAdmin(userService.isAdmin());
+  }, []);
 
   const handleLogout = () => {
     userService.logout();
