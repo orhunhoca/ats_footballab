@@ -1,29 +1,63 @@
 import { SEO } from "@/components/SEO";
 import { Navigation } from "@/components/Navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar } from "lucide-react";
+import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2 } from "lucide-react";
+import { studentService } from "@/services/studentService";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Student = Tables<"students">;
 
 export default function StudentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ active: 0, inactive: 0 });
 
-  // Mock data
-  const students = [
-    { id: 1, name: "Ahmet Yılmaz", age: 12, group: "U13 - Yeşil Takım", phone: "0532 123 4567", email: "ahmet@example.com", status: "Aktif" },
-    { id: 2, name: "Mehmet Demir", age: 11, group: "U12 - Mavi Takım", phone: "0533 234 5678", email: "mehmet@example.com", status: "Aktif" },
-    { id: 3, name: "Can Öztürk", age: 13, group: "U14 - Kırmızı Takım", phone: "0534 345 6789", email: "can@example.com", status: "Aktif" },
-    { id: 4, name: "Ege Kaya", age: 10, group: "U11 - Sarı Takım", phone: "0535 456 7890", email: "ege@example.com", status: "Aktif" },
-    { id: 5, name: "Burak Şahin", age: 12, group: "U13 - Yeşil Takım", phone: "0536 567 8901", email: "burak@example.com", status: "Pasif" },
-    { id: 6, name: "Eren Aydın", age: 14, group: "U14 - Kırmızı Takım", phone: "0537 678 9012", email: "eren@example.com", status: "Aktif" },
-  ];
+  useEffect(() => {
+    loadStudents();
+    loadStats();
+  }, []);
+
+  const loadStudents = async () => {
+    try {
+      setLoading(true);
+      const data = await studentService.getAll();
+      setStudents(data);
+    } catch (error) {
+      console.error("Error loading students:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const data = await studentService.getStats();
+      setStats(data);
+    } catch (error) {
+      console.error("Error loading stats:", error);
+    }
+  };
 
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.group.toLowerCase().includes(searchTerm.toLowerCase())
+    student.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const calculateAge = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
+  };
 
   return (
     <>
@@ -52,7 +86,7 @@ export default function StudentsPage() {
                 <div className="flex-1 relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <Input
-                    placeholder="Öğrenci adı veya grup ara..."
+                    placeholder="Öğrenci adı veya e-posta ara..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -81,17 +115,15 @@ export default function StudentsPage() {
                 <CardTitle className="text-sm font-medium text-gray-600">Aktif Öğrenci</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-emerald-600">
-                  {students.filter(s => s.status === "Aktif").length}
-                </div>
+                <div className="text-3xl font-bold text-emerald-600">{stats.active}</div>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">Grup Sayısı</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">Pasif Öğrenci</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-blue-600">4</div>
+                <div className="text-3xl font-bold text-gray-600">{stats.inactive}</div>
               </CardContent>
             </Card>
             <Card>
@@ -99,66 +131,107 @@ export default function StudentsPage() {
                 <CardTitle className="text-sm font-medium text-gray-600">Bu Ay Kayıt</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-purple-600">3</div>
+                <div className="text-3xl font-bold text-purple-600">
+                  {students.filter(s => {
+                    const created = new Date(s.created_at);
+                    const now = new Date();
+                    return created.getMonth() === now.getMonth() && 
+                           created.getFullYear() === now.getFullYear();
+                  }).length}
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Students List */}
-          <div className="grid gap-4">
-            {filteredStudents.map((student) => (
-              <Card key={student.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                        {student.name.split(" ").map(n => n[0]).join("")}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{student.name}</h3>
-                          <Badge variant={student.status === "Aktif" ? "default" : "secondary"}>
-                            {student.status}
-                          </Badge>
-                        </div>
-                        <div className="space-y-1 text-sm text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <UserCircle2 className="w-4 h-4" />
-                            <span>{student.age} yaşında</span>
-                            <span className="mx-2">•</span>
-                            <span className="font-medium text-emerald-600">{student.group}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Phone className="w-4 h-4" />
-                            <span>{student.phone}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Mail className="w-4 h-4" />
-                            <span>{student.email}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm">
-                        Düzenle
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Calendar className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          {/* Loading State */}
+          {loading && (
+            <Card className="py-12">
+              <CardContent className="text-center">
+                <Loader2 className="w-12 h-12 text-emerald-600 animate-spin mx-auto mb-4" />
+                <p className="text-gray-600">Öğrenciler yükleniyor...</p>
+              </CardContent>
+            </Card>
+          )}
 
-          {filteredStudents.length === 0 && (
+          {/* Students List */}
+          {!loading && (
+            <div className="grid gap-4">
+              {filteredStudents.map((student) => (
+                <Card key={student.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                          {student.name.split(" ").map(n => n[0]).join("")}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="text-lg font-semibold text-gray-900">{student.name}</h3>
+                            <Badge variant={student.status === "Aktif" ? "default" : "secondary"}>
+                              {student.status}
+                            </Badge>
+                          </div>
+                          <div className="space-y-1 text-sm text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <UserCircle2 className="w-4 h-4" />
+                              <span>{calculateAge(student.birth_date)} yaşında</span>
+                              <span className="mx-2">•</span>
+                              <span className="text-gray-500">
+                                {new Date(student.birth_date).toLocaleDateString("tr-TR")}
+                              </span>
+                            </div>
+                            {student.phone && (
+                              <div className="flex items-center gap-2">
+                                <Phone className="w-4 h-4" />
+                                <span>{student.phone}</span>
+                              </div>
+                            )}
+                            {student.email && (
+                              <div className="flex items-center gap-2">
+                                <Mail className="w-4 h-4" />
+                                <span>{student.email}</span>
+                              </div>
+                            )}
+                            {student.parent_phone && (
+                              <div className="flex items-center gap-2 text-xs">
+                                <Phone className="w-3 h-3" />
+                                <span>Veli: {student.parent_phone}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm">
+                          Düzenle
+                        </Button>
+                        <Button variant="outline" size="sm">
+                          <Calendar className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {!loading && filteredStudents.length === 0 && (
             <Card className="py-12">
               <CardContent className="text-center">
                 <UserCircle2 className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Öğrenci bulunamadı</h3>
-                <p className="text-gray-600">Arama kriterlerinize uygun öğrenci bulunamadı.</p>
+                <p className="text-gray-600 mb-4">
+                  {students.length === 0 
+                    ? "Henüz kayıtlı öğrenci bulunmuyor. Yeni öğrenci ekleyin." 
+                    : "Arama kriterlerinize uygun öğrenci bulunamadı."}
+                </p>
+                {students.length === 0 && (
+                  <Button className="bg-emerald-600 hover:bg-emerald-700">
+                    <Plus className="w-4 h-4 mr-2" />
+                    İlk Öğrenciyi Ekle
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
