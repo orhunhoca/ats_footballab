@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -151,8 +151,11 @@ export type Database = {
           coach_id: string | null
           color: string | null
           created_at: string | null
+          description: string | null
           id: string
           name: string
+          schedule: string | null
+          status: string | null
           updated_at: string | null
         }
         Insert: {
@@ -160,8 +163,11 @@ export type Database = {
           coach_id?: string | null
           color?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           name: string
+          schedule?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -169,8 +175,11 @@ export type Database = {
           coach_id?: string | null
           color?: string | null
           created_at?: string | null
+          description?: string | null
           id?: string
           name?: string
+          schedule?: string | null
+          status?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -250,6 +259,7 @@ export type Database = {
         Row: {
           address: string | null
           age: number
+          birth_date: string | null
           created_at: string | null
           email: string | null
           id: string
@@ -263,6 +273,7 @@ export type Database = {
         Insert: {
           address?: string | null
           age: number
+          birth_date?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
@@ -276,6 +287,7 @@ export type Database = {
         Update: {
           address?: string | null
           age?: number
+          birth_date?: string | null
           created_at?: string | null
           email?: string | null
           id?: string
