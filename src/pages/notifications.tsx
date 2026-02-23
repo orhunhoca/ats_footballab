@@ -82,7 +82,7 @@ export default function NotificationsPage() {
         }
 
         // Taksit ödemesi kontrolü
-        if (student.payment_plan === "12_monthly_installment" && !student.payment_status?.includes("second_paid")) {
+        if (student.payment_plan === "12 Aylık Taksitli" && !student.payment_status?.includes("second_paid")) {
           const registrationDate = new Date(student.created_at);
           const installmentDate = new Date(registrationDate);
           installmentDate.setDate(installmentDate.getDate() + 45);

@@ -1,7 +1,7 @@
 import { SEO } from "@/components/SEO";
 import { Navigation } from "@/components/Navigation";
 import Link from "next/link";
-import { Users, ClipboardCheck, BarChart3, UserPlus, Calendar, TrendingUp, Grid3x3, UserCircle, Bell, UserCheck, Target } from "lucide-react";
+import { Users, ClipboardCheck, BarChart3, UserPlus, Calendar, TrendingUp, Grid3x3, Bell, UserCheck, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useState, useEffect } from "react";

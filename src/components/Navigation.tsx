@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3 } from "lucide-react";
+import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3, Bell } from "lucide-react";
 
 export function Navigation() {
   const router = useRouter();
@@ -13,6 +13,7 @@ export function Navigation() {
     { href: "/groups", label: "Gruplar", icon: Grid3x3 },
     { href: "/coaches", label: "Antrenörler", icon: UserCircle },
     { href: "/reports", label: "Raporlar", icon: BarChart3 },
+    { href: "/notifications", label: "Bildirimler", icon: Bell },
   ];
 
   return (
@@ -49,9 +50,6 @@ export function Navigation() {
                 </Link>
               );
             })}
-            <Link href="/notifications" className="text-sm font-medium hover:text-green-600 transition-colors">
-              Bildirimler
-            </Link>
           </nav>
           
           <Button className="bg-emerald-600 hover:bg-emerald-700">

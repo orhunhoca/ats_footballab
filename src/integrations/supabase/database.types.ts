@@ -270,6 +270,7 @@ export type Database = {
           health_report_submitted: boolean | null
           id: string
           installment_date: string | null
+          membership_end_date: string | null
           name: string
           parent_name: string | null
           parent_phone: string | null
@@ -294,6 +295,7 @@ export type Database = {
           health_report_submitted?: boolean | null
           id?: string
           installment_date?: string | null
+          membership_end_date?: string | null
           name: string
           parent_name?: string | null
           parent_phone?: string | null
@@ -318,6 +320,7 @@ export type Database = {
           health_report_submitted?: boolean | null
           id?: string
           installment_date?: string | null
+          membership_end_date?: string | null
           name?: string
           parent_name?: string | null
           parent_phone?: string | null

@@ -34,9 +34,18 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
 
   const handlePaymentPlanChange = (value: string) => {
     let amount = "";
-    if (value === "6 Aylık") amount = "24000";
-    else if (value === "12 Aylık Peşin") amount = "44000";
-    else if (value === "12 Aylık Taksitli") amount = "23000"; // First installment
+    let months = 0;
+
+    if (value === "6 Aylık") {
+      amount = "24000";
+      months = 6;
+    } else if (value === "12 Aylık Peşin") {
+      amount = "44000";
+      months = 12;
+    } else if (value === "12 Aylık Taksitli") {
+      amount = "23000"; // First installment
+      months = 12;
+    }
     
     setFormData(prev => ({
       ...prev,
@@ -50,9 +59,21 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
     setLoading(true);
 
     try {
+      // Calculate membership end date
+      let membershipEndDate = null;
+      if (formData.payment_plan.includes("6 Aylık")) {
+        const date = new Date();
+        date.setMonth(date.getMonth() + 6);
+        membershipEndDate = date.toISOString().split('T')[0];
+      } else if (formData.payment_plan.includes("12 Aylık")) {
+        const date = new Date();
+        date.setMonth(date.getMonth() + 12);
+        membershipEndDate = date.toISOString().split('T')[0];
+      }
+
       await studentService.createStudent({
         name: formData.name,
-        birth_date: formData.birth_date, // Now supported by DB
+        birth_date: formData.birth_date,
         parent_phone: formData.parent_phone,
         clothing_size: formData.clothing_size,
         work_group_hour: formData.work_group_hour,
@@ -63,11 +84,12 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
         clothing_payment_status: formData.clothing_payment_status,
         payment_status: formData.payment_status,
         status: "Aktif",
+        membership_end_date: membershipEndDate,
         second_installment_amount: formData.payment_plan === "12 Aylık Taksitli" ? 23000 : 0,
         installment_date: formData.payment_plan === "12 Aylık Taksitli" 
           ? new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString() 
           : null
-      } as any); // Using any temporarily to bypass strict type check on new columns until types refresh fully
+      } as any);
 
       toast({
         title: "Başarılı",
