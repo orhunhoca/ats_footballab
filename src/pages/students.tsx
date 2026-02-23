@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2, AlertTriangle, Shirt, Clock } from "lucide-react";
+import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2, AlertTriangle, Shirt, Clock, MessageCircle } from "lucide-react";
 import { studentService } from "@/services/studentService";
 import { StudentForm } from "@/components/students/StudentForm";
 import type { Tables } from "@/integrations/supabase/types";
