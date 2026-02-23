@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { Navigation } from "@/components/Navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +10,7 @@ import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar } from "lucide
 export default function StudentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Mock data - Supabase bağlandığında gerçek verilerle değiştirilecek
+  // Mock data
   const students = [
     { id: 1, name: "Ahmet Yılmaz", age: 12, group: "U13 - Yeşil Takım", phone: "0532 123 4567", email: "ahmet@example.com", status: "Aktif" },
     { id: 2, name: "Mehmet Demir", age: 11, group: "U12 - Mavi Takım", phone: "0533 234 5678", email: "mehmet@example.com", status: "Aktif" },
@@ -29,23 +30,21 @@ export default function StudentsPage() {
       <SEO title="Öğrenci Yönetimi - Futbol Okulu" />
       
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white border-b">
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Öğrenci Yönetimi</h1>
-                <p className="text-gray-600 mt-1">Tüm öğrencileri görüntüle ve yönet</p>
-              </div>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Yeni Öğrenci
-              </Button>
-            </div>
-          </div>
-        </header>
+        <Navigation />
 
         <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Öğrenci Yönetimi</h1>
+              <p className="text-gray-600 mt-1">Tüm öğrencileri görüntüle ve yönet</p>
+            </div>
+            <Button className="bg-emerald-600 hover:bg-emerald-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Yeni Öğrenci
+            </Button>
+          </div>
+
           {/* Filters */}
           <Card className="mb-6">
             <CardContent className="pt-6">

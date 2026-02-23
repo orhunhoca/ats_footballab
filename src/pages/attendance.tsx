@@ -1,6 +1,8 @@
 import { SEO } from "@/components/SEO";
+import { Navigation } from "@/components/Navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -11,8 +13,6 @@ export default function AttendancePage() {
   const [selectedGroup, setSelectedGroup] = useState("all");
 
   // Mock data
-  const groups = ["Tümü", "U13 - Yeşil Takım", "U12 - Mavi Takım", "U14 - Kırmızı Takım", "U11 - Sarı Takım"];
-  
   const attendanceData = [
     { id: 1, name: "Ahmet Yılmaz", group: "U13 - Yeşil Takım", status: "present" },
     { id: 2, name: "Mehmet Demir", group: "U12 - Mavi Takım", status: "present" },
@@ -35,23 +35,21 @@ export default function AttendancePage() {
       <SEO title="Yoklama - Futbol Okulu" />
       
       <div className="min-h-screen bg-gray-50">
-        {/* Header */}
-        <header className="bg-white border-b">
-          <div className="container mx-auto px-4 py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Yoklama</h1>
-                <p className="text-gray-600 mt-1">Günlük devam takibi ve kayıt</p>
-              </div>
-              <Button className="bg-emerald-600 hover:bg-emerald-700">
-                <ClipboardCheck className="w-4 h-4 mr-2" />
-                Yoklamayı Kaydet
-              </Button>
-            </div>
-          </div>
-        </header>
+        <Navigation />
 
         <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Yoklama</h1>
+              <p className="text-gray-600 mt-1">Günlük devam takibi ve kayıt</p>
+            </div>
+            <Button className="bg-emerald-600 hover:bg-emerald-700">
+              <ClipboardCheck className="w-4 h-4 mr-2" />
+              Yoklamayı Kaydet
+            </Button>
+          </div>
+
           {/* Date and Group Selector */}
           <Card className="mb-6">
             <CardContent className="pt-6">
@@ -196,8 +194,4 @@ export default function AttendancePage() {
       </div>
     </>
   );
-}
-
-function Input({ type, value, onChange, className }: any) {
-  return <input type={type} value={value} onChange={onChange} className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ${className}`} />;
 }
