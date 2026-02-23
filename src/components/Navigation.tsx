@@ -49,6 +49,9 @@ export function Navigation() {
                 </Link>
               );
             })}
+            <Link href="/notifications" className="text-sm font-medium hover:text-green-600 transition-colors">
+              Bildirimler
+            </Link>
           </nav>
           
           <Button className="bg-emerald-600 hover:bg-emerald-700">

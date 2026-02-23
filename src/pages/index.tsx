@@ -1,11 +1,66 @@
 import { SEO } from "@/components/SEO";
 import { Navigation } from "@/components/Navigation";
 import Link from "next/link";
-import { Users, ClipboardCheck, BarChart3, UserPlus, Calendar, TrendingUp, Grid3x3, UserCircle } from "lucide-react";
+import { Users, ClipboardCheck, BarChart3, UserPlus, Calendar, TrendingUp, Grid3x3, UserCircle, Bell, UserCheck, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { studentService } from "@/services/studentService";
 
 export default function Home() {
+  const [stats, setStats] = useState({
+    totalStudents: 0,
+    activeStudents: 0,
+    totalGroups: 6
+  });
+  const [notifications, setNotifications] = useState({
+    expired: 0,
+    expiring: 0,
+    total: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const studentStats = await studentService.getStudentStats();
+      setStats({
+        totalStudents: studentStats.total,
+        activeStudents: studentStats.active,
+        totalGroups: 6
+      });
+
+      // Bildirim sayılarını hesapla
+      const students = await studentService.getAllStudents();
+      const today = new Date();
+      let expired = 0;
+      let expiring = 0;
+
+      students.forEach(student => {
+        if (!student.membership_end_date) return;
+        const endDate = new Date(student.membership_end_date);
+        const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (diffDays <= 0) expired++;
+        else if (diffDays <= 14) expiring++;
+      });
+
+      setNotifications({
+        expired,
+        expiring,
+        total: expired + expiring
+      });
+    } catch (error) {
+      console.error("Error loading data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <SEO
@@ -44,24 +99,56 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mb-20">
-            <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-100">
-              <div className="text-3xl font-bold text-emerald-600 mb-1">60</div>
-              <div className="text-sm text-gray-600">Aktif Öğrenci</div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-100">
-              <div className="text-3xl font-bold text-emerald-600 mb-1">4</div>
-              <div className="text-sm text-gray-600">Antrenör</div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-100">
-              <div className="text-3xl font-bold text-emerald-600 mb-1">94%</div>
-              <div className="text-sm text-gray-600">Devam Oranı</div>
-            </div>
-            <div className="bg-white rounded-2xl p-6 text-center shadow-sm border border-gray-100">
-              <div className="text-3xl font-bold text-emerald-600 mb-1">4</div>
-              <div className="text-sm text-gray-600">Aktif Grup</div>
-            </div>
+          {/* Stats Cards - add notification card */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Toplam Öğrenci</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalStudents}</div>
+                <p className="text-xs text-muted-foreground">Kayıtlı öğrenci sayısı</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Aktif Öğrenci</CardTitle>
+                <UserCheck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.activeStudents}</div>
+                <p className="text-xs text-muted-foreground">Aktif üyelikler</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Gruplar</CardTitle>
+                <Target className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.totalGroups}</div>
+                <p className="text-xs text-muted-foreground">Aktif grup sayısı</p>
+              </CardContent>
+            </Card>
+
+            <Link href="/notifications">
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium text-orange-700">Bekleyen Bildirimler</CardTitle>
+                  <Bell className="h-4 w-4 text-orange-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-700">{notifications.total}</div>
+                  <p className="text-xs text-orange-600">
+                    {notifications.expired > 0 && `${notifications.expired} üyelik bitti • `}
+                    {notifications.expiring > 0 && `${notifications.expiring} yaklaşan`}
+                  </p>
+                </CardContent>
+              </Card>
+            </Link>
           </div>
 
           {/* Features */}
