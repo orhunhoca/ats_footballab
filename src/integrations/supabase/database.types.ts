@@ -199,6 +199,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          role: string | null
           updated_at: string | null
         }
         Insert: {
@@ -207,6 +208,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          role?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -215,6 +217,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          role?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -260,43 +263,73 @@ export type Database = {
           address: string | null
           age: number
           birth_date: string | null
+          clothing_payment_status: string | null
+          clothing_size: string | null
           created_at: string | null
           email: string | null
+          health_report_submitted: boolean | null
           id: string
+          installment_date: string | null
           name: string
           parent_name: string | null
           parent_phone: string | null
+          payment_amount: number | null
+          payment_plan: string | null
+          payment_status: string | null
           phone: string | null
+          registration_type: string | null
+          second_installment_amount: number | null
           status: string | null
           updated_at: string | null
+          work_group_hour: string | null
         }
         Insert: {
           address?: string | null
           age: number
           birth_date?: string | null
+          clothing_payment_status?: string | null
+          clothing_size?: string | null
           created_at?: string | null
           email?: string | null
+          health_report_submitted?: boolean | null
           id?: string
+          installment_date?: string | null
           name: string
           parent_name?: string | null
           parent_phone?: string | null
+          payment_amount?: number | null
+          payment_plan?: string | null
+          payment_status?: string | null
           phone?: string | null
+          registration_type?: string | null
+          second_installment_amount?: number | null
           status?: string | null
           updated_at?: string | null
+          work_group_hour?: string | null
         }
         Update: {
           address?: string | null
           age?: number
           birth_date?: string | null
+          clothing_payment_status?: string | null
+          clothing_size?: string | null
           created_at?: string | null
           email?: string | null
+          health_report_submitted?: boolean | null
           id?: string
+          installment_date?: string | null
           name?: string
           parent_name?: string | null
           parent_phone?: string | null
+          payment_amount?: number | null
+          payment_plan?: string | null
+          payment_status?: string | null
           phone?: string | null
+          registration_type?: string | null
+          second_installment_amount?: number | null
           status?: string | null
           updated_at?: string | null
+          work_group_hour?: string | null
         }
         Relationships: []
       }
