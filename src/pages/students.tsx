@@ -5,17 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2 } from "lucide-react";
+import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2, AlertTriangle, Shirt, Clock } from "lucide-react";
 import { studentService } from "@/services/studentService";
+import { StudentForm } from "@/components/students/StudentForm";
 import type { Tables } from "@/integrations/supabase/types";
 
-type Student = Tables<"students">;
+// Extend type locally until generated types catch up
+type Student = Tables<"students"> & {
+  clothing_size?: string;
+  health_report_submitted?: boolean;
+  work_group_hour?: string;
+  payment_plan?: string;
+  payment_status?: string;
+  registration_type?: string;
+};
 
 export default function StudentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ active: 0, inactive: 0 });
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     loadStudents();
@@ -25,8 +35,8 @@ export default function StudentsPage() {
   const loadStudents = async () => {
     try {
       setLoading(true);
-      const data = await studentService.getAll();
-      setStudents(data);
+      const data = await studentService.getAllStudents();
+      setStudents(data as any);
     } catch (error) {
       console.error("Error loading students:", error);
     } finally {
@@ -36,7 +46,7 @@ export default function StudentsPage() {
 
   const loadStats = async () => {
     try {
-      const data = await studentService.getStats();
+      const data = await studentService.getStudentStats();
       setStats(data);
     } catch (error) {
       console.error("Error loading stats:", error);
@@ -48,7 +58,8 @@ export default function StudentsPage() {
     student.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const calculateAge = (birthDate: string) => {
+  const calculateAge = (birthDate: string | null) => {
+    if (!birthDate) return 0;
     const today = new Date();
     const birth = new Date(birthDate);
     let age = today.getFullYear() - birth.getFullYear();
@@ -57,6 +68,15 @@ export default function StudentsPage() {
       age--;
     }
     return age;
+  };
+
+  const isHealthReportMissing = (student: Student) => {
+    if (student.health_report_submitted) return false;
+    const created = new Date(student.created_at);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - created.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 10;
   };
 
   return (
@@ -73,32 +93,14 @@ export default function StudentsPage() {
               <h1 className="text-3xl font-bold text-gray-900">Öğrenci Yönetimi</h1>
               <p className="text-gray-600 mt-1">Tüm öğrencileri görüntüle ve yönet</p>
             </div>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button 
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => setIsFormOpen(true)}
+            >
               <Plus className="w-4 h-4 mr-2" />
               Yeni Öğrenci
             </Button>
           </div>
-
-          {/* Filters */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row gap-4">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                  <Input
-                    placeholder="Öğrenci adı veya e-posta ara..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <Button variant="outline">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filtrele
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -120,10 +122,12 @@ export default function StudentsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">Pasif Öğrenci</CardTitle>
+                <CardTitle className="text-sm font-medium text-gray-600">Raporu Eksik</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-gray-600">{stats.inactive}</div>
+                <div className="text-3xl font-bold text-red-600">
+                  {students.filter(s => isHealthReportMissing(s)).length}
+                </div>
               </CardContent>
             </Card>
             <Card>
@@ -143,6 +147,23 @@ export default function StudentsPage() {
             </Card>
           </div>
 
+          {/* Search */}
+          <Card className="mb-6">
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Input
+                    placeholder="Öğrenci adı veya e-posta ara..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Loading State */}
           {loading && (
             <Card className="py-12">
@@ -157,57 +178,70 @@ export default function StudentsPage() {
           {!loading && (
             <div className="grid gap-4">
               {filteredStudents.map((student) => (
-                <Card key={student.id} className="hover:shadow-md transition-shadow">
+                <Card key={student.id} className={`hover:shadow-md transition-shadow ${isHealthReportMissing(student) ? 'border-l-4 border-l-red-500' : ''}`}>
                   <CardContent className="p-6">
-                    <div className="flex items-start justify-between">
+                    <div className="flex flex-col md:flex-row items-start justify-between gap-4">
                       <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold">
+                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center text-white text-xl font-bold flex-shrink-0">
                           {student.name.split(" ").map(n => n[0]).join("")}
                         </div>
                         <div>
-                          <div className="flex items-center gap-3 mb-2">
+                          <div className="flex flex-wrap items-center gap-2 mb-2">
                             <h3 className="text-lg font-semibold text-gray-900">{student.name}</h3>
                             <Badge variant={student.status === "Aktif" ? "default" : "secondary"}>
                               {student.status}
                             </Badge>
+                            {isHealthReportMissing(student) && (
+                              <Badge variant="destructive" className="flex items-center gap-1">
+                                <AlertTriangle className="w-3 h-3" />
+                                Rapor Eksik
+                              </Badge>
+                            )}
                           </div>
-                          <div className="space-y-1 text-sm text-gray-600">
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-1 text-sm text-gray-600">
                             <div className="flex items-center gap-2">
                               <UserCircle2 className="w-4 h-4" />
                               <span>{calculateAge(student.birth_date)} yaşında</span>
-                              <span className="mx-2">•</span>
-                              <span className="text-gray-500">
-                                {new Date(student.birth_date).toLocaleDateString("tr-TR")}
-                              </span>
                             </div>
-                            {student.phone && (
+                            
+                            {student.work_group_hour && (
+                              <div className="flex items-center gap-2 text-blue-600 font-medium">
+                                <Clock className="w-4 h-4" />
+                                <span>{student.work_group_hour}</span>
+                              </div>
+                            )}
+
+                            {student.clothing_size && (
+                              <div className="flex items-center gap-2">
+                                <Shirt className="w-4 h-4" />
+                                <span>Beden: {student.clothing_size}</span>
+                              </div>
+                            )}
+
+                            {student.parent_phone && (
                               <div className="flex items-center gap-2">
                                 <Phone className="w-4 h-4" />
-                                <span>{student.phone}</span>
-                              </div>
-                            )}
-                            {student.email && (
-                              <div className="flex items-center gap-2">
-                                <Mail className="w-4 h-4" />
-                                <span>{student.email}</span>
-                              </div>
-                            )}
-                            {student.parent_phone && (
-                              <div className="flex items-center gap-2 text-xs">
-                                <Phone className="w-3 h-3" />
                                 <span>Veli: {student.parent_phone}</span>
                               </div>
                             )}
                           </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          Düzenle
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Calendar className="w-4 h-4" />
-                        </Button>
+                      
+                      <div className="flex flex-col items-end gap-2 text-right">
+                         <div className="text-sm">
+                            <span className="text-gray-500">Ödeme:</span>
+                            <span className={`ml-2 font-medium ${student.payment_status === "Ödendi" ? "text-green-600" : "text-amber-600"}`}>
+                              {student.payment_status}
+                            </span>
+                         </div>
+                         <div className="text-xs text-gray-500">
+                           {student.payment_plan}
+                         </div>
+                         <Button variant="outline" size="sm" className="mt-2">
+                            Düzenle
+                         </Button>
                       </div>
                     </div>
                   </CardContent>
@@ -223,19 +257,22 @@ export default function StudentsPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Öğrenci bulunamadı</h3>
                 <p className="text-gray-600 mb-4">
                   {students.length === 0 
-                    ? "Henüz kayıtlı öğrenci bulunmuyor. Yeni öğrenci ekleyin." 
+                    ? "Henüz kayıtlı öğrenci bulunmuyor." 
                     : "Arama kriterlerinize uygun öğrenci bulunamadı."}
                 </p>
-                {students.length === 0 && (
-                  <Button className="bg-emerald-600 hover:bg-emerald-700">
-                    <Plus className="w-4 h-4 mr-2" />
-                    İlk Öğrenciyi Ekle
-                  </Button>
-                )}
               </CardContent>
             </Card>
           )}
         </div>
+        
+        <StudentForm 
+          open={isFormOpen} 
+          onOpenChange={setIsFormOpen} 
+          onSuccess={() => {
+            loadStudents();
+            loadStats();
+          }} 
+        />
       </div>
     </>
   );

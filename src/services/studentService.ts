@@ -146,6 +146,58 @@ export const studentService = {
     return data || [];
   },
 
+  // Get financial report (Admin only)
+  async getFinancialReport(period: "weekly" | "monthly") {
+    const today = new Date();
+    const startDate = new Date();
+
+    if (period === "weekly") {
+      startDate.setDate(today.getDate() - 7);
+    } else {
+      startDate.setMonth(today.getMonth() - 1);
+    }
+
+    const { data, error } = await supabase
+      .from("students")
+      .select("payment_amount, registration_type, created_at, clothing_payment_status")
+      .gte("created_at", startDate.toISOString());
+
+    if (error) {
+      console.error("Error fetching financial report:", error);
+      throw error;
+    }
+
+    // Process data
+    const report = {
+      totalRevenue: 0,
+      newRegistrationRevenue: 0,
+      renewalRevenue: 0,
+      clothingRevenue: 0,
+      newRegistrationsCount: 0,
+      renewalsCount: 0
+    };
+
+    data?.forEach(student => {
+      const amount = Number(student.payment_amount) || 0;
+      report.totalRevenue += amount;
+      
+      if (student.registration_type === "Yeni Kayıt") {
+        report.newRegistrationRevenue += amount;
+        report.newRegistrationsCount++;
+      } else {
+        report.renewalRevenue += amount;
+        report.renewalsCount++;
+      }
+
+      if (student.clothing_payment_status === "Ödendi") {
+        report.clothingRevenue += 3000;
+        report.totalRevenue += 3000;
+      }
+    });
+
+    return report;
+  },
+
   // Get student statistics
   async getStudentStats() {
     const { count: totalCount, error: totalError } = await supabase
