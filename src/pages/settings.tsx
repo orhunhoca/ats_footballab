@@ -191,7 +191,7 @@ export default function SettingsPage() {
       full_name: user.full_name,
       username: user.username,
       password: "",
-      role: user.role,
+      role: user.role as "admin" | "coach",
       is_active: user.is_active,
     });
     setIsUserDialogOpen(true);
