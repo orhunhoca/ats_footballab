@@ -14,7 +14,7 @@ export const coachService = {
         *,
         groups!groups_coach_id_fkey(*)
       `)
-      .eq("status", "active")
+      .eq("status", "Aktif")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -81,7 +81,7 @@ export const coachService = {
   async deleteCoach(id: string) {
     const { error } = await supabase
       .from("coaches")
-      .update({ status: "inactive" })
+      .update({ status: "Pasif" })
       .eq("id", id);
 
     if (error) {
@@ -98,8 +98,8 @@ export const coachService = {
         *,
         groups!groups_coach_id_fkey(*)
       `)
-      .eq("status", "active")
-      .or(`full_name.ilike.%${searchTerm}%,specialty.ilike.%${searchTerm}%`)
+      .eq("status", "Aktif")
+      .or(`name.ilike.%${searchTerm}%,specialty.ilike.%${searchTerm}%`)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -119,7 +119,7 @@ export const coachService = {
     const { count: activeCount, error: activeError } = await supabase
       .from("coaches")
       .select("*", { count: "exact", head: true })
-      .eq("status", "active");
+      .eq("status", "Aktif");
 
     if (totalError || activeError) {
       console.error("Error fetching stats:", totalError || activeError);

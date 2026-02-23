@@ -15,7 +15,7 @@ export const attendanceService = {
         students!attendance_student_id_fkey(*),
         groups!attendance_group_id_fkey(*)
       `)
-      .eq("date", date);
+      .eq("attendance_date", date);
 
     if (groupId) {
       query = query.eq("group_id", groupId);
@@ -42,13 +42,13 @@ export const attendanceService = {
       .eq("student_id", studentId);
 
     if (startDate) {
-      query = query.gte("date", startDate);
+      query = query.gte("attendance_date", startDate);
     }
     if (endDate) {
-      query = query.lte("date", endDate);
+      query = query.lte("attendance_date", endDate);
     }
 
-    const { data, error } = await query.order("date", { ascending: false });
+    const { data, error } = await query.order("attendance_date", { ascending: false });
 
     if (error) {
       console.error("Error fetching student attendance:", error);
@@ -113,10 +113,10 @@ export const attendanceService = {
       .select("status");
 
     if (startDate) {
-      query = query.gte("date", startDate);
+      query = query.gte("attendance_date", startDate);
     }
     if (endDate) {
-      query = query.lte("date", endDate);
+      query = query.lte("attendance_date", endDate);
     }
 
     const { data, error } = await query;
@@ -130,7 +130,6 @@ export const attendanceService = {
       total: data?.length || 0,
       present: data?.filter(a => a.status === "present").length || 0,
       absent: data?.filter(a => a.status === "absent").length || 0,
-      late: data?.filter(a => a.status === "late").length || 0,
       excused: data?.filter(a => a.status === "excused").length || 0
     };
 
@@ -150,10 +149,10 @@ export const attendanceService = {
       .eq("group_id", groupId);
 
     if (startDate) {
-      query = query.gte("date", startDate);
+      query = query.gte("attendance_date", startDate);
     }
     if (endDate) {
-      query = query.lte("date", endDate);
+      query = query.lte("attendance_date", endDate);
     }
 
     const { data, error } = await query;

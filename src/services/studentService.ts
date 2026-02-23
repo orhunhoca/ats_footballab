@@ -16,7 +16,7 @@ export const studentService = {
           groups!student_groups_group_id_fkey(*)
         )
       `)
-      .eq("status", "active")
+      .eq("status", "Aktif")
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -85,7 +85,7 @@ export const studentService = {
   async deleteStudent(id: string) {
     const { error } = await supabase
       .from("students")
-      .update({ status: "inactive" })
+      .update({ status: "Pasif" })
       .eq("id", id);
 
     if (error) {
@@ -134,8 +134,8 @@ export const studentService = {
           groups!student_groups_group_id_fkey(*)
         )
       `)
-      .eq("status", "active")
-      .or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+      .eq("status", "Aktif")
+      .or(`name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
       .order("created_at", { ascending: false });
 
     if (error) {
@@ -155,7 +155,7 @@ export const studentService = {
     const { count: activeCount, error: activeError } = await supabase
       .from("students")
       .select("*", { count: "exact", head: true })
-      .eq("status", "active");
+      .eq("status", "Aktif");
 
     if (totalError || activeError) {
       console.error("Error fetching stats:", totalError || activeError);
