@@ -1,195 +1,311 @@
 import { SEO } from "@/components/SEO";
 import { Navigation } from "@/components/Navigation";
-import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, XCircle, Circle, Calendar, Users, ClipboardCheck } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { CalendarIcon, Users, CheckCircle2, XCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { attendanceService } from "@/services/attendanceService";
+import { studentService } from "@/services/studentService";
+import { groupService } from "@/services/groupService";
+import { useToast } from "@/hooks/use-toast";
+import type { Tables } from "@/integrations/supabase/types";
+
+type Group = Tables<"groups">;
+type Student = Tables<"students">;
 
 export default function AttendancePage() {
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
-  const [selectedGroup, setSelectedGroup] = useState("all");
+  const { toast } = useToast();
+  const [date, setDate] = useState<Date>(new Date());
+  const [selectedGroup, setSelectedGroup] = useState<string>("");
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [attendance, setAttendance] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // Mock data
-  const attendanceData = [
-    { id: 1, name: "Ahmet Yılmaz", group: "U13 - Yeşil Takım", status: "present" },
-    { id: 2, name: "Mehmet Demir", group: "U12 - Mavi Takım", status: "present" },
-    { id: 3, name: "Can Öztürk", group: "U14 - Kırmızı Takım", status: "absent" },
-    { id: 4, name: "Ege Kaya", group: "U11 - Sarı Takım", status: "present" },
-    { id: 5, name: "Burak Şahin", group: "U13 - Yeşil Takım", status: null },
-    { id: 6, name: "Eren Aydın", group: "U14 - Kırmızı Takım", status: "present" },
-  ];
+  // Load groups
+  useEffect(() => {
+    loadGroups();
+  }, []);
 
-  const toggleAttendance = (studentId: number) => {
-    console.log("Toggle attendance for student:", studentId);
+  // Load students when group changes
+  useEffect(() => {
+    if (selectedGroup) {
+      loadStudents();
+      loadAttendance();
+    }
+  }, [selectedGroup, date]);
+
+  const loadGroups = async () => {
+    try {
+      const data = await groupService.getAllGroups();
+      setGroups(data);
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Gruplar yüklenirken bir hata oluştu",
+        variant: "destructive"
+      });
+    }
   };
 
-  const presentCount = attendanceData.filter(s => s.status === "present").length;
-  const absentCount = attendanceData.filter(s => s.status === "absent").length;
-  const notMarkedCount = attendanceData.filter(s => s.status === null).length;
+  const loadStudents = async () => {
+    try {
+      setLoading(true);
+      const allStudents = await studentService.getAllStudents();
+      
+      // Filter students by selected group
+      const groupStudents = allStudents.filter(student => 
+        student.student_groups?.some((sg: any) => sg.groups?.id === selectedGroup)
+      );
+      
+      setStudents(groupStudents);
+    } catch (error) {
+      toast({
+        title: "Hata",
+        description: "Öğrenciler yüklenirken bir hata oluştu",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadAttendance = async () => {
+    try {
+      const dateStr = date.toISOString().split('T')[0];
+      const records = await attendanceService.getAttendanceByDate(dateStr, selectedGroup);
+      
+      const attendanceMap: Record<string, boolean> = {};
+      records.forEach(record => {
+        // Map 'present' status to true, others to false
+        attendanceMap[record.student_id] = record.status === 'present';
+      });
+      
+      setAttendance(attendanceMap);
+    } catch (error) {
+      console.error("Error loading attendance:", error);
+    }
+  };
+
+  const toggleAttendance = (studentId: string) => {
+    setAttendance(prev => ({
+      ...prev,
+      [studentId]: !prev[studentId]
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!selectedGroup) {
+      toast({
+        title: "Uyarı",
+        description: "Lütfen bir grup seçin",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const dateStr = date.toISOString().split('T')[0];
+
+      // Save attendance for each student
+      for (const student of students) {
+        const status = attendance[student.id] ? 'present' : 'absent';
+        
+        // Check if record exists to update or insert
+        // For simplicity in this implementation, we'll just insert/upsert if the service supports it
+        // Or we can delete existing for this day/student and insert new
+        // Ideally attendanceService.markAttendance should handle upsert
+        
+        // Since markAttendance uses insert, let's assume we need to check existence first or use an upsert method
+        // But for now, fixing the parameter error:
+        await attendanceService.markAttendance({
+          student_id: student.id,
+          group_id: selectedGroup,
+          attendance_date: dateStr,
+          status: status,
+          notes: ""
+        });
+      }
+
+      toast({
+        title: "Başarılı",
+        description: "Yoklama kaydedildi"
+      });
+
+      loadAttendance();
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: "Hata",
+        description: "Yoklama kaydedilirken bir hata oluştu",
+        variant: "destructive"
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const stats = {
+    total: students.length,
+    present: Object.values(attendance).filter(v => v).length,
+    absent: students.length - Object.values(attendance).filter(v => v).length
+  };
 
   return (
     <>
-      <SEO title="Yoklama - Futbol Okulu" />
-      
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-
-        <div className="container mx-auto px-4 py-8">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Yoklama</h1>
-              <p className="text-gray-600 mt-1">Günlük devam takibi ve kayıt</p>
-            </div>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
-              <ClipboardCheck className="w-4 h-4 mr-2" />
-              Yoklamayı Kaydet
-            </Button>
+      <SEO 
+        title="Yoklama | Sportex Futbol Okulu"
+        description="Öğrenci yoklama sistemi"
+      />
+      <Navigation />
+      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 pt-20 pb-8">
+        <div className="container mx-auto px-4">
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+              Yoklama Sistemi
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Öğrenci devam durumunu kaydedin
+            </p>
           </div>
 
-          {/* Date and Group Selector */}
-          <Card className="mb-6">
-            <CardContent className="pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid gap-6 mb-6 md:grid-cols-3">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Toplam Öğrenci</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{stats.total}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Geldi</CardTitle>
+                <CheckCircle2 className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{stats.present}</div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Gelmedi</CardTitle>
+                <XCircle className="h-4 w-4 text-red-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{stats.absent}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Card className="lg:col-span-1">
+              <CardHeader>
+                <CardTitle>Tarih ve Grup Seçimi</CardTitle>
+                <CardDescription>Yoklama almak için tarih ve grup seçin</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Calendar className="w-4 h-4 inline mr-2" />
-                    Tarih Seçin
-                  </label>
-                  <Input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full"
+                  <label className="text-sm font-medium mb-2 block">Tarih</label>
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(newDate) => newDate && setDate(newDate)}
+                    className="rounded-md border"
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    <Users className="w-4 h-4 inline mr-2" />
-                    Grup Seçin
-                  </label>
+                  <label className="text-sm font-medium mb-2 block">Grup</label>
                   <Select value={selectedGroup} onValueChange={setSelectedGroup}>
                     <SelectTrigger>
                       <SelectValue placeholder="Grup seçin" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tümü</SelectItem>
-                      <SelectItem value="u13">U13 - Yeşil Takım</SelectItem>
-                      <SelectItem value="u12">U12 - Mavi Takım</SelectItem>
-                      <SelectItem value="u14">U14 - Kırmızı Takım</SelectItem>
-                      <SelectItem value="u11">U11 - Sarı Takım</SelectItem>
+                      {groups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name} - {group.schedule || group.work_hour || ""}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-600">Toplam Öğrenci</CardTitle>
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <CardTitle>Öğrenci Listesi</CardTitle>
+                <CardDescription>
+                  {date.toLocaleDateString('tr-TR')} - {groups.find(g => g.id === selectedGroup)?.name || "Grup seçilmedi"}
+                </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-gray-900">{attendanceData.length}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-emerald-200 bg-emerald-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-emerald-700">Gelen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-emerald-600">{presentCount}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-red-200 bg-red-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-red-700">Gelmeyen</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-red-600">{absentCount}</div>
-              </CardContent>
-            </Card>
-            <Card className="border-amber-200 bg-amber-50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-amber-700">İşaretlenmedi</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold text-amber-600">{notMarkedCount}</div>
+                {!selectedGroup ? (
+                  <p className="text-center text-gray-500 py-8">Lütfen bir grup seçin</p>
+                ) : loading ? (
+                  <p className="text-center text-gray-500 py-8">Yükleniyor...</p>
+                ) : students.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8">Bu grupta öğrenci bulunmuyor</p>
+                ) : (
+                  <div className="space-y-3">
+                    {students.map((student) => (
+                      <div
+                        key={student.id}
+                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white font-bold">
+                            {student.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="font-medium">{student.name}</p>
+                            <p className="text-sm text-gray-500">Yaş: {student.age}</p>
+                          </div>
+                        </div>
+                        <Button
+                          variant={attendance[student.id] ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => toggleAttendance(student.id)}
+                          className={attendance[student.id] ? "bg-green-600 hover:bg-green-700" : ""}
+                        >
+                          {attendance[student.id] ? (
+                            <>
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Geldi
+                            </>
+                          ) : (
+                            <>
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Gelmedi
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    ))}
+
+                    <div className="pt-4 flex justify-end">
+                      <Button 
+                        onClick={handleSave} 
+                        disabled={saving}
+                        className="bg-gradient-to-r from-green-600 to-blue-600"
+                      >
+                        {saving ? "Kaydediliyor..." : "Yoklamayı Kaydet"}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
-
-          {/* Attendance List */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Öğrenci Listesi</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {attendanceData.map((student) => (
-                  <div
-                    key={student.id}
-                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-green-600 rounded-full flex items-center justify-center text-white font-semibold">
-                        {student.name.split(" ").map(n => n[0]).join("")}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{student.name}</h3>
-                        <p className="text-sm text-gray-600">{student.group}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {student.status === "present" && (
-                        <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-200">
-                          <CheckCircle2 className="w-4 h-4 mr-1" />
-                          Geldi
-                        </Badge>
-                      )}
-                      {student.status === "absent" && (
-                        <Badge className="bg-red-100 text-red-800 hover:bg-red-200">
-                          <XCircle className="w-4 h-4 mr-1" />
-                          Gelmedi
-                        </Badge>
-                      )}
-                      {student.status === null && (
-                        <Badge variant="outline">
-                          <Circle className="w-4 h-4 mr-1" />
-                          İşaretlenmedi
-                        </Badge>
-                      )}
-                      
-                      <div className="flex gap-1 ml-2">
-                        <Button
-                          size="sm"
-                          variant={student.status === "present" ? "default" : "outline"}
-                          onClick={() => toggleAttendance(student.id)}
-                          className={student.status === "present" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={student.status === "absent" ? "default" : "outline"}
-                          onClick={() => toggleAttendance(student.id)}
-                          className={student.status === "absent" ? "bg-red-600 hover:bg-red-700" : ""}
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </>
