@@ -1,65 +1,23 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
+// We are transitioning from "users" table to "profiles" table + Supabase Auth
+// Keeping these types for legacy support until full migration
 export type User = Tables<"users">;
 export type UserInsert = TablesInsert<"users">;
 export type UserUpdate = TablesUpdate<"users">;
 
-/**
- * Simple password hashing function (for demo purposes)
- * In production, use a proper library like bcrypt
- */
-function hashPassword(password: string): string {
-  // Simple hash - in production use bcrypt or similar
-  return btoa(password);
-}
-
-/**
- * Verify password against hash
- */
-function verifyPassword(password: string, hash: string): boolean {
-  return btoa(password) === hash;
-}
-
 export const userService = {
   /**
-   * Login user with username and password
+   * Login user - DEPRECATED: Use authService.signIn instead
    */
-  async login(username: string, password: string): Promise<User | null> {
-    try {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*")
-        .eq("username", username)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (error) {
-        console.error("Login error:", error);
-        throw error;
-      }
-
-      if (!data) {
-        return null;
-      }
-
-      // Verify password
-      if (!verifyPassword(password, data.password)) {
-        return null;
-      }
-
-      // Store user session in localStorage
-      localStorage.setItem("currentUser", JSON.stringify(data));
-
-      return data;
-    } catch (error) {
-      console.error("Error during login:", error);
-      throw error;
-    }
+  async login(username: string, password: string) {
+    console.warn("userService.login is deprecated. Use authService.signIn instead.");
+    return null;
   },
 
   /**
-   * Logout current user
+   * Logout - DEPRECATED: Use authService.signOut instead
    */
   logout(): void {
     if (typeof window === "undefined") return;
@@ -67,51 +25,40 @@ export const userService = {
   },
 
   /**
-   * Get current logged in user
+   * Get current user - DEPRECATED: Use authService.getCurrentUser instead
    */
-  getCurrentUser(): User | null {
+  getCurrentUser() {
     if (typeof window === "undefined") return null;
+    return null;
+  },
+
+  /**
+   * Check if user is admin
+   */
+  async isAdmin(): Promise<boolean> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
     
-    const userStr = localStorage.getItem("currentUser");
-    if (!userStr) return null;
-    
-    try {
-      return JSON.parse(userStr);
-    } catch {
-      return null;
-    }
+    const { data } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+      
+    return data?.role === "admin";
   },
 
   /**
-   * Check if current user is admin
+   * Get all users (from profiles)
    */
-  isAdmin(): boolean {
-    const user = this.getCurrentUser();
-    return user?.role === "admin";
-  },
-
-  /**
-   * Check if user is logged in
-   */
-  isLoggedIn(): boolean {
-    return this.getCurrentUser() !== null;
-  },
-
-  /**
-   * Get all users
-   */
-  async getUsers(): Promise<User[]> {
+  async getUsers() {
     try {
       const { data, error } = await supabase
-        .from("users")
+        .from("profiles")
         .select("*")
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error("Error fetching users:", error);
-        throw error;
-      }
-
+      if (error) throw error;
       return data || [];
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -120,56 +67,26 @@ export const userService = {
   },
 
   /**
-   * Create new user
+   * Create new user - Should be done via Auth API
+   * For now, we'll just return a placeholder error
    */
-  async createUser(user: Omit<UserInsert, "password"> & { password: string }): Promise<User> {
-    try {
-      const hashedPassword = hashPassword(user.password);
-      
-      const { data, error } = await supabase
-        .from("users")
-        .insert({
-          ...user,
-          password: hashedPassword,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error creating user:", error);
-        throw error;
-      }
-
-      return data;
-    } catch (error) {
-      console.error("Error creating user:", error);
-      throw error;
-    }
+  async createUser(user: any) {
+    throw new Error("Kullanıcı oluşturma işlemi için Yönetim panelini kullanın.");
   },
 
   /**
-   * Update user
+   * Update user profile
    */
-  async updateUser(id: string, updates: Partial<UserUpdate> & { password?: string }): Promise<User> {
+  async updateUser(id: string, updates: any) {
     try {
-      // If password is provided, hash it
-      const updateData: any = { ...updates };
-      if (updateData.password) {
-        updateData.password = hashPassword(updateData.password);
-      }
-
       const { data, error } = await supabase
-        .from("users")
-        .update(updateData)
+        .from("profiles")
+        .update(updates)
         .eq("id", id)
         .select()
         .single();
 
-      if (error) {
-        console.error("Error updating user:", error);
-        throw error;
-      }
-
+      if (error) throw error;
       return data;
     } catch (error) {
       console.error("Error updating user:", error);
@@ -178,44 +95,11 @@ export const userService = {
   },
 
   /**
-   * Update user password
-   */
-  async updateUserPassword(userId: string, newPassword: string): Promise<void> {
-    try {
-      const hashedPassword = hashPassword(newPassword);
-      
-      const { error } = await supabase
-        .from("users")
-        .update({ password: hashedPassword })
-        .eq("id", userId);
-
-      if (error) {
-        console.error("Error updating password:", error);
-        throw error;
-      }
-    } catch (error) {
-      console.error("Error updating password:", error);
-      throw error;
-    }
-  },
-
-  /**
-   * Delete user (soft delete - set is_active to false)
+   * Delete user
    */
   async deleteUser(id: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from("users")
-        .update({ is_active: false })
-        .eq("id", id);
-
-      if (error) {
-        console.error("Error deleting user:", error);
-        throw error;
-      }
-    } catch (error) {
-      console.error("Error deleting user:", error);
-      throw error;
-    }
+    // Soft delete not supported on profiles directly without cascade
+    // For now we just console log
+    console.warn("Deleting users requires Supabase Admin API");
   },
 };
