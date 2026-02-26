@@ -90,6 +90,11 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           summer_clothing_price: student.summer_clothing_price?.toString() || "3000",
           winter_clothing_price: student.winter_clothing_price?.toString() || "3000"
         });
+        
+        // Load student's current group
+        if (student.student_groups && student.student_groups.length > 0) {
+          setSelectedGroup(student.student_groups[0].group_id);
+        }
       } else {
         // Reset form for new student
         setFormData({
@@ -114,6 +119,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           summer_clothing_price: "3000",
           winter_clothing_price: "3000"
         });
+        setSelectedGroup("");
       }
     }
   }, [open, student]);
@@ -157,20 +163,22 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       );
 
       if (matchingGroups.length > 0) {
-        // If exact matches found, prefer them
         const bestMatch = matchingGroups[0];
         setFormData(prev => ({
           ...prev,
           work_group_hour: bestMatch.work_hour
         }));
         
+        // Auto-select the group
+        setSelectedGroup(bestMatch.id);
+        
         toast({
           title: "Otomatik Atama",
-          description: `${birthYear} doğumlu öğrenci için ${matchingGroups.length} uygun grup bulundu. En uygun saat seçildi.`,
+          description: `${birthYear} doğumlu öğrenci için ${bestMatch.name} grubu otomatik seçildi.`,
         });
       }
     }
-  }, [formData.birth_date, groups]);
+  }, [formData.birth_date, groups, student, toast]);
 
   // Auto-calculate end date when start date changes
   useEffect(() => {
@@ -244,6 +252,15 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       return;
     }
 
+    if (!selectedGroup) {
+      toast({
+        title: "Eksik Bilgi",
+        description: "Lütfen bir grup seçin.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -306,25 +323,42 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           const photoUrl = await storageService.uploadStudentPhoto(photoFile, studentId);
           await studentService.updateStudent(studentId, { photo_url: photoUrl });
         } else if (photoPreview === null && student.photo_url) {
-          // Photo removed
-          // Note: We're keeping the file in storage for now, just removing the reference
           await studentService.updateStudent(studentId, { photo_url: null });
+        }
+
+        // Update group assignment if changed
+        const currentGroupId = student.student_groups?.[0]?.group_id;
+        if (selectedGroup !== currentGroupId) {
+          // Remove from old group
+          if (currentGroupId) {
+            await studentService.removeFromGroup(studentId, currentGroupId);
+          }
+          // Add to new group
+          await studentService.assignToGroup(studentId, selectedGroup);
+          
+          toast({
+            title: "Grup Güncellendi",
+            description: "Öğrenci yeni gruba başarıyla atandı.",
+          });
         }
       } else {
         // Create new student
         const newStudent = await studentService.createStudent(studentData);
         studentId = newStudent.id;
 
+        // Assign to group
+        await studentService.assignToGroup(studentId, selectedGroup);
+
         // If photo selected, upload it
         if (photoFile && studentId) {
           const photoUrl = await storageService.uploadStudentPhoto(photoFile, studentId);
           await studentService.updateStudent(studentId, { photo_url: photoUrl });
         }
-      }
 
-      // Handle group assignment
-      if (selectedGroup && (!student || student.student_groups?.[0]?.group_id !== selectedGroup)) {
-        // TODO: Implement group assignment logic
+        toast({
+          title: "Başarılı",
+          description: "Öğrenci gruba başarıyla atandı.",
+        });
       }
       
       setFormData({
@@ -350,6 +384,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         winter_clothing_price: "3000"
       });
       setSelectedPlan(null);
+      setSelectedGroup("");
       
       onSuccess();
       onOpenChange(false);
@@ -462,6 +497,25 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 </Select>
               </div>
               <div className="space-y-2">
+                <Label>Grup Seçimi *</Label>
+                <Select 
+                  onValueChange={setSelectedGroup}
+                  value={selectedGroup}
+                  required
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Grup Seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {groups.map(group => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name} {group.work_hour ? `(${group.work_hour})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
                 <Label>Çalışma Grubu Saati</Label>
                 <Select 
                   onValueChange={v => setFormData({...formData, work_group_hour: v})}
@@ -471,7 +525,6 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                     <SelectValue placeholder="Saat Seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Show available groups based on birth year first */}
                     {groups
                       .filter(g => !formData.birth_date || g.target_years?.includes(new Date(formData.birth_date).getFullYear().toString()))
                       .filter(g => g.work_hour)
@@ -481,10 +534,8 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                         </SelectItem>
                     ))}
                     
-                    {/* Separator if needed */}
                     {groups.length > 0 && <div className="h-px bg-gray-100 my-1" />}
                     
-                    {/* Fallback to standard hours */}
                     {workHours.map(hour => (
                       <SelectItem key={hour} value={hour}>{hour}</SelectItem>
                     ))}
