@@ -1,21 +1,30 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { studentService } from "@/services/studentService";
 import { groupService } from "@/services/groupService";
+import { storageService } from "@/services/storageService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
 import { useToast } from "@/hooks/use-toast";
+import { Loader2, Camera, Upload, X } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Tables } from "@/integrations/supabase/types";
+
+// Define extended student type with relations
+type StudentWithGroups = Tables<"students"> & {
+  student_groups?: { group_id: string }[] | null;
+};
 
 interface StudentFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
-  student?: Tables<"students"> | null;
+  student?: StudentWithGroups | null;
 }
 
 export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentFormProps) {
@@ -24,6 +33,10 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<string>("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -193,6 +206,23 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     }
   };
 
+  const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setPhotoFile(file);
+      const objectUrl = URL.createObjectURL(file);
+      setPhotoPreview(objectUrl);
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -264,20 +294,37 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         winter_clothing_price: formData.winter_clothing_paid ? parseFloat(formData.winter_clothing_price) : null
       };
 
+      let studentId;
+
       if (student) {
         // Update existing student
         await studentService.updateStudent(student.id, studentData);
-        toast({
-          title: "Başarılı",
-          description: "Öğrenci bilgileri güncellendi.",
-        });
+        studentId = student.id;
+        
+        // If photo changed, upload new one
+        if (photoFile) {
+          const photoUrl = await storageService.uploadStudentPhoto(photoFile, studentId);
+          await studentService.updateStudent(studentId, { photo_url: photoUrl });
+        } else if (photoPreview === null && student.photo_url) {
+          // Photo removed
+          // Note: We're keeping the file in storage for now, just removing the reference
+          await studentService.updateStudent(studentId, { photo_url: null });
+        }
       } else {
         // Create new student
-        await studentService.createStudent(studentData);
-        toast({
-          title: "Başarılı",
-          description: "Öğrenci kaydı oluşturuldu.",
-        });
+        const newStudent = await studentService.createStudent(studentData);
+        studentId = newStudent.id;
+
+        // If photo selected, upload it
+        if (photoFile && studentId) {
+          const photoUrl = await storageService.uploadStudentPhoto(photoFile, studentId);
+          await studentService.updateStudent(studentId, { photo_url: photoUrl });
+        }
+      }
+
+      // Handle group assignment
+      if (selectedGroup && (!student || student.student_groups?.[0]?.group_id !== selectedGroup)) {
+        // TODO: Implement group assignment logic
       }
       
       setFormData({
@@ -330,6 +377,53 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           <DialogTitle>{student ? "Öğrenci Bilgilerini Düzenle" : "Yeni Öğrenci Kaydı"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Photo Upload Section */}
+          <div className="flex flex-col items-center justify-center mb-6">
+            <div className="relative mb-4">
+              <Avatar className="w-32 h-32 border-4 border-white shadow-lg">
+                <AvatarImage src={photoPreview || undefined} className="object-cover" />
+                <AvatarFallback className="text-4xl bg-gray-100">
+                  {formData.name ? formData.name.charAt(0).toUpperCase() : <Camera className="w-12 h-12 text-gray-400" />}
+                </AvatarFallback>
+              </Avatar>
+              {photoPreview && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="icon"
+                  className="absolute -top-2 -right-2 rounded-full w-8 h-8 shadow-md"
+                  onClick={handleRemovePhoto}
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                Fotoğraf Yükle / Çek
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                capture="environment"
+                onChange={handlePhotoSelect}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Telefondan çekim yapabilir veya galeriden seçebilirsiniz
+            </p>
+          </div>
+
           {/* Öğrenci Bilgileri */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Öğrenci Bilgileri</h3>

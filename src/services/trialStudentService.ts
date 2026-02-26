@@ -98,18 +98,28 @@ export const trialStudentService = {
       throw new Error("Trial student not found");
     }
 
+    // Calculate age
+    const birthDate = new Date(trialStudent.birth_date);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+
     // Create full student record with trial data + additional data
     const { data: newStudent, error: createError } = await supabase
       .from("students")
       .insert({
         name: trialStudent.name,
         birth_date: trialStudent.birth_date,
+        age: age,
         mother_name: additionalData.mother_name,
         mother_phone: trialStudent.parent_phone,
         father_name: additionalData.father_name,
         father_phone: additionalData.father_phone,
         address: additionalData.address,
-        health_report: additionalData.health_report,
+        health_report_submitted: additionalData.health_report === "Var",
         registration_type: additionalData.registration_type,
         payment_plan: additionalData.payment_plan,
         payment_amount: additionalData.payment_amount,
