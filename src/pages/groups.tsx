@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Users, Plus, TrendingUp, UserCircle, Clock, Loader2 } from "lucide-react";
 import { groupService } from "@/services/groupService";
+import { GroupForm } from "@/components/groups/GroupForm";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Group = Tables<"groups"> & {
@@ -16,6 +17,7 @@ type Group = Tables<"groups"> & {
 export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     loadGroups();
@@ -69,7 +71,7 @@ export default function GroupsPage() {
               <h1 className="text-3xl font-bold text-gray-900">Grup Yönetimi</h1>
               <p className="text-gray-600 mt-1">Takımlar, program ve öğrenci atamaları</p>
             </div>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Yeni Grup
             </Button>
@@ -241,6 +243,14 @@ export default function GroupsPage() {
             </Card>
           )}
         </div>
+        
+        <GroupForm 
+          open={isFormOpen} 
+          onOpenChange={setIsFormOpen} 
+          onSuccess={() => {
+            loadGroups();
+          }} 
+        />
       </div>
     </>
   );

@@ -86,17 +86,6 @@ export default function Home() {
               Öğrenci kayıt, yoklama takibi ve performans analizini tek platformda yönetin. 
               Zamanınızı idari işlerle değil, antrenmanla geçirin.
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <Link href="/students">
-                <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-lg px-8 py-6">
-                  <UserPlus className="w-5 h-5 mr-2" />
-                  Hemen Başla
-                </Button>
-              </Link>
-              <Button size="lg" variant="outline" className="text-lg px-8 py-6 border-2">
-                Demo İzle
-              </Button>
-            </div>
           </div>
 
           {/* Stats Cards - add notification card */}
@@ -211,28 +200,10 @@ export default function Home() {
           </div>
         </section>
 
-        {/* CTA Section */}
-        <section className="bg-gradient-to-r from-emerald-600 to-green-700 py-20">
-          <div className="container mx-auto px-4 text-center">
-            <Calendar className="w-16 h-16 text-white mx-auto mb-6 opacity-90" />
-            <h3 className="text-3xl md:text-4xl font-bold text-white mb-4">
-              Futbol Okulunuzu Bir Üst Seviyeye Taşıyın
-            </h3>
-            <p className="text-xl text-emerald-50 mb-8 max-w-2xl mx-auto">
-              Modern teknoloji ile idari süreçlerinizi hızlandırın, daha fazla zamanı sahada geçirin.
-            </p>
-            <Link href="/students">
-              <Button size="lg" className="bg-white text-emerald-700 hover:bg-emerald-50 text-lg px-10 py-6">
-                Ücretsiz Deneyin
-              </Button>
-            </Link>
-          </div>
-        </section>
-
         {/* Footer */}
         <footer className="bg-gray-900 text-gray-400 py-12">
           <div className="container mx-auto px-4 text-center">
-            <p className="text-sm">© {new Date().getFullYear()} Futbol Okulu Yönetim Sistemi. Tüm hakları saklıdır.</p>
+            <p className="text-sm">© {new Date().getFullYear()} Sportex Futbol Okulu. Tüm hakları saklıdır.</p>
           </div>
         </footer>
       </div>

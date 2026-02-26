@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus, Phone, Mail, UserCircle, Award, Calendar, Loader2 } from "lucide-react";
 import { coachService } from "@/services/coachService";
+import { CoachForm } from "@/components/coaches/CoachForm";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Coach = Tables<"coaches">;
@@ -16,6 +17,7 @@ export default function CoachesPage() {
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ active: 0, inactive: 0 });
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   useEffect(() => {
     loadCoaches();
@@ -71,7 +73,7 @@ export default function CoachesPage() {
               <h1 className="text-3xl font-bold text-gray-900">Antrenör Yönetimi</h1>
               <p className="text-gray-600 mt-1">Teknik kadro ve grup atamaları</p>
             </div>
-            <Button className="bg-emerald-600 hover:bg-emerald-700">
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Yeni Antrenör
             </Button>
@@ -229,6 +231,15 @@ export default function CoachesPage() {
             </Card>
           )}
         </div>
+        
+        <CoachForm 
+          open={isFormOpen} 
+          onOpenChange={setIsFormOpen} 
+          onSuccess={() => {
+            loadCoaches();
+            loadStats();
+          }} 
+        />
       </div>
     </>
   );

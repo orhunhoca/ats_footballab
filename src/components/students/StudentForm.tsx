@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,8 +36,10 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
   });
 
   useEffect(() => {
-    loadPaymentPlans();
-  }, []);
+    if (open) {
+      loadPaymentPlans();
+    }
+  }, [open]);
 
   const loadPaymentPlans = async () => {
     try {
@@ -50,7 +51,6 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
   };
 
   const handlePaymentPlanChange = (value: string) => {
-    // Check for manual/custom types first
     if (value === "Bireysel" || value === "Atletik Performans") {
       setSelectedPlan(null);
       setFormData(prev => ({
@@ -74,10 +74,19 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.name || !formData.birth_date || !formData.parent_phone) {
+      toast({
+        title: "Eksik Bilgi",
+        description: "Lütfen zorunlu alanları doldurun.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Calculate membership end date based on selected plan duration
       let membershipEndDate = null;
       let secondInstallmentAmount = 0;
       let installmentDate = null;
@@ -89,7 +98,6 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
 
         if (selectedPlan.installments > 1 && selectedPlan.installment_price) {
           secondInstallmentAmount = selectedPlan.installment_price;
-          // Default 45 days for second installment
           installmentDate = new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString();
         }
       }
@@ -98,27 +106,28 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
         name: formData.name,
         birth_date: formData.birth_date,
         parent_phone: formData.parent_phone,
-        clothing_size: formData.clothing_size,
-        work_group_hour: formData.work_group_hour,
+        email: null,
+        address: null,
+        group_id: null,
+        clothing_size: formData.clothing_size || null,
+        work_group_hour: formData.work_group_hour || null,
         health_report_submitted: formData.health_report_submitted,
         registration_type: formData.registration_type,
-        payment_plan: formData.payment_plan,
-        payment_amount: formData.payment_amount ? Number(formData.payment_amount) : 0,
+        payment_plan: formData.payment_plan || null,
+        payment_amount: formData.payment_amount ? parseFloat(formData.payment_amount) : null,
         clothing_payment_status: formData.clothing_payment_status,
         payment_status: formData.payment_status,
         status: "Aktif",
         membership_end_date: membershipEndDate,
-        second_installment_amount: secondInstallmentAmount,
+        second_installment_amount: secondInstallmentAmount || null,
         installment_date: installmentDate
-      } as any);
+      });
 
       toast({
         title: "Başarılı",
         description: "Öğrenci kaydı oluşturuldu.",
       });
-      onSuccess();
-      onOpenChange(false);
-      // Reset form
+      
       setFormData({
         name: "",
         birth_date: "",
@@ -133,11 +142,14 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
         payment_status: "Bekliyor"
       });
       setSelectedPlan(null);
-    } catch (error) {
-      console.error(error);
+      
+      onSuccess();
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Student creation error:", error);
       toast({
         title: "Hata",
-        description: "Kayıt oluşturulurken bir hata oluştu.",
+        description: error?.message || "Kayıt oluşturulurken bir hata oluştu.",
         variant: "destructive"
       });
     } finally {
@@ -159,7 +171,7 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Ad Soyad</Label>
+              <Label>Ad Soyad *</Label>
               <Input 
                 required
                 value={formData.name}
@@ -167,7 +179,7 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
               />
             </div>
             <div className="space-y-2">
-              <Label>Doğum Tarihi</Label>
+              <Label>Doğum Tarihi *</Label>
               <Input 
                 type="date"
                 required
@@ -176,7 +188,7 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
               />
             </div>
             <div className="space-y-2">
-              <Label>Veli Telefon</Label>
+              <Label>Veli Telefon *</Label>
               <Input 
                 required
                 placeholder="5XX XXX XX XX"
