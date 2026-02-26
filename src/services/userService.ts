@@ -190,6 +190,29 @@ export const userService = {
   },
 
   /**
+   * Update user password
+   */
+  async updatePassword(id: string, password: string) {
+    const hashedPassword = hashPassword(password);
+    
+    // Note: In a real app, you should use Supabase Auth admin API or update user password properly
+    // This is just updating a custom users table which might not be secure for auth
+    const { data, error } = await supabase
+      .from("users")
+      .update({ password: hashedPassword } as any) // Cast to any to avoid strict type checking on partial updates if types are out of sync
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating password:", error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  /**
    * Delete user (soft delete - set is_active to false)
    */
   async deleteUser(id: string): Promise<void> {

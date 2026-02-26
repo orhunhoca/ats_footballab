@@ -149,7 +149,7 @@ export default function NotificationsPage() {
   };
 
   const getWhatsAppLink = (notification: NotificationItem) => {
-    const phone = notification.student.parent_phone?.replace(/\D/g, "");
+    const phone = (notification.student.mother_phone || notification.student.father_phone)?.replace(/\D/g, "");
     if (!phone) return "#";
 
     const message = encodeURIComponent(notification.message);
@@ -157,7 +157,7 @@ export default function NotificationsPage() {
   };
 
   const getPhoneLink = (notification: NotificationItem) => {
-    const phone = notification.student.parent_phone?.replace(/\D/g, "");
+    const phone = (notification.student.mother_phone || notification.student.father_phone)?.replace(/\D/g, "");
     if (!phone) return "#";
     return `tel:+90${phone}`;
   };
@@ -223,29 +223,46 @@ export default function NotificationsPage() {
               </div>
               <p className="text-sm text-muted-foreground">{notification.message}</p>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Veli: {notification.student.parent_name}</span>
-                <span>•</span>
-                <span>{notification.student.parent_phone}</span>
+                {(notification.student.mother_name || notification.student.father_name) && (
+                  <>
+                    <span>Veli: {notification.student.mother_name || notification.student.father_name}</span>
+                    <span>•</span>
+                    <span>{notification.student.mother_phone || notification.student.father_phone}</span>
+                  </>
+                )}
               </div>
             </div>
           </div>
           <div className="flex gap-2">
             <Button
-              size="sm"
               variant="outline"
-              onClick={() => window.open(getPhoneLink(notification), "_self")}
-              disabled={!notification.student.parent_phone}
+              size="sm"
+              className="w-full justify-start text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={() => {
+                const phone = notification.student.mother_phone || notification.student.father_phone;
+                if (phone) {
+                  window.open(`https://wa.me/90${phone.replace(/\s/g, '')}?text=${encodeURIComponent(notification.message)}`, '_blank');
+                }
+              }}
+              disabled={!notification.student.mother_phone && !notification.student.father_phone}
             >
-              <Phone className="h-4 w-4" />
+              <MessageCircle className="w-4 h-4 mr-2" />
+              WhatsApp
             </Button>
             <Button
+              variant="outline"
               size="sm"
-              className="bg-green-600 hover:bg-green-700"
-              onClick={() => window.open(getWhatsAppLink(notification), "_blank")}
-              disabled={!notification.student.parent_phone}
+              className="w-full justify-start"
+              onClick={() => {
+                const phone = notification.student.mother_phone || notification.student.father_phone;
+                if (phone) {
+                  window.location.href = `tel:${phone}`;
+                }
+              }}
+              disabled={!notification.student.mother_phone && !notification.student.father_phone}
             >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              WhatsApp Gönder
+              <Phone className="w-4 h-4 mr-2" />
+              Ara
             </Button>
           </div>
         </div>

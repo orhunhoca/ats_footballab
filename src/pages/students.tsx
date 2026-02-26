@@ -9,6 +9,7 @@ import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2, Aler
 import { studentService } from "@/services/studentService";
 import { StudentForm } from "@/components/students/StudentForm";
 import type { Tables } from "@/integrations/supabase/types";
+import { TableHead } from "@/components/ui/table";
 
 // Extend type locally until generated types catch up
 type Student = Tables<"students"> & {
@@ -233,26 +234,26 @@ export default function StudentsPage() {
                               </div>
                             )}
 
-                            {student.parent_phone && (
+                            {(student.mother_phone || student.father_phone) && (
                               <div className="flex items-center gap-2">
                                 <Phone className="w-4 h-4" />
-                                <span>Veli: {student.parent_phone}</span>
+                                <span>Tel: {student.mother_phone || student.father_phone}</span>
                               </div>
                             )}
                           </div>
 
                           {/* Mobile Contact Buttons */}
-                          {student.parent_phone && (
+                          {(student.mother_phone || student.father_phone) && (
                             <div className="flex items-center gap-2 mt-3">
                               <a
-                                href={`tel:${student.parent_phone}`}
+                                href={`tel:${student.mother_phone || student.father_phone}`}
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
                               >
                                 <Phone className="w-4 h-4" />
                                 <span>Ara</span>
                               </a>
                               <a
-                                href={`https://wa.me/${formatPhoneForWhatsApp(student.parent_phone)}`}
+                                href={`https://wa.me/90${(student.mother_phone || student.father_phone)?.replace(/\D/g, '')}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
