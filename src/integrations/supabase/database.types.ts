@@ -283,46 +283,42 @@ export type Database = {
       }
       performance_tests: {
         Row: {
+          ai_analysis: string | null
           created_at: string | null
-          created_by: string | null
           id: string
           notes: string | null
-          result_value: number | null
           student_id: string
           test_date: string
-          test_type: string
+          test_type: Database["public"]["Enums"]["test_type"]
+          unit: string
           updated_at: string | null
+          value: number
         }
         Insert: {
+          ai_analysis?: string | null
           created_at?: string | null
-          created_by?: string | null
           id?: string
           notes?: string | null
-          result_value?: number | null
           student_id: string
           test_date?: string
-          test_type: string
+          test_type: Database["public"]["Enums"]["test_type"]
+          unit: string
           updated_at?: string | null
+          value: number
         }
         Update: {
+          ai_analysis?: string | null
           created_at?: string | null
-          created_by?: string | null
           id?: string
           notes?: string | null
-          result_value?: number | null
           student_id?: string
           test_date?: string
-          test_type?: string
+          test_type?: Database["public"]["Enums"]["test_type"]
+          unit?: string
           updated_at?: string | null
+          value?: number
         }
         Relationships: [
-          {
-            foreignKeyName: "performance_tests_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "performance_tests_student_id_fkey"
             columns: ["student_id"]
@@ -654,7 +650,13 @@ export type Database = {
       check_registration_renewals: { Args: never; Returns: undefined }
     }
     Enums: {
-      [_ in never]: never
+      test_type:
+        | "10m_dribbling"
+        | "20m_sprint"
+        | "shooting_accuracy"
+        | "passing_accuracy"
+        | "dribbling_cone"
+        | "coordination"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -781,6 +783,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      test_type: [
+        "10m_dribbling",
+        "20m_sprint",
+        "shooting_accuracy",
+        "passing_accuracy",
+        "dribbling_cone",
+        "coordination",
+      ],
+    },
   },
 } as const
