@@ -396,6 +396,7 @@ export type Database = {
           payment_plan: string | null
           payment_status: string | null
           phone: string | null
+          photo_url: string | null
           registration_end_date: string | null
           registration_start_date: string | null
           registration_type: string | null
@@ -429,6 +430,7 @@ export type Database = {
           payment_plan?: string | null
           payment_status?: string | null
           phone?: string | null
+          photo_url?: string | null
           registration_end_date?: string | null
           registration_start_date?: string | null
           registration_type?: string | null
@@ -462,6 +464,7 @@ export type Database = {
           payment_plan?: string | null
           payment_status?: string | null
           phone?: string | null
+          photo_url?: string | null
           registration_end_date?: string | null
           registration_start_date?: string | null
           registration_type?: string | null
@@ -475,6 +478,59 @@ export type Database = {
           work_group_hour?: string | null
         }
         Relationships: []
+      }
+      trial_students: {
+        Row: {
+          age_group: string | null
+          assigned_group_id: string | null
+          birth_date: string
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          parent_name: string
+          parent_phone: string
+          status: string | null
+          trial_date: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          age_group?: string | null
+          assigned_group_id?: string | null
+          birth_date: string
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          parent_name: string
+          parent_phone: string
+          status?: string | null
+          trial_date?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          age_group?: string | null
+          assigned_group_id?: string | null
+          birth_date?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          parent_name?: string
+          parent_phone?: string
+          status?: string | null
+          trial_date?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_students_assigned_group_id_fkey"
+            columns: ["assigned_group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       users: {
         Row: {

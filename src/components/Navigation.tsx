@@ -29,6 +29,7 @@ export function Navigation() {
 
   const menuItems = [
     { href: "/students", label: "Öğrenciler", icon: Users },
+    { href: "/trial-students", label: "Deneme Öğrencileri", icon: Users },
     { href: "/groups", label: "Gruplar", icon: Users },
     { href: "/coaches", label: "Antrenörler", icon: UserCircle2 },
     { href: "/attendance", label: "Yoklama", icon: CalendarCheck },
