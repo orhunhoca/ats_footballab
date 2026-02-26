@@ -27,15 +27,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { Tables } from "@/integrations/supabase/types";
+
+// Use profiles table type instead of users
+type Profile = Tables<"profiles">;
 
 export default function SettingsPage() {
   const { toast } = useToast();
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
   const [settings, setSettings] = useState<Setting[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingPlan, setEditingPlan] = useState<PaymentPlan | null>(null);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
   const [isUserDialogOpen, setIsUserDialogOpen] = useState(false);
   const [isNewPlan, setIsNewPlan] = useState(false);
@@ -54,10 +58,9 @@ export default function SettingsPage() {
   // Form state for user
   const [userForm, setUserForm] = useState({
     full_name: "",
-    username: "",
+    email: "",
     password: "",
     role: "coach" as "admin" | "coach",
-    is_active: true,
   });
 
   useEffect(() => {
@@ -191,23 +194,21 @@ export default function SettingsPage() {
     setEditingUser(null);
     setUserForm({
       full_name: "",
-      username: "",
+      email: "",
       password: "",
       role: "coach",
-      is_active: true,
     });
     setIsUserDialogOpen(true);
   };
 
-  const openEditUserDialog = (user: User) => {
+  const openEditUserDialog = (user: Profile) => {
     setIsNewUser(false);
     setEditingUser(user);
     setUserForm({
-      full_name: user.full_name,
-      username: user.username,
+      full_name: user.full_name || "",
+      email: user.email || "",
       password: "",
       role: user.role as "admin" | "coach",
-      is_active: user.is_active,
     });
     setIsUserDialogOpen(true);
   };
@@ -231,14 +232,25 @@ export default function SettingsPage() {
       } else if (editingUser) {
         const updateData: any = {
           full_name: userForm.full_name,
-          username: userForm.username,
           role: userForm.role,
-          is_active: userForm.is_active,
         };
-        if (userForm.password) {
-          updateData.password = userForm.password;
-        }
+        
+        // Update profile data
         await userService.updateUser(editingUser.id, updateData);
+        
+        // If password is provided, update it separately via Auth API (handled in service or edge function ideally)
+        // For now, note that password update for OTHER users usually requires admin API or edge function
+        if (userForm.password) {
+             console.log("Password update requested - requires admin privileges");
+             // In a client-side only app, updating another user's password is restricted. 
+             // We would need a Supabase Edge Function for this.
+             toast({
+                title: "Bilgi",
+                description: "Kullanıcı şifresi güncelleme şu an sadece kullanıcı tarafından yapılabilir.",
+                variant: "default"
+             });
+        }
+        
         toast({
           title: "Başarılı",
           description: "Kullanıcı güncellendi",
@@ -370,12 +382,9 @@ export default function SettingsPage() {
                               <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
                                 {user.role === 'admin' ? 'Admin' : 'Antrenör'}
                               </Badge>
-                              {!user.is_active && (
-                                <Badge variant="outline">Pasif</Badge>
-                              )}
                             </div>
                             <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                              @{user.username}
+                              {user.email}
                             </p>
                           </div>
                         </div>
@@ -624,12 +633,14 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="user-username">Kullanıcı Adı</Label>
+              <Label htmlFor="user-email">E-posta</Label>
               <Input
-                id="user-username"
-                placeholder="Örn: ahmet.yilmaz"
-                value={userForm.username}
-                onChange={(e) => setUserForm({ ...userForm, username: e.target.value })}
+                id="user-email"
+                type="email"
+                placeholder="Örn: ahmet@sportex.com"
+                value={userForm.email}
+                onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                disabled={!isNewUser}
               />
             </div>
             <div className="space-y-2">
@@ -658,14 +669,6 @@ export default function SettingsPage() {
                   <SelectItem value="coach">Antrenör</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex items-center justify-between">
-              <Label htmlFor="user-active">Aktif</Label>
-              <Switch
-                id="user-active"
-                checked={userForm.is_active}
-                onCheckedChange={(checked) => setUserForm({ ...userForm, is_active: checked })}
-              />
             </div>
           </div>
           <DialogFooter>

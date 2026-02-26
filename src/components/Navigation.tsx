@@ -11,20 +11,36 @@ export function Navigation() {
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    setCurrentUser(userService.getCurrentUser());
-    setIsAdmin(userService.isAdmin());
+    const checkAdmin = async () => {
+      try {
+        const adminStatus = await userService.isAdmin();
+        setIsAdmin(adminStatus);
+      } catch (error) {
+        console.error("Error checking admin status:", error);
+        setIsAdmin(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAdmin();
   }, []);
 
-  const handleLogout = () => {
-    userService.logout();
-    toast({
-      title: "Çıkış Yapıldı",
-      description: "Başarıyla çıkış yaptınız.",
-    });
-    router.push("/login");
+  const handleLogout = async () => {
+    try {
+      await userService.logout();
+      toast({
+        title: "Çıkış Yapıldı",
+        description: "Başarıyla çıkış yaptınız.",
+      });
+      router.push("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const menuItems = [
