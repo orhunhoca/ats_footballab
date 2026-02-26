@@ -159,7 +159,7 @@ export const studentService = {
 
     const { data, error } = await supabase
       .from("students")
-      .select("payment_amount, registration_type, created_at, clothing_payment_status")
+      .select("payment_amount, registration_type, created_at, summer_clothing_paid, winter_clothing_paid, summer_clothing_price, winter_clothing_price")
       .gte("created_at", startDate.toISOString());
 
     if (error) {
@@ -189,9 +189,17 @@ export const studentService = {
         report.renewalsCount++;
       }
 
-      if (student.clothing_payment_status === "Ödendi") {
-        report.clothingRevenue += 3000;
-        report.totalRevenue += 3000;
+      // Calculate clothing revenue separately
+      if (student.summer_clothing_paid) {
+        const summerPrice = Number(student.summer_clothing_price) || 3000;
+        report.clothingRevenue += summerPrice;
+        report.totalRevenue += summerPrice;
+      }
+      
+      if (student.winter_clothing_paid) {
+        const winterPrice = Number(student.winter_clothing_price) || 3000;
+        report.clothingRevenue += winterPrice;
+        report.totalRevenue += winterPrice;
       }
     });
 
@@ -219,5 +227,27 @@ export const studentService = {
       active: activeCount || 0,
       inactive: (totalCount || 0) - (activeCount || 0)
     };
+  },
+
+  // Get students with expiring registrations (within X days)
+  async getExpiringRegistrations(daysThreshold: number = 20) {
+    const today = new Date();
+    const futureDate = new Date();
+    futureDate.setDate(today.getDate() + daysThreshold);
+    
+    const { data, error } = await supabase
+      .from("students")
+      .select("id, name, registration_end_date, mother_phone, father_phone")
+      .eq("status", "Aktif")
+      .lte("registration_end_date", futureDate.toISOString().split('T')[0])
+      .gte("registration_end_date", today.toISOString().split('T')[0]) // Don't show already expired ones in this specific list if preferred, or remove this line to show all expired
+      .order("registration_end_date", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching expiring registrations:", error);
+      throw error;
+    }
+
+    return data || [];
   }
 };

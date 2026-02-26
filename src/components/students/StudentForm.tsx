@@ -294,7 +294,13 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         payment_plan: "",
         payment_amount: "",
         clothing_payment_status: "Ödenmedi",
-        payment_status: "Bekliyor"
+        payment_status: "Bekliyor",
+        registration_start_date: new Date().toISOString().split('T')[0],
+        registration_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        summer_clothing_paid: false,
+        winter_clothing_paid: false,
+        summer_clothing_price: "3000",
+        winter_clothing_price: "3000"
       });
       setSelectedPlan(null);
       
