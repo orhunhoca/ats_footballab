@@ -45,7 +45,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     birth_date: "",
     height_cm: "",
     weight_kg: "",
-    school_name: "",
+    school: "",
     mother_name: "",
     mother_phone: "",
     father_name: "",
@@ -79,7 +79,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           birth_date: student.birth_date || "",
           height_cm: student.height_cm?.toString() || "",
           weight_kg: student.weight_kg?.toString() || "",
-          school_name: student.school_name || "",
+          school: student.school || "",
           mother_name: student.mother_name || "",
           mother_phone: student.mother_phone || "",
           father_name: student.father_name || "",
@@ -111,7 +111,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           birth_date: "",
           height_cm: "",
           weight_kg: "",
-          school_name: "",
+          school: "",
           mother_name: "",
           mother_phone: "",
           father_name: "",
@@ -313,7 +313,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         age: age,
         height_cm: formData.height_cm ? parseInt(formData.height_cm) : null,
         weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : null,
-        school_name: formData.school_name || null,
+        school: formData.school || null,
         mother_name: formData.mother_name || null,
         mother_phone: formData.mother_phone || null,
         father_name: formData.father_name || null,
@@ -395,7 +395,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         birth_date: "",
         height_cm: "",
         weight_kg: "",
-        school_name: "",
+        school: "",
         mother_name: "",
         mother_phone: "",
         father_name: "",
@@ -534,8 +534,8 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
               <div className="space-y-2 col-span-2">
                 <Label>Okul</Label>
                 <Select 
-                  onValueChange={v => setFormData({...formData, school_name: v})}
-                  value={formData.school_name}
+                  onValueChange={v => setFormData({...formData, school: v})}
+                  value={formData.school}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Okul Seçin veya Yazın" />
@@ -553,8 +553,8 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 </Select>
                 <Input 
                   placeholder="veya yeni okul adı yazın"
-                  value={formData.school_name}
-                  onChange={e => setFormData({...formData, school_name: e.target.value})}
+                  value={formData.school}
+                  onChange={e => setFormData({...formData, school: e.target.value})}
                   className="mt-2"
                 />
               </div>
