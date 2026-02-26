@@ -13,9 +13,10 @@ interface StudentFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  student?: Tables<"students"> | null;
 }
 
-export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps) {
+export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
@@ -41,8 +42,46 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
   useEffect(() => {
     if (open) {
       loadPaymentPlans();
+      
+      // If editing, load student data into form
+      if (student) {
+        setFormData({
+          name: student.name || "",
+          birth_date: student.birth_date || "",
+          mother_name: student.mother_name || "",
+          mother_phone: student.mother_phone || "",
+          father_name: student.father_name || "",
+          father_phone: student.father_phone || "",
+          clothing_size: student.clothing_size || "",
+          work_group_hour: student.work_group_hour || "",
+          health_report_submitted: student.health_report_submitted || false,
+          registration_type: student.registration_type || "Yeni Kayıt",
+          payment_plan: student.payment_plan || "",
+          payment_amount: student.payment_amount?.toString() || "",
+          clothing_payment_status: student.clothing_payment_status || "Ödenmedi",
+          payment_status: student.payment_status || "Bekliyor"
+        });
+      } else {
+        // Reset form for new student
+        setFormData({
+          name: "",
+          birth_date: "",
+          mother_name: "",
+          mother_phone: "",
+          father_name: "",
+          father_phone: "",
+          clothing_size: "",
+          work_group_hour: "",
+          health_report_submitted: false,
+          registration_type: "Yeni Kayıt",
+          payment_plan: "",
+          payment_amount: "",
+          clothing_payment_status: "Ödenmedi",
+          payment_status: "Bekliyor"
+        });
+      }
     }
-  }, [open]);
+  }, [open, student]);
 
   const loadPaymentPlans = async () => {
     try {
@@ -127,7 +166,7 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
 
       const age = calculateAge(formData.birth_date);
 
-      await studentService.createStudent({
+      const studentData = {
         name: formData.name,
         birth_date: formData.birth_date,
         age: age,
@@ -149,12 +188,23 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
         membership_end_date: membershipEndDate,
         second_installment_amount: secondInstallmentAmount || null,
         installment_date: installmentDate
-      });
+      };
 
-      toast({
-        title: "Başarılı",
-        description: "Öğrenci kaydı oluşturuldu.",
-      });
+      if (student) {
+        // Update existing student
+        await studentService.updateStudent(student.id, studentData);
+        toast({
+          title: "Başarılı",
+          description: "Öğrenci bilgileri güncellendi.",
+        });
+      } else {
+        // Create new student
+        await studentService.createStudent(studentData);
+        toast({
+          title: "Başarılı",
+          description: "Öğrenci kaydı oluşturuldu.",
+        });
+      }
       
       setFormData({
         name: "",
@@ -177,10 +227,10 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Student creation error:", error);
+      console.error("Student operation error:", error);
       toast({
         title: "Hata",
-        description: error?.message || "Kayıt oluşturulurken bir hata oluştu.",
+        description: error?.message || "İşlem sırasında bir hata oluştu.",
         variant: "destructive"
       });
     } finally {
@@ -197,7 +247,7 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Yeni Öğrenci Kaydı</DialogTitle>
+          <DialogTitle>{student ? "Öğrenci Bilgilerini Düzenle" : "Yeni Öğrenci Kaydı"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Öğrenci Bilgileri */}
@@ -398,7 +448,7 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
             <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700">
-              {loading ? "Kaydediliyor..." : "Kaydı Tamamla"}
+              {loading ? (student ? "Güncelleniyor..." : "Kaydediliyor...") : (student ? "Güncelle" : "Kaydı Tamamla")}
             </Button>
           </DialogFooter>
         </form>

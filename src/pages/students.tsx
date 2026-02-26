@@ -27,6 +27,7 @@ export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ active: 0, inactive: 0 });
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
 
   useEffect(() => {
     loadStudents();
@@ -244,23 +245,53 @@ export default function StudentsPage() {
 
                           {/* Mobile Contact Buttons */}
                           {(student.mother_phone || student.father_phone) && (
-                            <div className="flex items-center gap-2 mt-3">
-                              <a
-                                href={`tel:${student.mother_phone || student.father_phone}`}
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
-                              >
-                                <Phone className="w-4 h-4" />
-                                <span>Ara</span>
-                              </a>
-                              <a
-                                href={`https://wa.me/90${(student.mother_phone || student.father_phone)?.replace(/\D/g, '')}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-sm font-medium"
-                              >
-                                <MessageCircle className="w-4 h-4" />
-                                <span>WhatsApp</span>
-                              </a>
+                            <div className="flex flex-col gap-2 mt-3">
+                              {student.mother_phone && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500 w-16">Anne:</span>
+                                  <div className="flex gap-2">
+                                    <a
+                                      href={`tel:${student.mother_phone}`}
+                                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs font-medium"
+                                    >
+                                      <Phone className="w-3 h-3" />
+                                      <span>Ara</span>
+                                    </a>
+                                    <a
+                                      href={`https://wa.me/90${student.mother_phone.replace(/\D/g, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-xs font-medium"
+                                    >
+                                      <MessageCircle className="w-3 h-3" />
+                                      <span>WhatsApp</span>
+                                    </a>
+                                  </div>
+                                </div>
+                              )}
+                              {student.father_phone && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs text-gray-500 w-16">Baba:</span>
+                                  <div className="flex gap-2">
+                                    <a
+                                      href={`tel:${student.father_phone}`}
+                                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-xs font-medium"
+                                    >
+                                      <Phone className="w-3 h-3" />
+                                      <span>Ara</span>
+                                    </a>
+                                    <a
+                                      href={`https://wa.me/90${student.father_phone.replace(/\D/g, '')}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors text-xs font-medium"
+                                    >
+                                      <MessageCircle className="w-3 h-3" />
+                                      <span>WhatsApp</span>
+                                    </a>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -276,7 +307,10 @@ export default function StudentsPage() {
                          <div className="text-xs text-gray-500">
                            {student.payment_plan}
                          </div>
-                         <Button variant="outline" size="sm" className="mt-2">
+                         <Button variant="outline" size="sm" className="mt-2" onClick={() => {
+                           setEditingStudent(student);
+                           setIsFormOpen(true);
+                         }}>
                             Düzenle
                          </Button>
                       </div>
@@ -304,10 +338,15 @@ export default function StudentsPage() {
         
         <StudentForm 
           open={isFormOpen} 
-          onOpenChange={setIsFormOpen} 
+          onOpenChange={(open) => {
+            setIsFormOpen(open);
+            if (!open) setEditingStudent(null);
+          }}
+          student={editingStudent}
           onSuccess={() => {
             loadStudents();
             loadStats();
+            setEditingStudent(null);
           }} 
         />
       </div>

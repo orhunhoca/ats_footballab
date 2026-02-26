@@ -224,46 +224,75 @@ export default function NotificationsPage() {
               <p className="text-sm text-muted-foreground">{notification.message}</p>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 {(notification.student.mother_name || notification.student.father_name) && (
-                  <>
-                    <span>Veli: {notification.student.mother_name || notification.student.father_name}</span>
-                    <span>•</span>
-                    <span>{notification.student.mother_phone || notification.student.father_phone}</span>
-                  </>
+                  <div className="flex flex-col gap-1">
+                    {notification.student.mother_name && notification.student.mother_phone && (
+                      <div>
+                        <span>Anne: {notification.student.mother_name}</span>
+                        <span className="ml-2">({notification.student.mother_phone})</span>
+                      </div>
+                    )}
+                    {notification.student.father_name && notification.student.father_phone && (
+                      <div>
+                        <span>Baba: {notification.student.father_name}</span>
+                        <span className="ml-2">({notification.student.father_phone})</span>
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             </div>
           </div>
           <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start text-green-600 hover:text-green-700 hover:bg-green-50"
-              onClick={() => {
-                const phone = notification.student.mother_phone || notification.student.father_phone;
-                if (phone) {
-                  window.open(`https://wa.me/90${phone.replace(/\s/g, '')}?text=${encodeURIComponent(notification.message)}`, '_blank');
-                }
-              }}
-              disabled={!notification.student.mother_phone && !notification.student.father_phone}
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              WhatsApp
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full justify-start"
-              onClick={() => {
-                const phone = notification.student.mother_phone || notification.student.father_phone;
-                if (phone) {
-                  window.location.href = `tel:${phone}`;
-                }
-              }}
-              disabled={!notification.student.mother_phone && !notification.student.father_phone}
-            >
-              <Phone className="w-4 h-4 mr-2" />
-              Ara
-            </Button>
+            {notification.student.mother_phone && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start text-green-600 hover:text-green-700 hover:bg-green-50"
+                  onClick={() => {
+                    window.open(`https://wa.me/90${notification.student.mother_phone?.replace(/\D/g, '')}?text=${encodeURIComponent(notification.message)}`, '_blank');
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Anne WA
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    window.location.href = `tel:${notification.student.mother_phone}`;
+                  }}
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Anne Ara
+                </Button>
+              </>
+            )}
+            {notification.student.father_phone && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="justify-start text-green-600 hover:text-green-700 hover:bg-green-50"
+                  onClick={() => {
+                    window.open(`https://wa.me/90${notification.student.father_phone?.replace(/\D/g, '')}?text=${encodeURIComponent(notification.message)}`, '_blank');
+                  }}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Baba WA
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    window.location.href = `tel:${notification.student.father_phone}`;
+                  }}
+                >
+                  <Phone className="w-4 h-4 mr-2" />
+                  Baba Ara
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </CardContent>
