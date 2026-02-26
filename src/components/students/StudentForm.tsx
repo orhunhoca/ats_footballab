@@ -290,6 +290,23 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     setLoading(true);
 
     try {
+      // Check if school is new and add it to schools table if so
+      if (formData.school && !schools.includes(formData.school)) {
+        const { error: schoolError } = await supabase
+          .from('schools')
+          .insert({ name: formData.school })
+          .select()
+          .single();
+          
+        if (!schoolError) {
+          // Update local schools list without reloading
+          setSchools(prev => [...prev, formData.school].sort());
+        } else {
+          console.error("Error adding new school:", schoolError);
+          // Continue anyway, just log the error
+        }
+      }
+
       let membershipEndDate = null;
       let secondInstallmentAmount = 0;
       let installmentDate = null;
