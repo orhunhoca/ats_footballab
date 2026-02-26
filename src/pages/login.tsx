@@ -60,8 +60,12 @@ export default function LoginPage() {
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-xl">
           <CardHeader className="space-y-4 text-center">
-            <div className="mx-auto bg-gradient-to-br from-green-500 to-blue-600 p-4 rounded-2xl w-16 h-16 flex items-center justify-center shadow-lg">
-              <Trophy className="w-8 h-8 text-white" />
+            <div className="mx-auto w-48 h-24 relative flex items-center justify-center mb-2">
+              <img 
+                src="/sportex-logo.png" 
+                alt="Sportex Logo" 
+                className="object-contain w-full h-full"
+              />
             </div>
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
               Sportex Futbol Okulu
