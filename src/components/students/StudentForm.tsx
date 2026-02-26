@@ -117,21 +117,24 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
   // Auto-assign group based on birth year
   useEffect(() => {
-    if (formData.birth_date && !student) { // Only for new records or if explicitly needed
+    if (formData.birth_date && !student) { 
       const birthYear = new Date(formData.birth_date).getFullYear().toString();
       
-      const matchingGroup = groups.find(g => 
-        g.target_years?.split(',').map((y: string) => y.trim()).includes(birthYear)
+      const matchingGroups = groups.filter(g => 
+        g.target_years?.split(',').map((y: string) => y.trim()).includes(birthYear) && g.work_hour
       );
 
-      if (matchingGroup && matchingGroup.work_hour) {
+      if (matchingGroups.length > 0) {
+        // If exact matches found, prefer them
+        const bestMatch = matchingGroups[0];
         setFormData(prev => ({
           ...prev,
-          work_group_hour: matchingGroup.work_hour
+          work_group_hour: bestMatch.work_hour
         }));
+        
         toast({
           title: "Otomatik Atama",
-          description: `${birthYear} doğumlu öğrenci için ${matchingGroup.name} (${matchingGroup.work_hour}) seçildi.`,
+          description: `${birthYear} doğumlu öğrenci için ${matchingGroups.length} uygun grup bulundu. En uygun saat seçildi.`,
         });
       }
     }
@@ -331,6 +334,20 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                     <SelectValue placeholder="Saat Seçin" />
                   </SelectTrigger>
                   <SelectContent>
+                    {/* Show available groups based on birth year first */}
+                    {groups
+                      .filter(g => !formData.birth_date || g.target_years?.includes(new Date(formData.birth_date).getFullYear().toString()))
+                      .filter(g => g.work_hour)
+                      .map(group => (
+                        <SelectItem key={group.id} value={group.work_hour}>
+                          {group.name} ({group.work_hour})
+                        </SelectItem>
+                    ))}
+                    
+                    {/* Separator if needed */}
+                    {groups.length > 0 && <div className="h-px bg-gray-100 my-1" />}
+                    
+                    {/* Fallback to standard hours */}
                     {workHours.map(hour => (
                       <SelectItem key={hour} value={hour}>{hour}</SelectItem>
                     ))}
