@@ -10,6 +10,7 @@ import { studentService } from "@/services/studentService";
 import { groupService } from "@/services/groupService";
 import { storageService } from "@/services/storageService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Camera, Upload, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -32,6 +33,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   const [loading, setLoading] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
+  const [schools, setSchools] = useState<string[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
@@ -41,6 +43,9 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   const [formData, setFormData] = useState({
     name: "",
     birth_date: "",
+    height_cm: "",
+    weight_kg: "",
+    school_name: "",
     mother_name: "",
     mother_phone: "",
     father_name: "",
@@ -65,12 +70,16 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     if (open) {
       loadPaymentPlans();
       loadGroups();
+      loadSchools();
       
       // If editing, load student data into form
       if (student) {
         setFormData({
           name: student.name || "",
           birth_date: student.birth_date || "",
+          height_cm: student.height_cm?.toString() || "",
+          weight_kg: student.weight_kg?.toString() || "",
+          school_name: student.school_name || "",
           mother_name: student.mother_name || "",
           mother_phone: student.mother_phone || "",
           father_name: student.father_name || "",
@@ -100,6 +109,9 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         setFormData({
           name: "",
           birth_date: "",
+          height_cm: "",
+          weight_kg: "",
+          school_name: "",
           mother_name: "",
           mother_phone: "",
           father_name: "",
@@ -123,6 +135,20 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       }
     }
   }, [open, student]);
+
+  const loadSchools = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('schools')
+        .select('name')
+        .order('name');
+      
+      if (error) throw error;
+      setSchools(data?.map(s => s.name) || []);
+    } catch (error) {
+      console.error("Okullar yüklenemedi:", error);
+    }
+  };
 
   const loadGroups = async () => {
     try {
@@ -285,6 +311,9 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         name: formData.name,
         birth_date: formData.birth_date,
         age: age,
+        height_cm: formData.height_cm ? parseInt(formData.height_cm) : null,
+        weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : null,
+        school_name: formData.school_name || null,
         mother_name: formData.mother_name || null,
         mother_phone: formData.mother_phone || null,
         father_name: formData.father_name || null,
@@ -364,6 +393,9 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       setFormData({
         name: "",
         birth_date: "",
+        height_cm: "",
+        weight_kg: "",
+        school_name: "",
         mother_name: "",
         mother_phone: "",
         father_name: "",
@@ -478,6 +510,52 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                   required
                   value={formData.birth_date}
                   onChange={e => setFormData({...formData, birth_date: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Boy (cm)</Label>
+                <Input 
+                  type="number"
+                  placeholder="Örn: 145"
+                  value={formData.height_cm}
+                  onChange={e => setFormData({...formData, height_cm: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Kilo (kg)</Label>
+                <Input 
+                  type="number"
+                  step="0.1"
+                  placeholder="Örn: 38.5"
+                  value={formData.weight_kg}
+                  onChange={e => setFormData({...formData, weight_kg: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2 col-span-2">
+                <Label>Okul</Label>
+                <Select 
+                  onValueChange={v => setFormData({...formData, school_name: v})}
+                  value={formData.school_name}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Okul Seçin veya Yazın" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {schools.length === 0 && (
+                      <SelectItem value="__new__" disabled>
+                        Henüz okul eklenmemiş
+                      </SelectItem>
+                    )}
+                    {schools.map(school => (
+                      <SelectItem key={school} value={school}>{school}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input 
+                  placeholder="veya yeni okul adı yazın"
+                  value={formData.school_name}
+                  onChange={e => setFormData({...formData, school_name: e.target.value})}
+                  className="mt-2"
                 />
               </div>
               <div className="space-y-2">

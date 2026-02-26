@@ -281,6 +281,57 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_tests: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          notes: string | null
+          result_value: number | null
+          student_id: string
+          test_date: string
+          test_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          result_value?: number | null
+          student_id: string
+          test_date?: string
+          test_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          result_value?: number | null
+          student_id?: string
+          test_date?: string
+          test_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "performance_tests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_tests_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -307,6 +358,30 @@ export type Database = {
           full_name?: string | null
           id?: string
           role?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      schools: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -386,6 +461,7 @@ export type Database = {
           father_name: string | null
           father_phone: string | null
           health_report_submitted: boolean | null
+          height_cm: number | null
           id: string
           installment_date: string | null
           membership_end_date: string | null
@@ -400,11 +476,13 @@ export type Database = {
           registration_end_date: string | null
           registration_start_date: string | null
           registration_type: string | null
+          school: string | null
           second_installment_amount: number | null
           status: string | null
           summer_clothing_paid: boolean | null
           summer_clothing_price: number | null
           updated_at: string | null
+          weight_kg: number | null
           winter_clothing_paid: boolean | null
           winter_clothing_price: number | null
           work_group_hour: string | null
@@ -420,6 +498,7 @@ export type Database = {
           father_name?: string | null
           father_phone?: string | null
           health_report_submitted?: boolean | null
+          height_cm?: number | null
           id?: string
           installment_date?: string | null
           membership_end_date?: string | null
@@ -434,11 +513,13 @@ export type Database = {
           registration_end_date?: string | null
           registration_start_date?: string | null
           registration_type?: string | null
+          school?: string | null
           second_installment_amount?: number | null
           status?: string | null
           summer_clothing_paid?: boolean | null
           summer_clothing_price?: number | null
           updated_at?: string | null
+          weight_kg?: number | null
           winter_clothing_paid?: boolean | null
           winter_clothing_price?: number | null
           work_group_hour?: string | null
@@ -454,6 +535,7 @@ export type Database = {
           father_name?: string | null
           father_phone?: string | null
           health_report_submitted?: boolean | null
+          height_cm?: number | null
           id?: string
           installment_date?: string | null
           membership_end_date?: string | null
@@ -468,11 +550,13 @@ export type Database = {
           registration_end_date?: string | null
           registration_start_date?: string | null
           registration_type?: string | null
+          school?: string | null
           second_installment_amount?: number | null
           status?: string | null
           summer_clothing_paid?: boolean | null
           summer_clothing_price?: number | null
           updated_at?: string | null
+          weight_kg?: number | null
           winter_clothing_paid?: boolean | null
           winter_clothing_price?: number | null
           work_group_hour?: string | null
