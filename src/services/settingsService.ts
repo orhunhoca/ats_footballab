@@ -97,6 +97,37 @@ export const settingsService = {
     }
   },
 
+  // Get all schools
+  async getSchools() {
+    const { data, error } = await supabase
+      .from("schools")
+      .select("*")
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching schools:", error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  // Add new school
+  async addSchool(name: string) {
+    const { data, error } = await supabase
+      .from("schools")
+      .insert({ name })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding school:", error);
+      throw error;
+    }
+
+    return data;
+  },
+
   // Settings
   async getSetting(key: string): Promise<string | null> {
     const { data, error } = await supabase

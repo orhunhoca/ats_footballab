@@ -63,6 +63,7 @@ export default function PerformancePage() {
   const [isLoadingTests, setIsLoadingTests] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
+  const [isLoadingStudents, setIsLoadingStudents] = useState(true);
 
   useEffect(() => {
     loadStudents();
@@ -75,11 +76,27 @@ export default function PerformancePage() {
   }, [selectedStudent]);
 
   const loadStudents = async () => {
+    setIsLoadingStudents(true);
     try {
       const data = await studentService.getAllStudents();
+      console.log("📚 Loaded students:", data.length, data);
       setStudents(data);
+      
+      if (data.length === 0) {
+        toast({
+          title: "Bilgi",
+          description: "Henüz kayıtlı öğrenci bulunmamaktadır.",
+        });
+      }
     } catch (error) {
-      console.error("Error loading students:", error);
+      console.error("❌ Error loading students:", error);
+      toast({
+        title: "Hata",
+        description: "Öğrenciler yüklenirken bir hata oluştu.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingStudents(false);
     }
   };
 
@@ -224,18 +241,28 @@ export default function PerformancePage() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                  {filteredStudents.map((student) => (
-                    <Button
-                      key={student.id}
-                      variant={
-                        selectedStudent?.id === student.id ? "default" : "outline"
-                      }
-                      className="w-full justify-start"
-                      onClick={() => setSelectedStudent(student)}
-                    >
-                      {student.name}
-                    </Button>
-                  ))}
+                  {isLoadingStudents ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    </div>
+                  ) : filteredStudents.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">
+                      {searchQuery ? "Öğrenci bulunamadı" : "Henüz kayıtlı öğrenci yok"}
+                    </div>
+                  ) : (
+                    filteredStudents.map((student) => (
+                      <Button
+                        key={student.id}
+                        variant={
+                          selectedStudent?.id === student.id ? "default" : "outline"
+                        }
+                        className="w-full justify-start"
+                        onClick={() => setSelectedStudent(student)}
+                      >
+                        {student.name}
+                      </Button>
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
