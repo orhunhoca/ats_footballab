@@ -8,8 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, Users, CheckCircle2, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { attendanceService } from "@/services/attendanceService";
-import { studentService } from "@/services/studentService";
 import { groupService } from "@/services/groupService";
+import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -55,15 +55,38 @@ export default function AttendancePage() {
   const loadStudents = async () => {
     try {
       setLoading(true);
-      const allStudents = await studentService.getAllStudents();
       
-      // Filter students by selected group
-      const groupStudents = allStudents.filter(student => 
-        student.student_groups?.some((sg: any) => sg.groups?.id === selectedGroup)
-      );
+      // Query students through student_groups junction table
+      const { data, error } = await supabase
+        .from("student_groups")
+        .select(`
+          student_id,
+          students (
+            id,
+            first_name,
+            last_name,
+            age,
+            phone,
+            parent_phone,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq("group_id", selectedGroup);
+
+      if (error) {
+        console.error("Error loading students:", error);
+        throw error;
+      }
+
+      // Extract student objects from the junction table results
+      const studentList = data
+        ?.map(item => item.students)
+        .filter((s): s is Student => s !== null) || [];
       
-      setStudents(groupStudents);
+      setStudents(studentList);
     } catch (error) {
+      console.error("Error:", error);
       toast({
         title: "Hata",
         description: "Öğrenciler yüklenirken bir hata oluştu",
@@ -81,7 +104,6 @@ export default function AttendancePage() {
       
       const attendanceMap: Record<string, boolean> = {};
       records.forEach(record => {
-        // Map 'present' status to true, others to false
         attendanceMap[record.student_id] = record.status === 'present';
       });
       
@@ -112,24 +134,29 @@ export default function AttendancePage() {
       setSaving(true);
       const dateStr = date.toISOString().split('T')[0];
 
-      // Save attendance for each student
-      for (const student of students) {
-        const status = attendance[student.id] ? 'present' : 'absent';
-        
-        // Check if record exists to update or insert
-        // For simplicity in this implementation, we'll just insert/upsert if the service supports it
-        // Or we can delete existing for this day/student and insert new
-        // Ideally attendanceService.markAttendance should handle upsert
-        
-        // Since markAttendance uses insert, let's assume we need to check existence first or use an upsert method
-        // But for now, fixing the parameter error:
-        await attendanceService.markAttendance({
-          student_id: student.id,
-          group_id: selectedGroup,
-          attendance_date: dateStr,
-          status: status,
-          notes: ""
-        });
+      // Delete existing attendance records for this date and group
+      const { error: deleteError } = await supabase
+        .from("attendance")
+        .delete()
+        .eq("attendance_date", dateStr)
+        .eq("group_id", selectedGroup);
+
+      if (deleteError) {
+        console.error("Error deleting old attendance:", deleteError);
+        throw deleteError;
+      }
+
+      // Create new attendance records
+      const attendanceRecords = students.map(student => ({
+        student_id: student.id,
+        group_id: selectedGroup,
+        attendance_date: dateStr,
+        status: attendance[student.id] ? 'present' : 'absent',
+        notes: ""
+      }));
+
+      if (attendanceRecords.length > 0) {
+        await attendanceService.bulkMarkAttendance(attendanceRecords);
       }
 
       toast({
@@ -232,7 +259,7 @@ export default function AttendancePage() {
                     <SelectContent>
                       {groups.map((group) => (
                         <SelectItem key={group.id} value={group.id}>
-                          {group.name} - {group.schedule || group.work_hour || ""}
+                          {group.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -264,10 +291,10 @@ export default function AttendancePage() {
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white font-bold">
-                            {student.name.charAt(0)}
+                            {student.first_name.charAt(0)}
                           </div>
                           <div>
-                            <p className="font-medium">{student.name}</p>
+                            <p className="font-medium">{student.first_name} {student.last_name}</p>
                             <p className="text-sm text-gray-500">Yaş: {student.age}</p>
                           </div>
                         </div>
