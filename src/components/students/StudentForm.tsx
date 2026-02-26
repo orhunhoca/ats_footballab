@@ -9,6 +9,7 @@ import { studentService } from "@/services/studentService";
 import { groupService } from "@/services/groupService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
 import { useToast } from "@/hooks/use-toast";
+import type { Tables } from "@/integrations/supabase/types";
 
 interface StudentFormProps {
   open: boolean;
