@@ -13,6 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -495,16 +499,20 @@ export default function PerformancePage() {
       </div>
 
       {/* Test Form Dialog */}
-      {selectedStudent && isFormOpen && (
-        <PerformanceTestForm
-          student={selectedStudent}
-          testProtocols={testProtocols}
-          onSuccess={() => {
-            loadTests();
-            setIsFormOpen(false);
-          }}
-          onCancel={() => setIsFormOpen(false)}
-        />
+      {selectedStudent && (
+        <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <PerformanceTestForm
+              student={selectedStudent}
+              testProtocols={testProtocols}
+              onSuccess={() => {
+                loadTests();
+                setIsFormOpen(false);
+              }}
+              onCancel={() => setIsFormOpen(false)}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );
