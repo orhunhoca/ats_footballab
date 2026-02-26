@@ -39,7 +39,13 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     payment_plan: "",
     payment_amount: "",
     clothing_payment_status: "Ödenmedi",
-    payment_status: "Bekliyor"
+    payment_status: "Bekliyor",
+    registration_start_date: new Date().toISOString().split('T')[0],
+    registration_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    summer_clothing_paid: false,
+    winter_clothing_paid: false,
+    summer_clothing_price: "3000",
+    winter_clothing_price: "3000"
   });
 
   useEffect(() => {
@@ -63,7 +69,13 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           payment_plan: student.payment_plan || "",
           payment_amount: student.payment_amount?.toString() || "",
           clothing_payment_status: student.clothing_payment_status || "Ödenmedi",
-          payment_status: student.payment_status || "Bekliyor"
+          payment_status: student.payment_status || "Bekliyor",
+          registration_start_date: student.registration_start_date || new Date().toISOString().split('T')[0],
+          registration_end_date: student.registration_end_date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          summer_clothing_paid: student.summer_clothing_paid || false,
+          winter_clothing_paid: student.winter_clothing_paid || false,
+          summer_clothing_price: student.summer_clothing_price?.toString() || "3000",
+          winter_clothing_price: student.winter_clothing_price?.toString() || "3000"
         });
       } else {
         // Reset form for new student
@@ -81,7 +93,13 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           payment_plan: "",
           payment_amount: "",
           clothing_payment_status: "Ödenmedi",
-          payment_status: "Bekliyor"
+          payment_status: "Bekliyor",
+          registration_start_date: new Date().toISOString().split('T')[0],
+          registration_end_date: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          summer_clothing_paid: false,
+          winter_clothing_paid: false,
+          summer_clothing_price: "3000",
+          winter_clothing_price: "3000"
         });
       }
     }
@@ -140,6 +158,18 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       }
     }
   }, [formData.birth_date, groups]);
+
+  // Auto-calculate end date when start date changes
+  useEffect(() => {
+    if (formData.registration_start_date) {
+      const startDate = new Date(formData.registration_start_date);
+      startDate.setFullYear(startDate.getFullYear() + 1);
+      setFormData(prev => ({
+        ...prev,
+        registration_end_date: startDate.toISOString().split('T')[0]
+      }));
+    }
+  }, [formData.registration_start_date]);
 
   const handlePaymentPlanChange = (value: string) => {
     if (value === "Bireysel" || value === "Atletik Performans") {
@@ -225,7 +255,13 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         status: "Aktif",
         membership_end_date: membershipEndDate,
         second_installment_amount: secondInstallmentAmount || null,
-        installment_date: installmentDate
+        installment_date: installmentDate,
+        registration_start_date: formData.registration_start_date,
+        registration_end_date: formData.registration_end_date,
+        summer_clothing_paid: formData.summer_clothing_paid,
+        winter_clothing_paid: formData.winter_clothing_paid,
+        summer_clothing_price: formData.summer_clothing_paid ? parseFloat(formData.summer_clothing_price) : null,
+        winter_clothing_price: formData.winter_clothing_paid ? parseFloat(formData.winter_clothing_price) : null
       };
 
       if (student) {
@@ -410,7 +446,31 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
           {/* Ödeme Bilgileri */}
           <div className="border-t pt-4">
-            <h3 className="font-semibold text-lg mb-3">Ödeme Bilgileri</h3>
+            <h3 className="font-semibold text-lg mb-3">Kayıt Bilgileri</h3>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="space-y-2">
+                <Label>Kayıt Başlangıç Tarihi *</Label>
+                <Input 
+                  type="date"
+                  required
+                  value={formData.registration_start_date}
+                  onChange={e => setFormData({...formData, registration_start_date: e.target.value})}
+                />
+                <p className="text-xs text-gray-500">Ödemelerin başlayacağı tarih</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Kayıt Bitiş Tarihi *</Label>
+                <Input 
+                  type="date"
+                  required
+                  value={formData.registration_end_date}
+                  onChange={e => setFormData({...formData, registration_end_date: e.target.value})}
+                />
+                <p className="text-xs text-gray-500">Otomatik: 1 yıl sonrası (değiştirilebilir)</p>
+              </div>
+            </div>
+            
+            <h3 className="font-semibold text-lg mb-3 mt-6">Ödeme Bilgileri</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Kayıt Tipi</Label>
@@ -473,21 +533,6 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>Kıyafet Ödemesi (3000 TL)</Label>
-                <Select 
-                  onValueChange={v => setFormData({...formData, clothing_payment_status: v})}
-                  value={formData.clothing_payment_status}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Ödenmedi">Ödenmedi</SelectItem>
-                    <SelectItem value="Ödendi">Ödendi</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             
             {selectedPlan?.installments && selectedPlan.installments > 1 && (
@@ -495,6 +540,81 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 ℹ️ 2. Taksit ({selectedPlan.installment_price?.toLocaleString('tr-TR')} TL) 45 gün sonrası için planlanacak.
               </div>
             )}
+          </div>
+
+          {/* Kıyafet Ödemeleri */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold text-lg mb-3">Kıyafet Ödemeleri</h3>
+            
+            <div className="space-y-4">
+              {/* Yazlık Kıyafet */}
+              <div className="border rounded-lg p-4 bg-amber-50">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox 
+                      id="summer_clothing"
+                      checked={formData.summer_clothing_paid}
+                      onCheckedChange={(checked) => 
+                        setFormData({...formData, summer_clothing_paid: checked as boolean})
+                      }
+                    />
+                    <Label htmlFor="summer_clothing" className="text-base font-medium cursor-pointer">
+                      Yazlık Kıyafet
+                    </Label>
+                  </div>
+                  {formData.summer_clothing_paid && (
+                    <span className="text-green-600 font-semibold">✓ Ödendi</span>
+                  )}
+                </div>
+                {formData.summer_clothing_paid && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Yazlık Kıyafet Tutarı (TL)</Label>
+                    <Input 
+                      type="number"
+                      value={formData.summer_clothing_price}
+                      onChange={e => setFormData({...formData, summer_clothing_price: e.target.value})}
+                      className="max-w-xs"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Kışlık Kıyafet */}
+              <div className="border rounded-lg p-4 bg-blue-50">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Checkbox 
+                      id="winter_clothing"
+                      checked={formData.winter_clothing_paid}
+                      onCheckedChange={(checked) => 
+                        setFormData({...formData, winter_clothing_paid: checked as boolean})
+                      }
+                    />
+                    <Label htmlFor="winter_clothing" className="text-base font-medium cursor-pointer">
+                      Kışlık Kıyafet
+                    </Label>
+                  </div>
+                  {formData.winter_clothing_paid && (
+                    <span className="text-green-600 font-semibold">✓ Ödendi</span>
+                  )}
+                </div>
+                {formData.winter_clothing_paid && (
+                  <div className="space-y-2">
+                    <Label className="text-sm">Kışlık Kıyafet Tutarı (TL)</Label>
+                    <Input 
+                      type="number"
+                      value={formData.winter_clothing_price}
+                      onChange={e => setFormData({...formData, winter_clothing_price: e.target.value})}
+                      className="max-w-xs"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+                💡 Her kıyafet tipi için ayrı ödeme takibi yapılır. Ciroda doğru hesaplama için kıyafet ödemelerini işaretleyiniz.
+              </div>
+            </div>
           </div>
 
           <DialogFooter className="mt-6">

@@ -19,6 +19,12 @@ type Student = Tables<"students"> & {
   payment_plan?: string;
   payment_status?: string;
   registration_type?: string;
+  registration_start_date?: string;
+  registration_end_date?: string;
+  summer_clothing_paid?: boolean;
+  winter_clothing_paid?: boolean;
+  summer_clothing_price?: number;
+  winter_clothing_price?: number;
 };
 
 export default function StudentsPage() {
@@ -236,6 +242,24 @@ export default function StudentsPage() {
                               <div className="flex items-center gap-2">
                                 <Shirt className="w-4 h-4" />
                                 <span>Beden: {student.clothing_size}</span>
+                              </div>
+                            )}
+
+                            {student.registration_end_date && (
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                <span>Bitiş: {new Date(student.registration_end_date).toLocaleDateString('tr-TR')}</span>
+                              </div>
+                            )}
+
+                            {(student.summer_clothing_paid || student.winter_clothing_paid) && (
+                              <div className="flex items-center gap-2 text-green-600">
+                                <Shirt className="w-4 h-4" />
+                                <span>
+                                  {student.summer_clothing_paid && "Yazlık ✓"}
+                                  {student.summer_clothing_paid && student.winter_clothing_paid && " • "}
+                                  {student.winter_clothing_paid && "Kışlık ✓"}
+                                </span>
                               </div>
                             )}
 

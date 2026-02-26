@@ -198,6 +198,50 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          scheduled_date: string | null
+          sent_at: string | null
+          student_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          scheduled_date?: string | null
+          sent_at?: string | null
+          student_id?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          scheduled_date?: string | null
+          sent_at?: string | null
+          student_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_plans: {
         Row: {
           created_at: string | null
@@ -352,10 +396,16 @@ export type Database = {
           payment_plan: string | null
           payment_status: string | null
           phone: string | null
+          registration_end_date: string | null
+          registration_start_date: string | null
           registration_type: string | null
           second_installment_amount: number | null
           status: string | null
+          summer_clothing_paid: boolean | null
+          summer_clothing_price: number | null
           updated_at: string | null
+          winter_clothing_paid: boolean | null
+          winter_clothing_price: number | null
           work_group_hour: string | null
         }
         Insert: {
@@ -379,10 +429,16 @@ export type Database = {
           payment_plan?: string | null
           payment_status?: string | null
           phone?: string | null
+          registration_end_date?: string | null
+          registration_start_date?: string | null
           registration_type?: string | null
           second_installment_amount?: number | null
           status?: string | null
+          summer_clothing_paid?: boolean | null
+          summer_clothing_price?: number | null
           updated_at?: string | null
+          winter_clothing_paid?: boolean | null
+          winter_clothing_price?: number | null
           work_group_hour?: string | null
         }
         Update: {
@@ -406,10 +462,16 @@ export type Database = {
           payment_plan?: string | null
           payment_status?: string | null
           phone?: string | null
+          registration_end_date?: string | null
+          registration_start_date?: string | null
           registration_type?: string | null
           second_installment_amount?: number | null
           status?: string | null
+          summer_clothing_paid?: boolean | null
+          summer_clothing_price?: number | null
           updated_at?: string | null
+          winter_clothing_paid?: boolean | null
+          winter_clothing_price?: number | null
           work_group_hour?: string | null
         }
         Relationships: []
@@ -449,7 +511,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_registration_renewals: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
