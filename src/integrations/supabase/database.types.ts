@@ -333,13 +333,15 @@ export type Database = {
           clothing_size: string | null
           created_at: string | null
           email: string | null
+          father_name: string | null
+          father_phone: string | null
           health_report_submitted: boolean | null
           id: string
           installment_date: string | null
           membership_end_date: string | null
+          mother_name: string | null
+          mother_phone: string | null
           name: string
-          parent_name: string | null
-          parent_phone: string | null
           payment_amount: number | null
           payment_plan: string | null
           payment_status: string | null
@@ -358,13 +360,15 @@ export type Database = {
           clothing_size?: string | null
           created_at?: string | null
           email?: string | null
+          father_name?: string | null
+          father_phone?: string | null
           health_report_submitted?: boolean | null
           id?: string
           installment_date?: string | null
           membership_end_date?: string | null
+          mother_name?: string | null
+          mother_phone?: string | null
           name: string
-          parent_name?: string | null
-          parent_phone?: string | null
           payment_amount?: number | null
           payment_plan?: string | null
           payment_status?: string | null
@@ -383,13 +387,15 @@ export type Database = {
           clothing_size?: string | null
           created_at?: string | null
           email?: string | null
+          father_name?: string | null
+          father_phone?: string | null
           health_report_submitted?: boolean | null
           id?: string
           installment_date?: string | null
           membership_end_date?: string | null
+          mother_name?: string | null
+          mother_phone?: string | null
           name?: string
-          parent_name?: string | null
-          parent_phone?: string | null
           payment_amount?: number | null
           payment_plan?: string | null
           payment_status?: string | null

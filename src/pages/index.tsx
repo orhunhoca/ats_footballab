@@ -1,209 +1,136 @@
 import { SEO } from "@/components/SEO";
 import { Navigation } from "@/components/Navigation";
-import Link from "next/link";
-import { Users, ClipboardCheck, BarChart3, UserPlus, Calendar, TrendingUp, Grid3x3, Bell, UserCheck, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, CalendarCheck, TrendingUp, ShieldCheck, UserCircle2, ArrowRight, Bell, Trophy } from "lucide-react";
+import Link from "next/link";
 import { useState, useEffect } from "react";
-import { studentService } from "@/services/studentService";
+import { userService } from "@/services/userService";
 
 export default function Home() {
-  const [stats, setStats] = useState({
-    totalStudents: 0,
-    activeStudents: 0,
-    totalGroups: 6
-  });
-  const [notifications, setNotifications] = useState({
-    expired: 0,
-    expiring: 0,
-    total: 0
-  });
-  const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    loadData();
+    setIsLoggedIn(!!userService.getCurrentUser());
   }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const studentStats = await studentService.getStudentStats();
-      setStats({
-        totalStudents: studentStats.total,
-        activeStudents: studentStats.active,
-        totalGroups: 6
-      });
-
-      // Bildirim sayılarını hesapla
-      const students = await studentService.getAllStudents();
-      const today = new Date();
-      let expired = 0;
-      let expiring = 0;
-
-      students.forEach(student => {
-        if (!student.membership_end_date) return;
-        const endDate = new Date(student.membership_end_date);
-        const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-        if (diffDays <= 0) expired++;
-        else if (diffDays <= 14) expiring++;
-      });
-
-      setNotifications({
-        expired,
-        expiring,
-        total: expired + expiring
-      });
-    } catch (error) {
-      console.error("Error loading data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   return (
     <>
-      <SEO
-        title="Futbol Okulu Yönetim Sistemi"
-        description="Öğrenci kayıt, yoklama ve performans takibi için profesyonel futbol okulu yönetim platformu"
-      />
+      <SEO title="Sportex - Futbol Okulu Yönetim Sistemi" />
       
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-green-50">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-emerald-100 selection:text-emerald-900">
         <Navigation />
 
         {/* Hero Section */}
-        <section className="container mx-auto px-4 py-16 md:py-24">
-          <div className="text-center max-w-4xl mx-auto mb-16">
+        <section className="pt-24 pb-16 md:pt-32 md:pb-24 overflow-hidden relative">
+          <div className="container mx-auto px-4 text-center relative z-10">
             <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 px-4 py-2 rounded-full text-sm font-semibold mb-6">
               <TrendingUp className="w-4 h-4" />
-              Modern Futbol Okulu Yönetimi
+              Profesyonel Altyapı Yönetimi
             </div>
-            <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Futbol Okulunuzu
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-green-700"> Dijitalleştirin</span>
-            </h2>
-            <p className="text-xl text-gray-600 mb-10 leading-relaxed">
-              Öğrenci kayıt, yoklama takibi ve performans analizini tek platformda yönetin. 
-              Zamanınızı idari işlerle değil, antrenmanla geçirin.
+            
+            <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">
+              Geleceğin Yıldızlarını
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-green-500 mt-2">
+                Sportex ile Yetiştirin
+              </span>
+            </h1>
+            
+            <p className="text-xl text-slate-600 dark:text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
+              Öğrenci takibi, antrenman programları, aidat yönetimi ve performans analizleri tek bir platformda.
             </p>
-          </div>
 
-          {/* Stats Cards - add notification card */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Toplam Öğrenci</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalStudents}</div>
-                <p className="text-xs text-muted-foreground">Kayıtlı öğrenci sayısı</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Aktif Öğrenci</CardTitle>
-                <UserCheck className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.activeStudents}</div>
-                <p className="text-xs text-muted-foreground">Aktif üyelikler</p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Gruplar</CardTitle>
-                <Target className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalGroups}</div>
-                <p className="text-xs text-muted-foreground">Aktif grup sayısı</p>
-              </CardContent>
-            </Card>
-
-            <Link href="/notifications">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow bg-gradient-to-br from-orange-50 to-red-50 border-orange-200">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium text-orange-700">Bekleyen Bildirimler</CardTitle>
-                  <Bell className="h-4 w-4 text-orange-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-700">{notifications.total}</div>
-                  <p className="text-xs text-orange-600">
-                    {notifications.expired > 0 && `${notifications.expired} üyelik bitti • `}
-                    {notifications.expiring > 0 && `${notifications.expiring} yaklaşan`}
-                  </p>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
-
-          {/* Features */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-            <Link href="/students">
-              <Card className="border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full">
-                <CardHeader>
-                  <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-4">
-                    <Users className="w-7 h-7 text-emerald-600" />
-                  </div>
-                  <CardTitle className="text-xl">Öğrenci Yönetimi</CardTitle>
-                  <CardDescription>
-                    Kayıtlar, profiller ve grup atamaları
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-
-            <Link href="/attendance">
-              <Card className="border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full">
-                <CardHeader>
-                  <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center mb-4">
-                    <ClipboardCheck className="w-7 h-7 text-blue-600" />
-                  </div>
-                  <CardTitle className="text-xl">Yoklama Sistemi</CardTitle>
-                  <CardDescription>
-                    Günlük devam takibi ve bildirimler
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-
-            <Link href="/groups">
-              <Card className="border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full">
-                <CardHeader>
-                  <div className="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center mb-4">
-                    <Grid3x3 className="w-7 h-7 text-purple-600" />
-                  </div>
-                  <CardTitle className="text-xl">Grup Yönetimi</CardTitle>
-                  <CardDescription>
-                    Takımlar, program ve organizasyon
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
-
-            <Link href="/reports">
-              <Card className="border-2 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 cursor-pointer h-full">
-                <CardHeader>
-                  <div className="w-14 h-14 bg-amber-100 rounded-2xl flex items-center justify-center mb-4">
-                    <BarChart3 className="w-7 h-7 text-amber-600" />
-                  </div>
-                  <CardTitle className="text-xl">Raporlar & Analiz</CardTitle>
-                  <CardDescription>
-                    İstatistikler ve performans takibi
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              {isLoggedIn ? (
+                <Link href="/students">
+                  <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-emerald-500/25 transition-all">
+                    <Users className="w-5 h-5 mr-2" />
+                    Öğrenci Paneline Git
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/login">
+                  <Button size="lg" className="bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-emerald-500/25 transition-all">
+                    <UserCircle2 className="w-5 h-5 mr-2" />
+                    Giriş Yap
+                  </Button>
+                </Link>
+              )}
+            </div>
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="bg-gray-900 text-gray-400 py-12">
+        {/* Dashboard Preview Cards */}
+        <section className="py-12 bg-white dark:bg-slate-900 border-y border-slate-200 dark:border-slate-800">
+          <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-blue-500/30">
+                    <Users className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-lg font-bold text-blue-900 dark:text-blue-100">Öğrenci Yönetimi</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-blue-700 dark:text-blue-300 text-sm">
+                    Detaylı profil kartları, sağlık raporları ve veli iletişim bilgileri.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/20 dark:to-purple-800/20">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-purple-500/30">
+                    <CalendarCheck className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-lg font-bold text-purple-900 dark:text-purple-100">Yoklama Sistemi</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-purple-700 dark:text-purple-300 text-sm">
+                    QR kod veya liste üzerinden hızlı yoklama ve devamsızlık takibi.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/20 dark:to-amber-800/20">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-amber-500/30">
+                    <Trophy className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-lg font-bold text-amber-900 dark:text-amber-100">Performans</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-amber-700 dark:text-amber-300 text-sm">
+                    Gelişim raporları, maç istatistikleri ve antrenör değerlendirmeleri.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/20 dark:to-emerald-800/20">
+                <CardHeader className="pb-2">
+                  <div className="w-12 h-12 bg-emerald-500 rounded-xl flex items-center justify-center mb-4 shadow-lg shadow-emerald-500/30">
+                    <ShieldCheck className="w-6 h-6 text-white" />
+                  </div>
+                  <CardTitle className="text-lg font-bold text-emerald-900 dark:text-emerald-100">Güvenli Altyapı</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-emerald-700 dark:text-emerald-300 text-sm">
+                    KVKK uyumlu veri saklama, rol tabanlı yetkilendirme ve yedekleme.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </section>
+
+        {/* Simple Footer */}
+        <footer className="bg-white dark:bg-slate-950 py-8 border-t border-slate-200 dark:border-slate-800 mt-auto">
           <div className="container mx-auto px-4 text-center">
-            <p className="text-sm">© {new Date().getFullYear()} Sportex Futbol Okulu. Tüm hakları saklıdır.</p>
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center text-white font-bold">S</div>
+              <span className="font-bold text-xl text-slate-900 dark:text-white">Sportex</span>
+            </div>
+            <p className="text-sm text-slate-500">© {new Date().getFullYear()} Sportex Futbol Okulu Yönetim Sistemi. Tüm hakları saklıdır.</p>
           </div>
         </footer>
       </div>

@@ -24,7 +24,10 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
   const [formData, setFormData] = useState({
     name: "",
     birth_date: "",
-    parent_phone: "",
+    mother_name: "",
+    mother_phone: "",
+    father_name: "",
+    father_phone: "",
     clothing_size: "",
     work_group_hour: "",
     health_report_submitted: false,
@@ -48,6 +51,17 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
     } catch (error) {
       console.error("Ödeme planları yüklenemedi:", error);
     }
+  };
+
+  const calculateAge = (birthDate: string) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return age;
   };
 
   const handlePaymentPlanChange = (value: string) => {
@@ -75,10 +89,19 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.birth_date || !formData.parent_phone) {
+    if (!formData.name || !formData.birth_date) {
       toast({
         title: "Eksik Bilgi",
         description: "Lütfen zorunlu alanları doldurun.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!formData.mother_phone && !formData.father_phone) {
+      toast({
+        title: "Eksik Bilgi",
+        description: "En az bir veli telefonu girilmelidir.",
         variant: "destructive"
       });
       return;
@@ -102,13 +125,18 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
         }
       }
 
+      const age = calculateAge(formData.birth_date);
+
       await studentService.createStudent({
         name: formData.name,
         birth_date: formData.birth_date,
-        parent_phone: formData.parent_phone,
+        age: age,
+        mother_name: formData.mother_name || null,
+        mother_phone: formData.mother_phone || null,
+        father_name: formData.father_name || null,
+        father_phone: formData.father_phone || null,
         email: null,
         address: null,
-        group_id: null,
         clothing_size: formData.clothing_size || null,
         work_group_hour: formData.work_group_hour || null,
         health_report_submitted: formData.health_report_submitted,
@@ -131,7 +159,10 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
       setFormData({
         name: "",
         birth_date: "",
-        parent_phone: "",
+        mother_name: "",
+        mother_phone: "",
+        father_name: "",
+        father_phone: "",
         clothing_size: "",
         work_group_hour: "",
         health_report_submitted: false,
@@ -164,86 +195,120 @@ export function StudentForm({ open, onOpenChange, onSuccess }: StudentFormProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Yeni Öğrenci Kaydı</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Ad Soyad *</Label>
-              <Input 
-                required
-                value={formData.name}
-                onChange={e => setFormData({...formData, name: e.target.value})}
-              />
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Öğrenci Bilgileri */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-lg">Öğrenci Bilgileri</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Ad Soyad *</Label>
+                <Input 
+                  required
+                  value={formData.name}
+                  onChange={e => setFormData({...formData, name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Doğum Tarihi *</Label>
+                <Input 
+                  type="date"
+                  required
+                  value={formData.birth_date}
+                  onChange={e => setFormData({...formData, birth_date: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Kıyafet Bedeni</Label>
+                <Select 
+                  onValueChange={v => setFormData({...formData, clothing_size: v})}
+                  value={formData.clothing_size}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Beden Seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["110", "128", "140", "152", "164", "XS", "S", "M", "L", "XL"].map(size => (
+                      <SelectItem key={size} value={size}>{size}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Çalışma Grubu Saati</Label>
+                <Select 
+                  onValueChange={v => setFormData({...formData, work_group_hour: v})}
+                  value={formData.work_group_hour}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Saat Seçin" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {workHours.map(hour => (
+                      <SelectItem key={hour} value={hour}>{hour}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label>Doğum Tarihi *</Label>
-              <Input 
-                type="date"
-                required
-                value={formData.birth_date}
-                onChange={e => setFormData({...formData, birth_date: e.target.value})}
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox 
+                id="health_report"
+                checked={formData.health_report_submitted}
+                onCheckedChange={(checked) => 
+                  setFormData({...formData, health_report_submitted: checked as boolean})
+                }
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Veli Telefon *</Label>
-              <Input 
-                required
-                placeholder="5XX XXX XX XX"
-                value={formData.parent_phone}
-                onChange={e => setFormData({...formData, parent_phone: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Kıyafet Bedeni</Label>
-              <Select 
-                onValueChange={v => setFormData({...formData, clothing_size: v})}
-                value={formData.clothing_size}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Beden Seçin" />
-                </SelectTrigger>
-                <SelectContent>
-                  {["110", "128", "140", "152", "164", "XS", "S", "M", "L", "XL"].map(size => (
-                    <SelectItem key={size} value={size}>{size}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label htmlFor="health_report">Sağlık Raporu Teslim Edildi</Label>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Çalışma Grubu Saati</Label>
-            <Select 
-              onValueChange={v => setFormData({...formData, work_group_hour: v})}
-              value={formData.work_group_hour}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Saat Seçin" />
-              </SelectTrigger>
-              <SelectContent>
-                {workHours.map(hour => (
-                  <SelectItem key={hour} value={hour}>{hour}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Veli Bilgileri */}
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="font-semibold text-lg">Veli Bilgileri</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Anne Adı Soyadı</Label>
+                <Input 
+                  placeholder="Anne adı soyadı"
+                  value={formData.mother_name}
+                  onChange={e => setFormData({...formData, mother_name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Anne Telefonu</Label>
+                <Input 
+                  placeholder="5XX XXX XX XX"
+                  value={formData.mother_phone}
+                  onChange={e => setFormData({...formData, mother_phone: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Baba Adı Soyadı</Label>
+                <Input 
+                  placeholder="Baba adı soyadı"
+                  value={formData.father_name}
+                  onChange={e => setFormData({...formData, father_name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Baba Telefonu</Label>
+                <Input 
+                  placeholder="5XX XXX XX XX"
+                  value={formData.father_phone}
+                  onChange={e => setFormData({...formData, father_phone: e.target.value})}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-gray-500">* En az bir veli telefonu girilmelidir</p>
           </div>
 
-          <div className="flex items-center space-x-2 py-2">
-            <Checkbox 
-              id="health_report"
-              checked={formData.health_report_submitted}
-              onCheckedChange={(checked) => 
-                setFormData({...formData, health_report_submitted: checked as boolean})
-              }
-            />
-            <Label htmlFor="health_report">Sağlık Raporu Teslim Edildi</Label>
-          </div>
-
-          <div className="border-t pt-4 mt-4">
-            <h3 className="font-semibold mb-3">Ödeme Bilgileri</h3>
+          {/* Ödeme Bilgileri */}
+          <div className="border-t pt-4">
+            <h3 className="font-semibold text-lg mb-3">Ödeme Bilgileri</h3>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Kayıt Tipi</Label>
