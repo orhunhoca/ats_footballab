@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { userService } from "@/services/userService";
-import { Trophy, LogIn } from "lucide-react";
+import { LogIn } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
