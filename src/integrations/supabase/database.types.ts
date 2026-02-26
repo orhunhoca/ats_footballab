@@ -289,7 +289,8 @@ export type Database = {
           notes: string | null
           student_id: string
           test_date: string
-          test_type: Database["public"]["Enums"]["test_type"]
+          test_protocol_id: string | null
+          test_type: Database["public"]["Enums"]["test_type"] | null
           unit: string
           updated_at: string | null
           value: number
@@ -301,7 +302,8 @@ export type Database = {
           notes?: string | null
           student_id: string
           test_date?: string
-          test_type: Database["public"]["Enums"]["test_type"]
+          test_protocol_id?: string | null
+          test_type?: Database["public"]["Enums"]["test_type"] | null
           unit: string
           updated_at?: string | null
           value: number
@@ -313,7 +315,8 @@ export type Database = {
           notes?: string | null
           student_id?: string
           test_date?: string
-          test_type?: Database["public"]["Enums"]["test_type"]
+          test_protocol_id?: string | null
+          test_type?: Database["public"]["Enums"]["test_type"] | null
           unit?: string
           updated_at?: string | null
           value?: number
@@ -324,6 +327,13 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_tests_test_protocol_id_fkey"
+            columns: ["test_protocol_id"]
+            isOneToOne: false
+            referencedRelation: "test_protocols"
             referencedColumns: ["id"]
           },
         ]
@@ -556,6 +566,39 @@ export type Database = {
           winter_clothing_paid?: boolean | null
           winter_clothing_price?: number | null
           work_group_hour?: string | null
+        }
+        Relationships: []
+      }
+      test_protocols: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          unit: string
+          updated_at: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          unit: string
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          unit?: string
+          updated_at?: string | null
         }
         Relationships: []
       }

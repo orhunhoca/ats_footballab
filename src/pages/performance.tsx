@@ -43,21 +43,20 @@ import { format } from "date-fns";
 import { tr } from "date-fns/locale";
 import { studentService, type Student } from "@/services/studentService";
 import {
-  getStudentTests,
-  getStudentTestsByType,
-  generateAIAnalysis,
-  TEST_TYPES,
+  performanceService,
   type PerformanceTest,
 } from "@/services/performanceService";
+import { settingsService, type TestProtocol } from "@/services/settingsService";
 import { PerformanceTestForm } from "@/components/students/PerformanceTestForm";
 import { useToast } from "@/hooks/use-toast";
 
 export default function PerformancePage() {
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
+  const [testProtocols, setTestProtocols] = useState<TestProtocol[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [tests, setTests] = useState<PerformanceTest[]>([]);
-  const [selectedTestType, setSelectedTestType] = useState<string>("all");
+  const [selectedProtocolFilter, setSelectedProtocolFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoadingTests, setIsLoadingTests] = useState(false);
@@ -67,6 +66,7 @@ export default function PerformancePage() {
 
   useEffect(() => {
     loadStudents();
+    loadTestProtocols();
   }, []);
 
   useEffect(() => {
@@ -79,15 +79,8 @@ export default function PerformancePage() {
     setIsLoadingStudents(true);
     try {
       const data = await studentService.getAllStudents();
-      console.log("📚 Loaded students:", data.length, data);
+      console.log("📚 Loaded students:", data.length);
       setStudents(data);
-      
-      if (data.length === 0) {
-        toast({
-          title: "Bilgi",
-          description: "Henüz kayıtlı öğrenci bulunmamaktadır.",
-        });
-      }
     } catch (error) {
       console.error("❌ Error loading students:", error);
       toast({
@@ -100,12 +93,27 @@ export default function PerformancePage() {
     }
   };
 
+  const loadTestProtocols = async () => {
+    try {
+      const protocols = await settingsService.getTestProtocols();
+      console.log("📋 Loaded test protocols:", protocols);
+      setTestProtocols(protocols);
+    } catch (error) {
+      console.error("Error loading test protocols:", error);
+      toast({
+        title: "Hata",
+        description: "Test protokolleri yüklenirken bir hata oluştu",
+        variant: "destructive",
+      });
+    }
+  };
+
   const loadTests = async () => {
     if (!selectedStudent) return;
 
     setIsLoadingTests(true);
     try {
-      const data = await getStudentTests(selectedStudent.id);
+      const data = await performanceService.getStudentTests(selectedStudent.id);
       setTests(data);
     } catch (error) {
       console.error("Error loading tests:", error);
@@ -124,7 +132,7 @@ export default function PerformancePage() {
 
     setIsGeneratingAI(true);
     try {
-      const analysis = await generateAIAnalysis(
+      const analysis = await performanceService.generateAIAnalysis(
         selectedStudent.id,
         selectedStudent.name
       );
@@ -150,20 +158,22 @@ export default function PerformancePage() {
   );
 
   const filteredTests =
-    selectedTestType === "all"
+    selectedProtocolFilter === "all"
       ? tests
-      : tests.filter((test) => test.test_type === selectedTestType);
+      : tests.filter((test) => test.test_protocol_id === selectedProtocolFilter);
 
   // Prepare chart data
   const getChartData = () => {
     if (!selectedStudent || tests.length === 0) return [];
 
-    const testsByType: Record<string, PerformanceTest[]> = {};
+    // Group tests by protocol name
+    const testsByProtocol: Record<string, PerformanceTest[]> = {};
     tests.forEach((test) => {
-      if (!testsByType[test.test_type]) {
-        testsByType[test.test_type] = [];
+      const protocolName = test.test_protocols?.name || test.test_type || "Bilinmeyen Test";
+      if (!testsByProtocol[protocolName]) {
+        testsByProtocol[protocolName] = [];
       }
-      testsByType[test.test_type].push(test);
+      testsByProtocol[protocolName].push(test);
     });
 
     // Get all unique dates
@@ -171,10 +181,10 @@ export default function PerformancePage() {
 
     return dates.map((date) => {
       const dataPoint: any = { date: format(new Date(date), "dd MMM", { locale: tr }) };
-      Object.keys(testsByType).forEach((type) => {
-        const testOnDate = testsByType[type].find((t) => t.test_date === date);
+      Object.keys(testsByProtocol).forEach((protocolName) => {
+        const testOnDate = testsByProtocol[protocolName].find((t) => t.test_date === date);
         if (testOnDate) {
-          dataPoint[type] = Number(testOnDate.value);
+          dataPoint[protocolName] = Number(testOnDate.value);
         }
       });
       return dataPoint;
@@ -182,11 +192,12 @@ export default function PerformancePage() {
   };
 
   const chartData = getChartData();
+  const chartLines = Object.keys(chartData[0] || {}).filter(key => key !== 'date');
 
   // Calculate improvement
-  const getImprovement = (testType: string) => {
+  const getImprovement = (protocolId: string | null, testType: string | null) => {
     const typeTests = tests
-      .filter((t) => t.test_type === testType)
+      .filter((t) => (protocolId && t.test_protocol_id === protocolId) || (!protocolId && t.test_type === testType))
       .sort((a, b) => new Date(a.test_date).getTime() - new Date(b.test_date).getTime());
 
     if (typeTests.length < 2) return null;
@@ -195,15 +206,19 @@ export default function PerformancePage() {
     const last = Number(typeTests[typeTests.length - 1].value);
     const diff = last - first;
 
-    // For time-based tests, negative is better
-    const isTimeBased = ["10m_dribbling", "20m_sprint", "dribbling_cone"].includes(
-      testType
-    );
+    // For simplicity, assuming higher is better unless unit suggests otherwise (like seconds)
+    // We can refine this logic based on protocol configuration later
+    const unit = typeTests[0].test_protocols?.unit || typeTests[0].unit || "";
+    const isTimeBased = unit.toLowerCase().includes("saniye") || unit.toLowerCase().includes("sn");
+    
+    // If time based, lower is better (diff < 0 is improvement)
+    // If not time based (reps, cm, m), higher is better (diff > 0 is improvement)
+    const isImprovement = isTimeBased ? diff < 0 : diff > 0;
 
     return {
       value: Math.abs(diff),
-      isImprovement: isTimeBased ? diff < 0 : diff > 0,
-      percentage: ((Math.abs(diff) / first) * 100).toFixed(1),
+      isImprovement: isImprovement,
+      percentage: first !== 0 ? ((Math.abs(diff) / first) * 100).toFixed(1) : "0",
     };
   };
 
@@ -227,7 +242,7 @@ export default function PerformancePage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Student Selection */}
-            <Card className="lg:col-span-1">
+            <Card className="lg:col-span-1 h-fit">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Search className="h-5 w-5" />
@@ -346,7 +361,7 @@ export default function PerformancePage() {
                             <YAxis />
                             <Tooltip />
                             <Legend />
-                            {Object.keys(TEST_TYPES).map((type, index) => {
+                            {chartLines.map((line, index) => {
                               const colors = [
                                 "#3b82f6",
                                 "#10b981",
@@ -357,11 +372,11 @@ export default function PerformancePage() {
                               ];
                               return (
                                 <Line
-                                  key={type}
+                                  key={line}
                                   type="monotone"
-                                  dataKey={type}
+                                  dataKey={line}
                                   stroke={colors[index % colors.length]}
-                                  name={TEST_TYPES[type].label}
+                                  strokeWidth={2}
                                 />
                               );
                             })}
@@ -377,17 +392,17 @@ export default function PerformancePage() {
                       <div className="flex items-center justify-between">
                         <CardTitle>Test Sonuçları</CardTitle>
                         <Select
-                          value={selectedTestType}
-                          onValueChange={setSelectedTestType}
+                          value={selectedProtocolFilter}
+                          onValueChange={setSelectedProtocolFilter}
                         >
                           <SelectTrigger className="w-[200px]">
                             <SelectValue placeholder="Test türü" />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="all">Tüm Testler</SelectItem>
-                            {Object.values(TEST_TYPES).map((test) => (
-                              <SelectItem key={test.value} value={test.value}>
-                                {test.label}
+                            {testProtocols.map((protocol) => (
+                              <SelectItem key={protocol.id} value={protocol.id}>
+                                {protocol.name}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -416,7 +431,10 @@ export default function PerformancePage() {
                           </TableHeader>
                           <TableBody>
                             {filteredTests.map((test) => {
-                              const improvement = getImprovement(test.test_type);
+                              const improvement = getImprovement(test.test_protocol_id || null, test.test_type || null);
+                              const protocolName = test.test_protocols?.name || test.test_type || "Bilinmeyen";
+                              const unit = test.test_protocols?.unit || test.unit || "";
+                              
                               return (
                                 <TableRow key={test.id}>
                                   <TableCell>
@@ -425,10 +443,10 @@ export default function PerformancePage() {
                                     })}
                                   </TableCell>
                                   <TableCell>
-                                    {TEST_TYPES[test.test_type]?.label || test.test_type}
+                                    {protocolName}
                                   </TableCell>
                                   <TableCell className="font-medium">
-                                    {test.value} {test.unit}
+                                    {test.value} {unit}
                                   </TableCell>
                                   <TableCell>
                                     {improvement && (
@@ -438,6 +456,7 @@ export default function PerformancePage() {
                                             ? "default"
                                             : "destructive"
                                         }
+                                        className={improvement.isImprovement ? "bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900 dark:text-green-300" : ""}
                                       >
                                         {improvement.isImprovement ? (
                                           <TrendingUp className="mr-1 h-3 w-3" />
@@ -465,7 +484,7 @@ export default function PerformancePage() {
                   <CardContent className="py-12">
                     <div className="text-center text-muted-foreground">
                       <Activity className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>Lütfen bir öğrenci seçin</p>
+                      <p>Detayları görüntülemek için soldaki listeden bir öğrenci seçin</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -476,13 +495,15 @@ export default function PerformancePage() {
       </div>
 
       {/* Test Form Dialog */}
-      {selectedStudent && (
+      {selectedStudent && isFormOpen && (
         <PerformanceTestForm
-          studentId={selectedStudent.id}
-          studentName={selectedStudent.name}
-          open={isFormOpen}
-          onOpenChange={setIsFormOpen}
-          onSuccess={loadTests}
+          student={selectedStudent}
+          testProtocols={testProtocols}
+          onSuccess={() => {
+            loadTests();
+            setIsFormOpen(false);
+          }}
+          onCancel={() => setIsFormOpen(false)}
         />
       )}
     </>

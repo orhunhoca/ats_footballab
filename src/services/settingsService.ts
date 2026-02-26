@@ -9,6 +9,10 @@ export type Setting = Tables<"settings">;
 export type SettingInsert = TablesInsert<"settings">;
 export type SettingUpdate = TablesUpdate<"settings">;
 
+export type TestProtocol = Tables<"test_protocols">;
+export type TestProtocolInsert = TablesInsert<"test_protocols">;
+export type TestProtocolUpdate = TablesUpdate<"test_protocols">;
+
 // Payment Plans
 export const settingsService = {
   // Get all active payment plans
@@ -93,6 +97,81 @@ export const settingsService = {
 
     if (error) {
       console.error("Error deleting payment plan:", error);
+      throw error;
+    }
+  },
+
+  // Test Protocols
+  async getTestProtocols(): Promise<TestProtocol[]> {
+    const { data, error } = await supabase
+      .from("test_protocols")
+      .select("*")
+      .eq("is_active", true)
+      .order("category", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching test protocols:", error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  async getAllTestProtocols(): Promise<TestProtocol[]> {
+    const { data, error } = await supabase
+      .from("test_protocols")
+      .select("*")
+      .order("category", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching all test protocols:", error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  async createTestProtocol(protocol: TestProtocolInsert): Promise<TestProtocol> {
+    const { data, error } = await supabase
+      .from("test_protocols")
+      .insert(protocol)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating test protocol:", error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  async updateTestProtocol(id: string, updates: TestProtocolUpdate): Promise<TestProtocol> {
+    const { data, error } = await supabase
+      .from("test_protocols")
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error updating test protocol:", error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  async deleteTestProtocol(id: string): Promise<void> {
+    const { error } = await supabase
+      .from("test_protocols")
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error deleting test protocol:", error);
       throw error;
     }
   },

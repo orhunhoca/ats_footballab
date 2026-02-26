@@ -1,225 +1,208 @@
 import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon, Loader2 } from "lucide-react";
-import { format } from "date-fns";
-import { tr } from "date-fns/locale";
-import { cn } from "@/lib/utils";
-import {
-  createPerformanceTest,
-  TEST_TYPES,
-  type PerformanceTestInsert,
-} from "@/services/performanceService";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { performanceService } from "@/services/performanceService";
+import { Save, X, FlaskConical } from "lucide-react";
+import type { Student } from "@/services/studentService";
+import type { TestProtocol } from "@/services/settingsService";
 
 interface PerformanceTestFormProps {
-  studentId: string;
-  studentName: string;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  student: Student;
+  testProtocols: TestProtocol[];
   onSuccess: () => void;
+  onCancel: () => void;
 }
 
-export function PerformanceTestForm({
-  studentId,
-  studentName,
-  open,
-  onOpenChange,
-  onSuccess,
-}: PerformanceTestFormProps) {
+export function PerformanceTestForm({ student, testProtocols, onSuccess, onCancel }: PerformanceTestFormProps) {
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [testDate, setTestDate] = useState<Date>(new Date());
-  const [testType, setTestType] = useState<string>("");
-  const [value, setValue] = useState<string>("");
-  const [notes, setNotes] = useState<string>("");
+  const [loading, setLoading] = useState(false);
+  const [selectedProtocol, setSelectedProtocol] = useState<TestProtocol | null>(null);
+  const [formData, setFormData] = useState({
+    test_date: new Date().toISOString().split("T")[0],
+    result_value: "",
+    notes: "",
+  });
 
-  const selectedTestInfo = testType ? TEST_TYPES[testType] : null;
+  const handleProtocolChange = (protocolId: string) => {
+    const protocol = testProtocols.find(p => p.id === protocolId);
+    setSelectedProtocol(protocol || null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!testType || !value) {
+
+    if (!selectedProtocol) {
       toast({
-        title: "Eksik Bilgi",
-        description: "Lütfen tüm zorunlu alanları doldurun.",
+        title: "Hata",
+        description: "Lütfen bir test protokolü seçin",
         variant: "destructive",
       });
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      const testData: PerformanceTestInsert = {
-        student_id: studentId,
-        test_date: format(testDate, "yyyy-MM-dd"),
-        test_type: testType as any,
-        value: parseFloat(value),
-        unit: selectedTestInfo!.unit,
-        notes: notes || null,
-      };
-
-      await createPerformanceTest(testData);
-
-      toast({
-        title: "Test Kaydedildi",
-        description: "Performans testi başarıyla kaydedildi.",
-      });
-
-      // Reset form
-      setTestType("");
-      setValue("");
-      setNotes("");
-      setTestDate(new Date());
-
-      onSuccess();
-      onOpenChange(false);
-    } catch (error) {
-      console.error("Error saving test:", error);
+    if (!formData.result_value) {
       toast({
         title: "Hata",
-        description: "Test kaydedilirken bir hata oluştu.",
+        description: "Lütfen test sonucunu girin",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await performanceService.createPerformanceTest({
+        student_id: student.id,
+        test_protocol_id: selectedProtocol.id,
+        test_date: formData.test_date,
+        value: parseFloat(formData.result_value), // Changed from result_value to value
+        notes: formData.notes || null,
+        unit: selectedProtocol.unit, // Add unit for redundancy/display
+      });
+
+      toast({
+        title: "Başarılı",
+        description: "Performans testi kaydedildi",
+      });
+
+      onSuccess();
+    } catch (error) {
+      console.error("Error saving performance test:", error);
+      toast({
+        title: "Hata",
+        description: "Test kaydedilirken bir hata oluştu",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      "Hız": "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
+      "Dayanıklılık": "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
+      "Kuvvet": "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
+      "Koordinasyon": "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
+      "Esneklik": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
+    };
+    return colors[category] || "bg-gray-100 text-gray-700";
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
-        <DialogHeader>
-          <DialogTitle>Performans Testi Ekle</DialogTitle>
-          <DialogDescription>
-            {studentName} için yeni performans testi kaydı oluşturun.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="test-date">Test Tarihi *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !testDate && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {testDate ? (
-                    format(testDate, "PPP", { locale: tr })
-                  ) : (
-                    <span>Tarih seçin</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={testDate}
-                  onSelect={(date) => date && setTestDate(date)}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <FlaskConical className="w-5 h-5 text-blue-600" />
+          <div>
+            <CardTitle>Yeni Performans Testi</CardTitle>
+            <CardDescription>
+              {student.name} için test sonucu kaydet
+            </CardDescription>
           </div>
-
+        </div>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Test Protocol Selection */}
           <div className="space-y-2">
-            <Label htmlFor="test-type">Test Türü *</Label>
-            <Select value={testType} onValueChange={setTestType}>
-              <SelectTrigger>
-                <SelectValue placeholder="Test türü seçin" />
+            <Label htmlFor="test-protocol">Test Protokolü *</Label>
+            <Select onValueChange={handleProtocolChange}>
+              <SelectTrigger id="test-protocol">
+                <SelectValue placeholder="Test seçin..." />
               </SelectTrigger>
               <SelectContent>
-                {Object.values(TEST_TYPES).map((test) => (
-                  <SelectItem key={test.value} value={test.value}>
-                    {test.label}
+                {testProtocols.map((protocol) => (
+                  <SelectItem key={protocol.id} value={protocol.id}>
+                    <div className="flex items-center gap-2">
+                      <span>{protocol.name}</span>
+                      <Badge className={getCategoryColor(protocol.category)} variant="secondary">
+                        {protocol.category}
+                      </Badge>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {selectedTestInfo && (
-              <p className="text-sm text-muted-foreground">
-                {selectedTestInfo.description}
-              </p>
+            {selectedProtocol && (
+              <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+                <div className="flex items-center gap-2 text-sm">
+                  <Badge className={getCategoryColor(selectedProtocol.category)}>
+                    {selectedProtocol.category}
+                  </Badge>
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Ölçüm Birimi: <strong>{selectedProtocol.unit}</strong>
+                  </span>
+                </div>
+                {selectedProtocol.description && (
+                  <p className="text-sm text-slate-600 dark:text-slate-400 mt-2">
+                    {selectedProtocol.description}
+                  </p>
+                )}
+              </div>
             )}
           </div>
 
+          {/* Test Date */}
           <div className="space-y-2">
-            <Label htmlFor="value">
-              Sonuç {selectedTestInfo && `(${selectedTestInfo.unit})`} *
-            </Label>
+            <Label htmlFor="test-date">Test Tarihi *</Label>
             <Input
-              id="value"
-              type="number"
-              step="0.01"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              placeholder={selectedTestInfo?.unit || "Değer girin"}
+              id="test-date"
+              type="date"
+              value={formData.test_date}
+              onChange={(e) => setFormData({ ...formData, test_date: e.target.value })}
               required
             />
           </div>
 
+          {/* Result Value */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notlar</Label>
+            <Label htmlFor="result-value">
+              Sonuç * {selectedProtocol && `(${selectedProtocol.unit})`}
+            </Label>
+            <Input
+              id="result-value"
+              type="number"
+              step="0.01"
+              placeholder={selectedProtocol ? `Örn: 15.2 ${selectedProtocol.unit}` : "Önce test seçin"}
+              value={formData.result_value}
+              onChange={(e) => setFormData({ ...formData, result_value: e.target.value })}
+              disabled={!selectedProtocol}
+              required
+            />
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notlar (Opsiyonel)</Label>
             <Textarea
               id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Test ile ilgili ek notlar (opsiyonel)"
+              placeholder="Test hakkında notlar..."
+              value={formData.notes}
+              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               rows={3}
             />
           </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-4">
+            <Button type="button" variant="ghost" onClick={onCancel} disabled={loading}>
+              <X className="w-4 h-4 mr-2" />
               İptal
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Kaydediliyor...
-                </>
-              ) : (
-                "Kaydet"
-              )}
+            <Button type="submit" disabled={loading || !selectedProtocol}>
+              <Save className="w-4 h-4 mr-2" />
+              {loading ? "Kaydediliyor..." : "Kaydet"}
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+      </CardContent>
+    </Card>
   );
 }
