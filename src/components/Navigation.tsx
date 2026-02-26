@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3, Bell, Settings, CalendarCheck, UserCircle2, LogOut, Menu, X } from "lucide-react";
+import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3, Bell, Settings, CalendarCheck, UserCircle2, LogOut, Menu, X, TrendingUp } from "lucide-react";
 import { userService, type User } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -49,6 +49,7 @@ export function Navigation() {
     { href: "/groups", label: "Gruplar", icon: Users },
     { href: "/coaches", label: "Antrenörler", icon: UserCircle2 },
     { href: "/attendance", label: "Yoklama", icon: CalendarCheck },
+    { href: "/performance", label: "Performans", icon: TrendingUp },
     { href: "/notifications", label: "Bildirimler", icon: Bell },
     { href: "/reports", label: "Raporlar", icon: BarChart3 },
   ];
