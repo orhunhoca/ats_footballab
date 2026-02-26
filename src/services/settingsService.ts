@@ -44,6 +44,8 @@ export const settingsService = {
 
   // Create payment plan
   async createPaymentPlan(plan: PaymentPlanInsert): Promise<PaymentPlan> {
+    console.log("Creating payment plan with data:", plan);
+    
     const { data, error } = await supabase
       .from("payment_plans")
       .insert(plan)
@@ -52,9 +54,16 @@ export const settingsService = {
 
     if (error) {
       console.error("Error creating payment plan:", error);
-      throw error;
+      console.error("Error details:", {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      throw new Error(`Ödeme planı oluşturulamadı: ${error.message}`);
     }
 
+    console.log("Payment plan created successfully:", data);
     return data;
   },
 

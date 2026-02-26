@@ -117,6 +117,16 @@ export default function SettingsPage() {
 
   const handleSavePlan = async () => {
     try {
+      // Validate required fields
+      if (!planForm.name || !planForm.price || !planForm.duration_months) {
+        toast({
+          title: "Hata",
+          description: "Lütfen tüm zorunlu alanları doldurun",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const planData = {
         name: planForm.name,
         price: parseFloat(planForm.price),
@@ -126,14 +136,18 @@ export default function SettingsPage() {
         is_active: planForm.is_active,
       };
 
+      console.log("Saving payment plan:", planData);
+
       if (isNewPlan) {
-        await settingsService.createPaymentPlan(planData);
+        const result = await settingsService.createPaymentPlan(planData);
+        console.log("Create result:", result);
         toast({
           title: "Başarılı",
           description: "Ödeme planı eklendi",
         });
       } else if (editingPlan) {
-        await settingsService.updatePaymentPlan(editingPlan.id, planData);
+        const result = await settingsService.updatePaymentPlan(editingPlan.id, planData);
+        console.log("Update result:", result);
         toast({
           title: "Başarılı",
           description: "Ödeme planı güncellendi",
@@ -143,9 +157,10 @@ export default function SettingsPage() {
       setIsPlanDialogOpen(false);
       loadData();
     } catch (error) {
+      console.error("Payment plan save error:", error);
       toast({
         title: "Hata",
-        description: "Ödeme planı kaydedilirken bir hata oluştu",
+        description: error instanceof Error ? error.message : "Ödeme planı kaydedilirken bir hata oluştu",
         variant: "destructive",
       });
     }
