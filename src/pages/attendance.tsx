@@ -4,8 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, Users, CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Users } from "lucide-react";
 import { useState, useEffect } from "react";
 import { attendanceService } from "@/services/attendanceService";
 import { groupService } from "@/services/groupService";
@@ -63,11 +62,9 @@ export default function AttendancePage() {
           student_id,
           students (
             id,
-            first_name,
-            last_name,
+            name,
             age,
             phone,
-            parent_phone,
             created_at,
             updated_at
           )
@@ -291,10 +288,10 @@ export default function AttendancePage() {
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white font-bold">
-                            {student.first_name.charAt(0)}
+                            {student.name.charAt(0)}
                           </div>
                           <div>
-                            <p className="font-medium">{student.first_name} {student.last_name}</p>
+                            <p className="font-medium">{student.name}</p>
                             <p className="text-sm text-gray-500">Yaş: {student.age}</p>
                           </div>
                         </div>
