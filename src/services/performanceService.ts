@@ -95,7 +95,7 @@ export async function getStudentTestsByType(
     .from("performance_tests")
     .select("*")
     .eq("student_id", studentId)
-    .eq("test_type", testType)
+    .eq("test_type", testType as any) // Type casting to bypass strict enum check for dynamic string
     .order("test_date", { ascending: true });
 
   if (error) {

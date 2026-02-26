@@ -115,10 +115,14 @@ export const trialStudentService = {
         birth_date: trialStudent.birth_date,
         age: age,
         mother_name: additionalData.mother_name,
-        mother_phone: trialStudent.parent_phone,
+        mother_phone: additionalData.mother_phone,
         father_name: additionalData.father_name,
         father_phone: additionalData.father_phone,
         address: additionalData.address,
+        height_cm: additionalData.height_cm ? parseInt(additionalData.height_cm) : null,
+        weight_kg: additionalData.weight_kg ? parseFloat(additionalData.weight_kg) : null,
+        school: additionalData.school || null,
+        jersey_size: additionalData.jersey_size || null,
         health_report_submitted: additionalData.health_report === "Var",
         registration_type: additionalData.registration_type,
         payment_plan: additionalData.payment_plan,
@@ -135,13 +139,13 @@ export const trialStudentService = {
       throw createError;
     }
 
-    // Assign to group if trial student had one
-    if (trialStudent.assigned_group_id && newStudent) {
+    // Assign to selected group
+    if (additionalData.group_id && newStudent) {
       await supabase
         .from("student_groups")
         .insert({
           student_id: newStudent.id,
-          group_id: trialStudent.assigned_group_id
+          group_id: additionalData.group_id
         });
     }
 
