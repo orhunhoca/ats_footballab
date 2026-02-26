@@ -57,7 +57,11 @@ export default function StudentsPage() {
 
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.mother_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.father_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.mother_phone?.includes(searchTerm) ||
+    student.father_phone?.includes(searchTerm)
   );
 
   const calculateAge = (birthDate: string | null) => {
@@ -236,9 +240,19 @@ export default function StudentsPage() {
                             )}
 
                             {(student.mother_phone || student.father_phone) && (
-                              <div className="flex items-center gap-2">
-                                <Phone className="w-4 h-4" />
-                                <span>Tel: {student.mother_phone || student.father_phone}</span>
+                              <div className="flex flex-col gap-1">
+                                {student.mother_phone && (
+                                  <div className="flex items-center gap-2">
+                                    <Phone className="w-4 h-4" />
+                                    <span>Anne: {student.mother_phone}</span>
+                                  </div>
+                                )}
+                                {student.father_phone && (
+                                  <div className="flex items-center gap-2">
+                                    <Phone className="w-4 h-4" />
+                                    <span>Baba: {student.father_phone}</span>
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>

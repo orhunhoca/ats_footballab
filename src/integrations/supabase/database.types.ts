@@ -156,7 +156,9 @@ export type Database = {
           name: string
           schedule: string | null
           status: string | null
+          target_years: string | null
           updated_at: string | null
+          work_hour: string | null
         }
         Insert: {
           age_group: string
@@ -168,7 +170,9 @@ export type Database = {
           name: string
           schedule?: string | null
           status?: string | null
+          target_years?: string | null
           updated_at?: string | null
+          work_hour?: string | null
         }
         Update: {
           age_group?: string
@@ -180,7 +184,9 @@ export type Database = {
           name?: string
           schedule?: string | null
           status?: string | null
+          target_years?: string | null
           updated_at?: string | null
+          work_hour?: string | null
         }
         Relationships: [
           {

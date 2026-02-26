@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { studentService } from "@/services/studentService";
+import { groupService } from "@/services/groupService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,6 +21,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
+  const [groups, setGroups] = useState<any[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
   
   const [formData, setFormData] = useState({
@@ -42,6 +44,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   useEffect(() => {
     if (open) {
       loadPaymentPlans();
+      loadGroups();
       
       // If editing, load student data into form
       if (student) {
@@ -83,6 +86,15 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     }
   }, [open, student]);
 
+  const loadGroups = async () => {
+    try {
+      const data = await groupService.getAllGroups();
+      setGroups(data);
+    } catch (error) {
+      console.error("Gruplar yüklenemedi:", error);
+    }
+  };
+
   const loadPaymentPlans = async () => {
     try {
       const plans = await settingsService.getPaymentPlans();
@@ -102,6 +114,28 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     }
     return age;
   };
+
+  // Auto-assign group based on birth year
+  useEffect(() => {
+    if (formData.birth_date && !student) { // Only for new records or if explicitly needed
+      const birthYear = new Date(formData.birth_date).getFullYear().toString();
+      
+      const matchingGroup = groups.find(g => 
+        g.target_years?.split(',').map((y: string) => y.trim()).includes(birthYear)
+      );
+
+      if (matchingGroup && matchingGroup.work_hour) {
+        setFormData(prev => ({
+          ...prev,
+          work_group_hour: matchingGroup.work_hour
+        }));
+        toast({
+          title: "Otomatik Atama",
+          description: `${birthYear} doğumlu öğrenci için ${matchingGroup.name} (${matchingGroup.work_hour}) seçildi.`,
+        });
+      }
+    }
+  }, [formData.birth_date, groups]);
 
   const handlePaymentPlanChange = (value: string) => {
     if (value === "Bireysel" || value === "Atletik Performans") {

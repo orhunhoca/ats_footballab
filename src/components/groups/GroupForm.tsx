@@ -26,6 +26,8 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
   const [formData, setFormData] = useState({
     name: "",
     age_group: "",
+    target_years: "", // Comma separated years: "2014, 2015"
+    work_hour: "", // "09:00"
     description: "",
     coach_id: "",
     schedule: "",
@@ -71,6 +73,8 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
       await groupService.createGroup({
         name: formData.name,
         age_group: formData.age_group,
+        target_years: formData.target_years,
+        work_hour: formData.work_hour,
         description: formData.description || null,
         coach_id: formData.coach_id || null,
         schedule: JSON.stringify(scheduleArray),
@@ -86,6 +90,8 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
       setFormData({
         name: "",
         age_group: "",
+        target_years: "",
+        work_hour: "",
         description: "",
         coach_id: "",
         schedule: "",
@@ -128,10 +134,31 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
             <Label>Yaş Grubu *</Label>
             <Input 
               required
-              placeholder="Örn: 10-12 Yaş"
+              placeholder="Örn: U12 (2014-2015)"
               value={formData.age_group}
               onChange={e => setFormData({...formData, age_group: e.target.value})}
             />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Hedef Doğum Yılları</Label>
+              <Input 
+                placeholder="Örn: 2014, 2015"
+                value={formData.target_years}
+                onChange={e => setFormData({...formData, target_years: e.target.value})}
+              />
+              <p className="text-xs text-muted-foreground">Virgülle ayırarak yazın.</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Çalışma Saati</Label>
+              <Input 
+                type="time"
+                value={formData.work_hour}
+                onChange={e => setFormData({...formData, work_hour: e.target.value})}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
