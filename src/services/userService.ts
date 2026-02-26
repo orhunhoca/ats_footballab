@@ -150,37 +150,50 @@ export const userService = {
   /**
    * Update user
    */
-  async updateUser(id: string, updates: UserUpdate | { password: string }) {
-    // If updating password, we need to handle it separately or ensure type compatibility
-    // But since UserUpdate allows partial updates, we just need to cast or ensure typescript understands
-    
-    const { data, error } = await supabase
-      .from("users")
-      .update(updates as any) // Type assertion to bypass strict check for password-only update
-      .eq("id", id)
-      .select()
-      .single();
+  async updateUser(id: string, updates: Partial<UserUpdate> & { password?: string }): Promise<User> {
+    try {
+      // If password is provided, hash it
+      const updateData: any = { ...updates };
+      if (updateData.password) {
+        updateData.password = hashPassword(updateData.password);
+      }
 
-    if (error) {
+      const { data, error } = await supabase
+        .from("users")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error("Error updating user:", error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
       console.error("Error updating user:", error);
       throw error;
     }
-
-    return data;
   },
 
   /**
    * Update user password
    */
-  async updateUserPassword(userId: string, newPassword: string) {
-    // Note: In a real app with Supabase Auth, you would use supabase.auth.updateUser()
-    // But since we are using a custom users table for this demo:
-    const { error } = await supabase
-      .from("users")
-      .update({ password: newPassword } as any) // Type assertion to bypass strict check for now
-      .eq("id", userId);
+  async updateUserPassword(userId: string, newPassword: string): Promise<void> {
+    try {
+      const hashedPassword = hashPassword(newPassword);
+      
+      const { error } = await supabase
+        .from("users")
+        .update({ password: hashedPassword })
+        .eq("id", userId);
 
-    if (error) {
+      if (error) {
+        console.error("Error updating password:", error);
+        throw error;
+      }
+    } catch (error) {
       console.error("Error updating password:", error);
       throw error;
     }
