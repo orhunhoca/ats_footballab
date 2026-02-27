@@ -188,5 +188,22 @@ export const authService = {
       console.error("Error checking admin status:", error);
       return false;
     }
+  },
+
+  // Create user profile with role
+  async createProfile(userId: string, profileData: { email: string; full_name: string; role: string }) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .insert({
+        id: userId,
+        email: profileData.email,
+        full_name: profileData.full_name,
+        role: profileData.role,
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    return { data, error };
   }
 };
