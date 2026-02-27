@@ -62,55 +62,49 @@ export type Database = {
       }
       coaches: {
         Row: {
-          created_at: string
+          created_at: string | null
           email: string | null
           experience: string | null
           id: string
+          invite_status: string | null
+          invited_at: string | null
           license: string | null
           name: string
           phone: string | null
-          specialty: string | null
+          specialty: string
           status: string | null
-          updated_at: string
+          updated_at: string | null
           user_id: string | null
-          invite_token: string | null
-          invite_status: string | null
-          invite_sent_at: string | null
-          invite_expires_at: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           email?: string | null
           experience?: string | null
           id?: string
+          invite_status?: string | null
+          invited_at?: string | null
           license?: string | null
           name: string
           phone?: string | null
-          specialty?: string | null
+          specialty: string
           status?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string | null
-          invite_token?: string | null
-          invite_status?: string | null
-          invite_sent_at?: string | null
-          invite_expires_at?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           email?: string | null
           experience?: string | null
           id?: string
+          invite_status?: string | null
+          invited_at?: string | null
           license?: string | null
           name?: string
           phone?: string | null
-          specialty?: string | null
+          specialty?: string
           status?: string | null
-          updated_at?: string
+          updated_at?: string | null
           user_id?: string | null
-          invite_token?: string | null
-          invite_status?: string | null
-          invite_sent_at?: string | null
-          invite_expires_at?: string | null
         }
         Relationships: [
           {

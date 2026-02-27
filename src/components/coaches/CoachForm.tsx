@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ interface CoachFormProps {
 export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState(0);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -29,6 +30,16 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     license: "",
     status: "Aktif"
   });
+
+  // Cooldown timer
+  useEffect(() => {
+    if (cooldownSeconds > 0) {
+      const timer = setTimeout(() => {
+        setCooldownSeconds(cooldownSeconds - 1);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldownSeconds]);
 
   const generateRandomPassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
@@ -66,7 +77,6 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
 
     try {
       // Step 1: Create Supabase Auth user
-      // authService.signUp throws error if fails, returns { user, session } if success
       const { user } = await authService.signUp(
         formData.email,
         formData.password,
@@ -89,15 +99,13 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
         throw new Error(`Profil oluşturulamadı: ${profileError.message}`);
       }
 
-      // Step 3: Send Password Reset Email (This acts as the Invite)
-      // We don't need to generate a random password manually anymore if we use this flow,
-      // but we already created the user with one. Now let's let them set their own.
+      // Step 3: Send Password Reset Email
       await authService.sendPasswordResetEmail(formData.email);
 
       // Step 4: Create coach record
       const inviteToken = crypto.randomUUID();
       const inviteExpiresAt = new Date();
-      inviteExpiresAt.setDate(inviteExpiresAt.getDate() + 7); // 7 days
+      inviteExpiresAt.setDate(inviteExpiresAt.getDate() + 7);
 
       await coachService.createCoach({
         name: formData.name,
@@ -134,11 +142,28 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
       onOpenChange(false);
     } catch (error: any) {
       console.error("Coach invitation error:", error);
-      toast({
-        title: "Hata",
-        description: error?.message || "Davetiye gönderilirken bir hata oluştu.",
-        variant: "destructive"
-      });
+      
+      // Rate limit error handling
+      if (error?.message?.includes("49 seconds") || error?.message?.includes("security purposes")) {
+        setCooldownSeconds(60);
+        toast({
+          title: "⏱️ Güvenlik Sınırı",
+          description: "Çok hızlı işlem yapıldı. Lütfen 1 dakika bekleyip tekrar deneyin.",
+          variant: "destructive"
+        });
+      } else if (error?.message?.includes("User already registered")) {
+        toast({
+          title: "Email Zaten Kayıtlı",
+          description: "Bu email adresi ile kayıtlı bir kullanıcı zaten var.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Hata",
+          description: error?.message || "Davetiye gönderilirken bir hata oluştu.",
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }
@@ -256,13 +281,17 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
             </Button>
             <Button 
               type="submit" 
-              disabled={loading} 
+              disabled={loading || cooldownSeconds > 0} 
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                   Davetiye Gönderiliyor...
+                </>
+              ) : cooldownSeconds > 0 ? (
+                <>
+                  ⏱️ Bekleyin ({cooldownSeconds}s)
                 </>
               ) : (
                 <>
