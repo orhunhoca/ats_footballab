@@ -1,4 +1,4 @@
- 
+/* eslint-disable @typescript-eslint/no-empty-object-type */
 export type Json =
   | string
   | number
@@ -66,6 +66,8 @@ export type Database = {
           email: string | null
           experience: string | null
           id: string
+          invite_status: string | null
+          invited_at: string | null
           license: string | null
           name: string
           phone: string | null
@@ -79,6 +81,8 @@ export type Database = {
           email?: string | null
           experience?: string | null
           id?: string
+          invite_status?: string | null
+          invited_at?: string | null
           license?: string | null
           name: string
           phone?: string | null
@@ -92,6 +96,8 @@ export type Database = {
           email?: string | null
           experience?: string | null
           id?: string
+          invite_status?: string | null
+          invited_at?: string | null
           license?: string | null
           name?: string
           phone?: string | null
