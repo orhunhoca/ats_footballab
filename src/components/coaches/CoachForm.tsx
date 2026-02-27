@@ -102,11 +102,11 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
       // Wait a moment for the trigger to complete
       await new Promise(resolve => setTimeout(resolve, 500));
       
-      const { error: profileError } = await authService.updateProfile(user.id, {
-        role: "coach"
-      });
-
-      if (profileError) {
+      try {
+        await authService.updateProfile(user.id, {
+          role: "coach"
+        });
+      } catch (profileError) {
         console.warn("Profil güncelleme hatası (devam ediliyor):", profileError);
         // Don't throw - profile might already have correct role
       }
