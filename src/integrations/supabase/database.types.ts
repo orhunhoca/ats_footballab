@@ -66,7 +66,10 @@ export type Database = {
           email: string | null
           experience: string | null
           id: string
+          invite_expires_at: string | null
+          invite_sent_at: string | null
           invite_status: string | null
+          invite_token: string | null
           invited_at: string | null
           license: string | null
           name: string
@@ -81,7 +84,10 @@ export type Database = {
           email?: string | null
           experience?: string | null
           id?: string
+          invite_expires_at?: string | null
+          invite_sent_at?: string | null
           invite_status?: string | null
+          invite_token?: string | null
           invited_at?: string | null
           license?: string | null
           name: string
@@ -96,7 +102,10 @@ export type Database = {
           email?: string | null
           experience?: string | null
           id?: string
+          invite_expires_at?: string | null
+          invite_sent_at?: string | null
           invite_status?: string | null
+          invite_token?: string | null
           invited_at?: string | null
           license?: string | null
           name?: string

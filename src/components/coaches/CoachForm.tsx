@@ -19,6 +19,8 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isRateLimited, setIsRateLimited] = useState(false);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -40,6 +42,14 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
       return () => clearTimeout(timer);
     }
   }, [cooldownSeconds]);
+
+  // Reset error state when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      setErrorMessage(null);
+      setIsRateLimited(false);
+    }
+  }, [open]);
 
   const generateRandomPassword = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
@@ -143,6 +153,18 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     } catch (error: any) {
       console.error("Coach invitation error:", error);
       
+      // Handle Supabase specific errors
+      if (error.message.includes("rate limit") || error.message.includes("429")) {
+        if (error.message.includes("email")) {
+          setErrorMessage("📧 E-posta sınırı aşıldı! Bu adresle çok fazla deneme yapıldı. Lütfen farklı bir e-posta adresi kullanın.");
+        } else {
+          setErrorMessage("⏱️ Güvenlik Sınırı - Çok hızlı işlem yapıldı. Lütfen 1 dakika bekleyip tekrar deneyin.");
+          setIsRateLimited(true);
+        }
+        return;
+      }
+      
+      // Handle RLS errors
       // Rate limit error handling
       if (error?.message?.includes("49 seconds") || error?.message?.includes("security purposes")) {
         setCooldownSeconds(60);
@@ -182,6 +204,12 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
           </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {errorMessage && (
+            <div className={`p-3 rounded-md text-sm flex items-center gap-2 ${isRateLimited ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Ad Soyad *</Label>
             <Input 
