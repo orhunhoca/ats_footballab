@@ -8,7 +8,7 @@ import {
   Trophy, 
   UserCircle2, 
   Settings, 
-  Whistle, 
+  UserCog, 
   LogOut,
   ChevronRight,
   TrendingUp,
@@ -122,7 +122,7 @@ export default function Home() {
                 <>
                   <DashboardButton 
                     href="/coaches"
-                    icon={Whistle}
+                    icon={UserCog}
                     title="Antrenörler"
                     desc="Teknik ekip yönetimi"
                     color="text-purple-600"
