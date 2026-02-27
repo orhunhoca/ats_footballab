@@ -66,14 +66,13 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
 
     try {
       // Step 1: Create Supabase Auth user
-      const { user, error: authError } = await authService.signUp(
+      // authService.signUp throws error if fails, returns { user, session } if success
+      const { user } = await authService.signUp(
         formData.email,
-        formData.password
+        formData.password,
+        formData.name,
+        "coach"
       );
-
-      if (authError) {
-        throw new Error(`Hesap oluşturulamadı: ${authError.message}`);
-      }
 
       if (!user) {
         throw new Error("Kullanıcı oluşturulamadı");
@@ -90,7 +89,12 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
         throw new Error(`Profil oluşturulamadı: ${profileError.message}`);
       }
 
-      // Step 3: Create coach record
+      // Step 3: Send Password Reset Email (This acts as the Invite)
+      // We don't need to generate a random password manually anymore if we use this flow,
+      // but we already created the user with one. Now let's let them set their own.
+      await authService.sendPasswordResetEmail(formData.email);
+
+      // Step 4: Create coach record
       const inviteToken = crypto.randomUUID();
       const inviteExpiresAt = new Date();
       inviteExpiresAt.setDate(inviteExpiresAt.getDate() + 7); // 7 days
@@ -111,8 +115,8 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
       });
 
       toast({
-        title: "Davetiye Gönderildi! 📧",
-        description: `${formData.name} adresine davetiye maili gönderildi. Antrenör maildeki linke tıklayarak hesabını aktive edebilir.`,
+        title: "Davetiye ve Şifre Belirleme Maili Gönderildi! 📧",
+        description: `${formData.name} adresine şifre belirleme linki gönderildi. Antrenör linke tıklayarak kendi şifresini oluşturabilir.`,
       });
       
       setFormData({

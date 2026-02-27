@@ -178,6 +178,26 @@ export const authService = {
   },
 
   /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(email: string) {
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/settings?tab=security`, // Yönlendirilecek sayfa
+      });
+
+      if (error) {
+        console.error("Error sending reset email:", error);
+        throw error;
+      }
+      return data;
+    } catch (error) {
+      console.error("Error in sendPasswordResetEmail:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Check if user is admin
    */
   async isAdmin(): Promise<boolean> {
