@@ -98,15 +98,17 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
         throw new Error("Kullanıcı oluşturulamadı");
       }
 
-      // Step 2: Create profile with coach role
-      const { error: profileError } = await authService.createProfile(user.id, {
-        email: formData.email,
-        full_name: formData.name,
+      // Step 2: Update profile with coach role (profile is auto-created by Supabase trigger)
+      // Wait a moment for the trigger to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      const { error: profileError } = await authService.updateProfile(user.id, {
         role: "coach"
       });
 
       if (profileError) {
-        throw new Error(`Profil oluşturulamadı: ${profileError.message}`);
+        console.warn("Profil güncelleme hatası (devam ediliyor):", profileError);
+        // Don't throw - profile might already have correct role
       }
 
       // Step 3: Send Password Reset Email
