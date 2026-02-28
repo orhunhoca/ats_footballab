@@ -26,7 +26,6 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     name: "",
     phone: "",
     email: "",
-    password: "",
     specialty: "",
     experience: "",
     license: "",
@@ -51,19 +50,10 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     }
   }, [open]);
 
-  const generateRandomPassword = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
-    let password = "";
-    for (let i = 0; i < 12; i++) {
-      password += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    setFormData({...formData, password});
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.phone || !formData.email || !formData.password) {
+    if (!formData.name || !formData.phone || !formData.email) {
       toast({
         title: "Eksik Bilgi",
         description: "Lütfen tüm zorunlu alanları doldurun.",
@@ -86,35 +76,7 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     setLoading(true);
 
     try {
-      // Step 1: Create Supabase Auth user
-      const { user } = await authService.signUp(
-        formData.email,
-        formData.password,
-        formData.name,
-        "coach"
-      );
-
-      if (!user) {
-        throw new Error("Kullanıcı oluşturulamadı");
-      }
-
-      // Step 2: Update profile with coach role (profile is auto-created by Supabase trigger)
-      // Wait a moment for the trigger to complete
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      try {
-        await authService.updateProfile(user.id, {
-          role: "coach"
-        });
-      } catch (profileError) {
-        console.warn("Profil güncelleme hatası (devam ediliyor):", profileError);
-        // Don't throw - profile might already have correct role
-      }
-
-      // Step 3: Send Password Reset Email
-      await authService.sendPasswordResetEmail(formData.email);
-
-      // Step 4: Create coach record
+      // Create coach record with invite
       const inviteToken = crypto.randomUUID();
       const inviteExpiresAt = new Date();
       inviteExpiresAt.setDate(inviteExpiresAt.getDate() + 7);
@@ -127,12 +89,15 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
         experience: formData.experience || null,
         license: formData.license || null,
         status: formData.status,
-        user_id: user.id,
+        user_id: null, // Will be set when coach accepts invite
         invite_status: "pending",
         invite_token: inviteToken,
         invite_sent_at: new Date().toISOString(),
         invite_expires_at: inviteExpiresAt.toISOString()
       });
+
+      // Send password reset email (magic link approach)
+      await authService.sendPasswordResetEmail(formData.email);
 
       toast({
         title: "Davetiye ve Şifre Belirleme Maili Gönderildi! 📧",
@@ -143,7 +108,6 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
         name: "",
         phone: "",
         email: "",
-        password: "",
         specialty: "",
         experience: "",
         license: "",
@@ -166,7 +130,6 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
         return;
       }
       
-      // Handle RLS errors
       // Rate limit error handling
       if (error?.message?.includes("49 seconds") || error?.message?.includes("security purposes")) {
         setCooldownSeconds(60);
@@ -232,27 +195,6 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
               onChange={e => setFormData({...formData, email: e.target.value})}
             />
             <p className="text-xs text-gray-500">Bu adrese davetiye maili gönderilecek</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Geçici Şifre *</Label>
-            <div className="flex gap-2">
-              <Input 
-                required
-                type="text"
-                placeholder="Güçlü bir şifre girin"
-                value={formData.password}
-                onChange={e => setFormData({...formData, password: e.target.value})}
-              />
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={generateRandomPassword}
-              >
-                Oluştur
-              </Button>
-            </div>
-            <p className="text-xs text-gray-500">Antrenör ilk girişte şifresini değiştirebilir</p>
           </div>
 
           <div className="space-y-2">
