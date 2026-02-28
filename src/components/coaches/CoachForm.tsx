@@ -96,12 +96,9 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
         invite_expires_at: inviteExpiresAt.toISOString()
       });
 
-      // Send password reset email (magic link approach)
-      await authService.sendPasswordResetEmail(formData.email);
-
       toast({
-        title: "Davetiye ve Şifre Belirleme Maili Gönderildi! 📧",
-        description: `${formData.name} adresine şifre belirleme linki gönderildi. Antrenör linke tıklayarak kendi şifresini oluşturabilir.`,
+        title: "Antrenör Eklendi! ✅",
+        description: `${formData.name} başarıyla kaydedildi. Davetiye durumu: Beklemede. Rate limit geçince email gönderebilirsiniz.`,
       });
       
       setFormData({
@@ -162,10 +159,10 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="w-5 h-5 text-emerald-600" />
-            Antrenör Davet Et
+            Antrenör Ekle
           </DialogTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Antrenöre email ile davetiye gönderilecek. Davetiye linkine tıklayarak hesabını aktive edebilir.
+            Antrenör bilgileri kaydedilecek. Daha sonra davetiye email'i gönderebilirsiniz.
           </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -268,7 +265,7 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
               ) : (
                 <>
                   <Mail className="w-4 h-4 mr-2" />
-                  Davetiye Gönder
+                  Antrenör Ekle
                 </>
               )}
             </Button>
