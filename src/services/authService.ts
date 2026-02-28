@@ -1,9 +1,46 @@
 import { supabase } from "@/integrations/supabase/client";
+import { createClient } from "@supabase/supabase-js";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
 
 export const authService = {
+  /**
+   * Create a new user without signing in (prevents signing out the admin)
+   * Uses a temporary client instance
+   */
+  async createUserWithoutLogin(email: string, password: string, fullName: string, role: string = "coach") {
+    try {
+      // Create a temporary client to avoid affecting the current session
+      const tempClient = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { data: authData, error: authError } = await tempClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+            role: role
+          }
+        }
+      });
+
+      if (authError) {
+        console.error("Create user error:", authError);
+        throw authError;
+      }
+
+      console.log("User created successfully (without login):", authData);
+      return authData;
+    } catch (error) {
+      console.error("Error in createUserWithoutLogin:", error);
+      throw error;
+    }
+  },
+
   /**
    * Sign up a new user with Supabase Auth
    */

@@ -28,6 +28,7 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     name: "",
     phone: "",
     email: "",
+    password: "",
     specialty: "",
     experience: "",
     license: "",
@@ -87,14 +88,15 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     setLoading(true);
 
     try {
-      const { data: authData, error: authError } = await authService.signUp(
+      // Use the new method that doesn't sign out the admin
+      const { user } = await authService.createUserWithoutLogin(
         formData.email,
-        formData.password
+        formData.password,
+        formData.name,
+        "coach"
       );
 
-      if (authError) throw authError;
-
-      if (authData.user) {
+      if (user) {
         await coachService.createCoach({
           name: formData.name,
           phone: formData.phone,
@@ -103,8 +105,8 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
           experience: formData.experience || null,
           license: formData.license || null,
           status: formData.status,
-          user_id: authData.user.id,
-          invite_status: "accepted",
+          user_id: user.id,
+          invite_status: "accepted", // Auto-accept since we set the password
           invite_token: null,
           invite_sent_at: null,
           invite_expires_at: null
@@ -112,7 +114,7 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
 
         toast({
           title: "✅ Antrenör Başarıyla Eklendi!",
-          description: `${formData.name} kaydedildi. Geçici şifre ile giriş yapabilir.`,
+          description: `${formData.name} kaydedildi. Belirlenen şifre ile giriş yapabilir.`,
         });
         
         setFormData({
