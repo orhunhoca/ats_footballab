@@ -128,7 +128,7 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
         license: formData.license || null,
         status: formData.status,
         user_id: user.id,
-        invite_status: "Pending",
+        invite_status: "pending",
         invite_token: inviteToken,
         invite_sent_at: new Date().toISOString(),
         invite_expires_at: inviteExpiresAt.toISOString()
