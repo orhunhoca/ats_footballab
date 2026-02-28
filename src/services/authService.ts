@@ -54,7 +54,8 @@ export const authService = {
           data: {
             full_name: fullName,
             role: role
-          }
+          },
+          emailRedirectTo: undefined
         }
       });
 
