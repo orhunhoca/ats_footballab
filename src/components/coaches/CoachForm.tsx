@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { coachService } from "@/services/coachService";
 import { authService } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Mail } from "lucide-react";
+import { Loader2, Eye, EyeOff, RefreshCw, Copy, CheckCircle2 } from "lucide-react";
 
 interface CoachFormProps {
   open: boolean;
@@ -18,6 +18,8 @@ interface CoachFormProps {
 export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordCopied, setPasswordCopied] = useState(false);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isRateLimited, setIsRateLimited] = useState(false);
@@ -33,27 +35,37 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
   });
 
   // Cooldown timer
-  useEffect(() => {
-    if (cooldownSeconds > 0) {
-      const timer = setTimeout(() => {
-        setCooldownSeconds(cooldownSeconds - 1);
-      }, 1000);
-      return () => clearTimeout(timer);
+  const generateRandomPassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%";
+    const length = 12;
+    let password = "";
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
     }
-  }, [cooldownSeconds]);
+    setFormData({...formData, password});
+    setShowPassword(true);
+  };
 
-  // Reset error state when dialog opens/closes
+  const copyPassword = async () => {
+    await navigator.clipboard.writeText(formData.password);
+    setPasswordCopied(true);
+    setTimeout(() => setPasswordCopied(false), 2000);
+    toast({
+      title: "Kopyalandı!",
+      description: "Geçici şifre panoya kopyalandı.",
+    });
+  };
+
   useEffect(() => {
-    if (open) {
-      setErrorMessage(null);
-      setIsRateLimited(false);
+    if (open && !formData.password) {
+      generateRandomPassword();
     }
   }, [open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.phone || !formData.email) {
+    if (!formData.name || !formData.phone || !formData.email || !formData.password) {
       toast({
         title: "Eksik Bilgi",
         description: "Lütfen tüm zorunlu alanları doldurun.",
@@ -62,7 +74,6 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
       return;
     }
 
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       toast({
@@ -76,66 +87,52 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     setLoading(true);
 
     try {
-      // Create coach record with invite
-      const inviteToken = crypto.randomUUID();
-      const inviteExpiresAt = new Date();
-      inviteExpiresAt.setDate(inviteExpiresAt.getDate() + 7);
+      const { data: authData, error: authError } = await authService.signUp(
+        formData.email,
+        formData.password
+      );
 
-      await coachService.createCoach({
-        name: formData.name,
-        phone: formData.phone,
-        email: formData.email,
-        specialty: formData.specialty || null,
-        experience: formData.experience || null,
-        license: formData.license || null,
-        status: formData.status,
-        user_id: null, // Will be set when coach accepts invite
-        invite_status: "pending",
-        invite_token: inviteToken,
-        invite_sent_at: new Date().toISOString(),
-        invite_expires_at: inviteExpiresAt.toISOString()
-      });
+      if (authError) throw authError;
 
-      toast({
-        title: "Antrenör Eklendi! ✅",
-        description: `${formData.name} başarıyla kaydedildi. Davetiye durumu: Beklemede. Rate limit geçince email gönderebilirsiniz.`,
-      });
-      
-      setFormData({
-        name: "",
-        phone: "",
-        email: "",
-        specialty: "",
-        experience: "",
-        license: "",
-        status: "Aktif"
-      });
-      
-      onSuccess();
-      onOpenChange(false);
-    } catch (error: any) {
-      console.error("Coach invitation error:", error);
-      
-      // Handle Supabase specific errors
-      if (error.message.includes("rate limit") || error.message.includes("429")) {
-        if (error.message.includes("email")) {
-          setErrorMessage("📧 E-posta sınırı aşıldı! Bu adresle çok fazla deneme yapıldı. Lütfen farklı bir e-posta adresi kullanın.");
-        } else {
-          setErrorMessage("⏱️ Güvenlik Sınırı - Çok hızlı işlem yapıldı. Lütfen 1 dakika bekleyip tekrar deneyin.");
-          setIsRateLimited(true);
-        }
-        return;
-      }
-      
-      // Rate limit error handling
-      if (error?.message?.includes("49 seconds") || error?.message?.includes("security purposes")) {
-        setCooldownSeconds(60);
-        toast({
-          title: "⏱️ Güvenlik Sınırı",
-          description: "Çok hızlı işlem yapıldı. Lütfen 1 dakika bekleyip tekrar deneyin.",
-          variant: "destructive"
+      if (authData.user) {
+        await coachService.createCoach({
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          specialty: formData.specialty || null,
+          experience: formData.experience || null,
+          license: formData.license || null,
+          status: formData.status,
+          user_id: authData.user.id,
+          invite_status: "accepted",
+          invite_token: null,
+          invite_sent_at: null,
+          invite_expires_at: null
         });
-      } else if (error?.message?.includes("User already registered")) {
+
+        toast({
+          title: "✅ Antrenör Başarıyla Eklendi!",
+          description: `${formData.name} kaydedildi. Geçici şifre ile giriş yapabilir.`,
+        });
+        
+        setFormData({
+          name: "",
+          phone: "",
+          email: "",
+          password: "",
+          specialty: "",
+          experience: "",
+          license: "",
+          status: "Aktif"
+        });
+        
+        onSuccess();
+        onOpenChange(false);
+      }
+    } catch (error: any) {
+      console.error("Coach creation error:", error);
+      
+      if (error?.message?.includes("User already registered")) {
         toast({
           title: "Email Zaten Kayıtlı",
           description: "Bu email adresi ile kayıtlı bir kullanıcı zaten var.",
@@ -144,7 +141,7 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
       } else {
         toast({
           title: "Hata",
-          description: error?.message || "Davetiye gönderilirken bir hata oluştu.",
+          description: error?.message || "Antrenör eklenirken bir hata oluştu.",
           variant: "destructive"
         });
       }
@@ -157,21 +154,12 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Mail className="w-5 h-5 text-emerald-600" />
-            Antrenör Ekle
-          </DialogTitle>
+          <DialogTitle>Antrenör Ekle</DialogTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Antrenör bilgileri kaydedilecek. Daha sonra davetiye email'i gönderebilirsiniz.
+            Geçici şifre ile hesap oluşturulacak. Antrenör ilk girişte şifresini değiştirebilir.
           </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          {errorMessage && (
-            <div className={`p-3 rounded-md text-sm flex items-center gap-2 ${isRateLimited ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-red-50 text-red-800 border border-red-200'}`}>
-              <span>{errorMessage}</span>
-            </div>
-          )}
-
           <div className="space-y-2">
             <Label>Ad Soyad *</Label>
             <Input 
@@ -191,7 +179,49 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
               value={formData.email}
               onChange={e => setFormData({...formData, email: e.target.value})}
             />
-            <p className="text-xs text-gray-500">Bu adrese davetiye maili gönderilecek</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Geçici Şifre *</Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Input 
+                  required
+                  type={showPassword ? "text" : "password"}
+                  value={formData.password}
+                  onChange={e => setFormData({...formData, password: e.target.value})}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={generateRandomPassword}
+                title="Yeni şifre oluştur"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={copyPassword}
+                title="Şifreyi kopyala"
+              >
+                {passwordCopied ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-amber-600">
+              ⚠️ Bu şifreyi antrenöre iletin. İlk girişte değiştirebilir.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -250,23 +280,16 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
             </Button>
             <Button 
               type="submit" 
-              disabled={loading || cooldownSeconds > 0} 
+              disabled={loading} 
               className="bg-emerald-600 hover:bg-emerald-700"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Davetiye Gönderiliyor...
-                </>
-              ) : cooldownSeconds > 0 ? (
-                <>
-                  ⏱️ Bekleyin ({cooldownSeconds}s)
+                  Ekleniyor...
                 </>
               ) : (
-                <>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Antrenör Ekle
-                </>
+                "Antrenör Ekle"
               )}
             </Button>
           </DialogFooter>
