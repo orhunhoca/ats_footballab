@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { getAllPrograms, createProgram, addExerciseToProgram, type TrainingCategory, type DifficultyLevel } from "@/services/trainingService";
+import { getAllTrainingPrograms, createTrainingProgram, addExerciseToProgram, type TrainingCategory, type DifficultyLevel } from "@/services/trainingService";
 import { Dumbbell, Plus, Clock, Users, Target, Loader2, ChevronRight } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -40,7 +40,7 @@ export default function TrainingPage() {
   async function loadPrograms() {
     try {
       setLoading(true);
-      const data = await getAllPrograms();
+      const data = await getAllTrainingPrograms();
       setPrograms(data);
     } catch (error) {
       console.error("Error loading programs:", error);
@@ -67,7 +67,7 @@ export default function TrainingPage() {
     }
 
     try {
-      await createProgram({
+      await createTrainingProgram({
         name: formData.name,
         category: formData.category,
         week_number: formData.week_number ? parseInt(formData.week_number) : undefined,
@@ -106,9 +106,9 @@ export default function TrainingPage() {
   function getCategoryLabel(category: TrainingCategory) {
     const labels: Record<TrainingCategory, string> = {
       defense: "Savunma",
-      attack: "Hücum",
+      offense: "Hücum",
       coordination: "Koordinasyon",
-      transition: "Alan Geçişi",
+      transitions: "Alan Geçişi",
       technical: "Teknik",
       conditioning: "Kondisyon",
       tactical: "Taktik"
@@ -119,9 +119,9 @@ export default function TrainingPage() {
   function getCategoryColor(category: TrainingCategory) {
     const colors: Record<TrainingCategory, string> = {
       defense: "bg-blue-100 text-blue-800",
-      attack: "bg-red-100 text-red-800",
+      offense: "bg-red-100 text-red-800",
       coordination: "bg-purple-100 text-purple-800",
-      transition: "bg-orange-100 text-orange-800",
+      transitions: "bg-orange-100 text-orange-800",
       technical: "bg-green-100 text-green-800",
       conditioning: "bg-yellow-100 text-yellow-800",
       tactical: "bg-indigo-100 text-indigo-800"
@@ -203,9 +203,9 @@ export default function TrainingPage() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="defense">Savunma</SelectItem>
-                          <SelectItem value="attack">Hücum</SelectItem>
+                          <SelectItem value="offense">Hücum</SelectItem>
                           <SelectItem value="coordination">Koordinasyon</SelectItem>
-                          <SelectItem value="transition">Alan Geçişi</SelectItem>
+                          <SelectItem value="transitions">Alan Geçişi</SelectItem>
                           <SelectItem value="technical">Teknik</SelectItem>
                           <SelectItem value="conditioning">Kondisyon</SelectItem>
                           <SelectItem value="tactical">Taktik</SelectItem>
@@ -344,9 +344,9 @@ export default function TrainingPage() {
           <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
             <TabsTrigger value="all">Tümü</TabsTrigger>
             <TabsTrigger value="defense">Savunma</TabsTrigger>
-            <TabsTrigger value="attack">Hücum</TabsTrigger>
+            <TabsTrigger value="offense">Hücum</TabsTrigger>
             <TabsTrigger value="coordination">Koordinasyon</TabsTrigger>
-            <TabsTrigger value="transition">Alan Geçişi</TabsTrigger>
+            <TabsTrigger value="transitions">Alan Geçişi</TabsTrigger>
             <TabsTrigger value="technical">Teknik</TabsTrigger>
             <TabsTrigger value="conditioning">Kondisyon</TabsTrigger>
             <TabsTrigger value="tactical">Taktik</TabsTrigger>
