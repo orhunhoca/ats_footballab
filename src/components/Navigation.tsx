@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3, Bell, Settings, CalendarCheck, UserCircle2, LogOut, Menu, X, TrendingUp } from "lucide-react";
+import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3, Bell, Settings, CalendarCheck, UserCircle2, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell } from "lucide-react";
 import { userService, type User } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 export function Navigation() {
   const router = useRouter();
@@ -50,6 +51,8 @@ export function Navigation() {
     { href: "/coaches", label: "Antrenörler", icon: UserCircle2 },
     { href: "/attendance", label: "Yoklama", icon: CalendarCheck },
     { href: "/performance", label: "Performans", icon: TrendingUp },
+    { href: "/payments", label: "Ödemeler", icon: CreditCard },
+    { href: "/training", label: "Antrenman Programları", icon: Dumbbell },
     { href: "/notifications", label: "Bildirimler", icon: Bell },
     { href: "/reports", label: "Raporlar", icon: BarChart3 },
   ];
