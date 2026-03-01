@@ -125,6 +125,36 @@ export type Database = {
           },
         ]
       }
+      document_templates: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          template_content: Json
+          template_name: string
+          template_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          template_content: Json
+          template_name: string
+          template_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          template_content?: Json
+          template_name?: string
+          template_type?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       group_schedule: {
         Row: {
           created_at: string | null
@@ -997,6 +1027,72 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      whatsapp_media: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          file_name: string | null
+          file_size: number | null
+          group_id: string | null
+          id: string
+          media_type: string
+          media_url: string
+          mime_type: string | null
+          sent_at: string | null
+          sent_to: Json | null
+          student_id: string | null
+          updated_at: string | null
+          whatsapp_media_id: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          group_id?: string | null
+          id?: string
+          media_type: string
+          media_url: string
+          mime_type?: string | null
+          sent_at?: string | null
+          sent_to?: Json | null
+          student_id?: string | null
+          updated_at?: string | null
+          whatsapp_media_id?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          file_name?: string | null
+          file_size?: number | null
+          group_id?: string | null
+          id?: string
+          media_type?: string
+          media_url?: string
+          mime_type?: string | null
+          sent_at?: string | null
+          sent_to?: Json | null
+          student_id?: string | null
+          updated_at?: string | null
+          whatsapp_media_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_media_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_media_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       whatsapp_messages: {
         Row: {
