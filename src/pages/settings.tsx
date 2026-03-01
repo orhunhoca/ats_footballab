@@ -9,8 +9,9 @@ import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/authService";
 import { whatsappService } from "@/services/whatsappService";
 import { scheduledMessageService } from "@/services/scheduledMessageService";
+import { iyzicoService } from "@/services/iyzicoService";
 import { useState, useEffect } from "react";
-import { Settings, Shield, Bell, Building2, User, Loader2, MessageSquare, CheckCircle2, AlertCircle, CalendarClock } from "lucide-react";
+import { Settings, Shield, Bell, Building2, User, Loader2, MessageSquare, CheckCircle2, AlertCircle, CalendarClock, CreditCard } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -62,11 +63,18 @@ export default function SettingsPage() {
 
   // Scheduler settings
   const [schedulerSettings, setSchedulerSettings] = useState({
-    training_reminder_enabled: true,
+    training_reminder_enabled: false,
     training_reminder_hours_before: 1,
-    payment_reminder_enabled: true,
-    birthday_enabled: true,
-    anniversary_enabled: true
+    payment_reminder_enabled: false,
+    birthday_enabled: false,
+  });
+
+  // iyzico settings state
+  const [iyzicoSettings, setIyzicoSettings] = useState({
+    api_key: "",
+    secret_key: "",
+    base_url: "https://sandbox-api.iyzipay.com",
+    is_active: false
   });
 
   useEffect(() => {
@@ -77,38 +85,55 @@ export default function SettingsPage() {
 
   const loadSchedulerSettings = async () => {
     try {
-      const settings = await scheduledMessageService.getSchedulerSettings();
-      if (settings && settings.length > 0) {
-        const newSettings = { ...schedulerSettings };
-        
-        settings.forEach(setting => {
-          if (setting.setting_type === 'training_reminder') {
-            newSettings.training_reminder_enabled = setting.enabled ?? true;
-            newSettings.training_reminder_hours_before = setting.hours_before ?? 1;
-          } else if (setting.setting_type === 'payment_reminder') {
-            newSettings.payment_reminder_enabled = setting.enabled ?? true;
-          } else if (setting.setting_type === 'birthday_greeting') {
-            newSettings.birthday_enabled = setting.enabled ?? true;
-          } else if (setting.setting_type === 'anniversary_greeting') {
-            newSettings.anniversary_enabled = setting.enabled ?? true;
-          }
+      const schedSettings = await scheduledMessageService.getSchedulerSettings();
+      if (schedSettings.length > 0) {
+        const training = schedSettings.find(s => s.setting_type === "training_reminder");
+        const payment = schedSettings.find(s => s.setting_type === "payment_reminder");
+        const birthday = schedSettings.find(s => s.setting_type === "birthday_greeting");
+
+        setSchedulerSettings({
+          training_reminder_enabled: training?.enabled || false,
+          training_reminder_hours_before: training?.hours_before || 1,
+          payment_reminder_enabled: payment?.enabled || false,
+          birthday_enabled: birthday?.enabled || false,
         });
-        
-        setSchedulerSettings(newSettings);
       }
+
+      // Load iyzico settings
+      const iyzico = await iyzicoService.getSettings();
+      if (iyzico) {
+        setIyzicoSettings({
+          api_key: iyzico.api_key || "",
+          secret_key: iyzico.secret_key || "",
+          base_url: iyzico.base_url || "https://sandbox-api.iyzipay.com",
+          is_active: iyzico.is_active || false
+        });
+      }
+
     } catch (error) {
-      console.error("Error loading scheduler settings:", error);
+      console.error("Error loading user data:", error);
+      toast({
+        title: "Hata",
+        description: "Kullanıcı bilgileri yüklenemedi",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSaveSchedulerSettings = async () => {
     try {
       setSaving(true);
+      // Save Scheduler settings
       await scheduledMessageService.updateSchedulerSettings(schedulerSettings);
+
+      // Save iyzico settings
+      await iyzicoService.saveSettings(iyzicoSettings);
       
       toast({
         title: "Başarılı",
-        description: "Otomatik mesaj ayarları güncellendi",
+        description: "Tüm ayarlar başarıyla kaydedildi.",
       });
     } catch (error) {
       console.error("Scheduler settings error:", error);
@@ -353,6 +378,10 @@ export default function SettingsPage() {
               <TabsTrigger value="scheduler">
                 <CalendarClock className="w-4 h-4 mr-2" />
                 Otomatik Mesajlar
+              </TabsTrigger>
+              <TabsTrigger value="payment">
+                <CreditCard className="w-4 h-4 mr-2" />
+                Online Ödeme
               </TabsTrigger>
             </TabsList>
 
@@ -777,6 +806,74 @@ export default function SettingsPage() {
                     </Button>
                   </div>
                 </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* iyzico / Online Payment Settings Tab */}
+            <TabsContent value="payment">
+              <Card className="p-6">
+                <div className="flex items-center gap-2 mb-6">
+                  <CreditCard className="w-5 h-5 text-green-600" />
+                  <h2 className="text-xl font-semibold">Online Ödeme Ayarları (iyzico)</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">iyzico Entegrasyonu</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Online ödeme almak için iyzico entegrasyonunu etkinleştirin
+                      </p>
+                    </div>
+                    <Switch
+                      checked={iyzicoSettings.is_active}
+                      onCheckedChange={(checked) => setIyzicoSettings({ ...iyzicoSettings, is_active: checked })}
+                    />
+                  </div>
+
+                  {iyzicoSettings.is_active && (
+                    <div className="grid gap-4">
+                      <div className="grid gap-2">
+                        <Label>API Key</Label>
+                        <Input
+                          value={iyzicoSettings.api_key}
+                          onChange={(e) => setIyzicoSettings({ ...iyzicoSettings, api_key: e.target.value })}
+                          placeholder="iyzico API Key"
+                          type="password"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Secret Key</Label>
+                        <Input
+                          value={iyzicoSettings.secret_key}
+                          onChange={(e) => setIyzicoSettings({ ...iyzicoSettings, secret_key: e.target.value })}
+                          placeholder="iyzico Secret Key"
+                          type="password"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label>Base URL</Label>
+                        <Input
+                          value={iyzicoSettings.base_url}
+                          onChange={(e) => setIyzicoSettings({ ...iyzicoSettings, base_url: e.target.value })}
+                          placeholder="https://sandbox-api.iyzipay.com"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Test için: https://sandbox-api.iyzipay.com <br />
+                          Canlı için: https://api.iyzipay.com
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="bg-blue-50 p-4 rounded-md text-sm text-blue-700">
+                    <h4 className="font-semibold mb-1">Bilgilendirme</h4>
+                    <p>
+                      Bu ayarları kaydettikten sonra, Ödemeler sayfasından öğrenciler için online ödeme linki oluşturabilirsiniz.
+                      Ödeme başarılı olduğunda otomatik olarak sisteme işlenecek ve veliye makbuz gönderilecektir.
+                    </p>
+                  </div>
+                </div>
               </Card>
             </TabsContent>
           </Tabs>

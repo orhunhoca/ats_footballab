@@ -420,6 +420,7 @@ export type Database = {
           iyzico_payment_id: string | null
           payment_history_id: string
           payment_link: string
+          payment_type: string
           status: string
           student_id: string
           updated_at: string | null
@@ -436,6 +437,7 @@ export type Database = {
           iyzico_payment_id?: string | null
           payment_history_id: string
           payment_link: string
+          payment_type?: string
           status?: string
           student_id: string
           updated_at?: string | null
@@ -452,6 +454,7 @@ export type Database = {
           iyzico_payment_id?: string | null
           payment_history_id?: string
           payment_link?: string
+          payment_type?: string
           status?: string
           student_id?: string
           updated_at?: string | null
