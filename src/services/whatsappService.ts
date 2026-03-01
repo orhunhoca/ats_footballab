@@ -405,6 +405,104 @@ export const whatsappService = {
     }
   },
 
+  // Send document message (PDF, etc.)
+  async sendDocumentMessage(
+    phoneNumber: string,
+    documentUrl: string,
+    filename: string,
+    caption?: string
+  ): Promise<void> {
+    const settings = await this.getSettings();
+    if (!settings?.is_enabled) {
+      throw new Error("WhatsApp entegrasyonu aktif değil");
+    }
+
+    try {
+      // In production, this would call WhatsApp Business API
+      // For now, we'll simulate and log
+      console.log("Sending document via WhatsApp:", {
+        to: phoneNumber,
+        document: documentUrl,
+        filename,
+        caption,
+      });
+
+      // Record in database
+      await supabase.from("whatsapp_messages").insert({
+        phone_number: phoneNumber,
+        message_type: "document",
+        status: "sent",
+        message_content: {
+          document_url: documentUrl,
+          filename,
+          caption,
+        },
+      });
+
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    } catch (error) {
+      console.error("Error sending document:", error);
+
+      // Record failed message
+      const failedRecord = {
+        phone_number: phoneNumber,
+        message_type: "document",
+        status: "failed",
+        error_message: error instanceof Error ? error.message : "Unknown error",
+      };
+      await supabase.from("whatsapp_messages").insert(failedRecord);
+      throw error;
+    }
+  },
+
+  // Send image message
+  async sendImageMessage(
+    phoneNumber: string,
+    imageUrl: string,
+    caption?: string
+  ): Promise<void> {
+    const settings = await this.getSettings();
+    if (!settings?.is_enabled) {
+      throw new Error("WhatsApp entegrasyonu aktif değil");
+    }
+
+    try {
+      // In production, this would call WhatsApp Business API
+      console.log("Sending image via WhatsApp:", {
+        to: phoneNumber,
+        image: imageUrl,
+        caption,
+      });
+
+      // Record in database
+      await supabase.from("whatsapp_messages").insert({
+        phone_number: phoneNumber,
+        message_type: "image",
+        status: "sent",
+        message_content: {
+          image_url: imageUrl,
+          caption,
+        },
+      });
+
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    } catch (error) {
+      console.error("Error sending image:", error);
+
+      // Record failed message
+      const failedRecord = {
+        phone_number: phoneNumber,
+        message_type: "image",
+        status: "failed",
+        error_message: error instanceof Error ? error.message : "Unknown error",
+      };
+      await supabase.from("whatsapp_messages").insert(failedRecord);
+      throw error;
+    }
+  },
+
   // Get message history for a student
   async getMessageHistory(studentId?: string): Promise<WhatsAppMessage[]> {
     let query = supabase

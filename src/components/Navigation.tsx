@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ClipboardCheck, BarChart3, UserCircle, Grid3x3, Bell, Settings, CalendarCheck, UserCircle2, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell } from "lucide-react";
+import { Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera } from "lucide-react";
 import { userService, type User } from "@/services/userService";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
