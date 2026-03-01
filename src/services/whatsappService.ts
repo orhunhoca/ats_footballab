@@ -335,6 +335,76 @@ export const whatsappService = {
     }
   },
 
+  // Send document (PDF) via WhatsApp
+  async sendDocumentMessage(
+    phoneNumber: string,
+    documentUrl: string,
+    filename: string,
+    caption?: string
+  ): Promise<WhatsAppMessage> {
+    try {
+      // Get settings
+      const settings = await this.getSettings();
+      if (!settings?.is_active) {
+        throw new Error("WhatsApp integration is not active");
+      }
+
+      // Call Edge Function
+      const { data: functionData, error: functionError } = await supabase.functions.invoke(
+        "send-whatsapp",
+        {
+          body: {
+            phoneNumber,
+            messageType: "document",
+            messageContent: {
+              documentUrl,
+              filename,
+              caption,
+            },
+          },
+        }
+      );
+
+      if (functionError) throw functionError;
+
+      // Record message in database
+      const messageRecord: WhatsAppMessageInsert = {
+        recipient_phone: phoneNumber,
+        message_type: "custom",
+        status: "sent",
+        whatsapp_message_id: functionData?.messageId,
+      };
+
+      const { data, error: insertError } = await supabase
+        .from("whatsapp_messages")
+        .insert(messageRecord)
+        .select()
+        .single();
+
+      if (insertError) throw insertError;
+
+      // Record in media table
+      await supabase.from("whatsapp_media").insert({
+        media_type: "document",
+        media_url: documentUrl,
+        caption: caption || filename,
+      });
+
+      return data;
+    } catch (error) {
+      // Record failed message
+      const failedRecord: WhatsAppMessageInsert = {
+        recipient_phone: phoneNumber,
+        message_type: "custom",
+        status: "failed",
+        error_message: error instanceof Error ? error.message : "Unknown error",
+      };
+
+      await supabase.from("whatsapp_messages").insert(failedRecord);
+      throw error;
+    }
+  },
+
   // Get message history for a student
   async getMessageHistory(studentId?: string): Promise<WhatsAppMessage[]> {
     let query = supabase
