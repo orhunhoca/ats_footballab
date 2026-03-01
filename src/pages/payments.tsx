@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { createPayment, getAllPayments, getPaymentStats, type PaymentMethod, type PaymentHistory } from "@/services/paymentService";
+import { createPayment, getAllPayments, getPaymentStats, type PaymentMethod, type PaymentType, type PaymentHistory } from "@/services/paymentService";
 import { studentService } from "@/services/studentService";
 import { CreditCard, Wallet, Building2, Loader2, TrendingUp, AlertCircle, CheckCircle2 } from "lucide-react";
 
@@ -32,6 +32,7 @@ export default function PaymentsPage() {
     student_id: "",
     amount: "",
     payment_method: "cash" as PaymentMethod,
+    payment_type: "registration" as PaymentType,
     installment_number: "",
     notes: ""
   });
@@ -81,6 +82,7 @@ export default function PaymentsPage() {
         student_id: formData.student_id,
         amount: parseFloat(formData.amount),
         payment_method: formData.payment_method,
+        payment_type: formData.payment_type,
         installment_number: formData.installment_number ? parseInt(formData.installment_number) : undefined,
         notes: formData.notes || undefined
       });
@@ -95,6 +97,7 @@ export default function PaymentsPage() {
         student_id: "",
         amount: "",
         payment_method: "cash",
+        payment_type: "registration",
         installment_number: "",
         notes: ""
       });
@@ -201,6 +204,24 @@ export default function PaymentsPage() {
                       value={formData.amount}
                       onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
                     />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="payment_type">Ödeme Türü *</Label>
+                    <Select
+                      value={formData.payment_type}
+                      onValueChange={(value: PaymentType) => setFormData({ ...formData, payment_type: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="registration">Kayıt Yenileme</SelectItem>
+                        <SelectItem value="summer_clothing">Yazlık Kıyafet</SelectItem>
+                        <SelectItem value="winter_clothing">Kışlık Kıyafet</SelectItem>
+                        <SelectItem value="other">Diğer</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid gap-2">
