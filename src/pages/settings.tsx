@@ -91,12 +91,14 @@ export default function SettingsPage() {
         const training = schedSettings.find(s => s.setting_type === "training_reminder");
         const payment = schedSettings.find(s => s.setting_type === "payment_reminder");
         const birthday = schedSettings.find(s => s.setting_type === "birthday_greeting");
+        const anniversary = schedSettings.find(s => s.setting_type === "anniversary_greeting");
 
         setSchedulerSettings({
           training_reminder_enabled: training?.enabled || false,
           training_reminder_hours_before: training?.hours_before || 1,
           payment_reminder_enabled: payment?.enabled || false,
           birthday_enabled: birthday?.enabled || false,
+          anniversary_enabled: anniversary?.enabled || false,
         });
       }
 
