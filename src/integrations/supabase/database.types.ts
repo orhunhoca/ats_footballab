@@ -267,6 +267,42 @@ export type Database = {
           },
         ]
       }
+      message_scheduler_settings: {
+        Row: {
+          created_at: string | null
+          days_before: number | null
+          enabled: boolean | null
+          hours_before: number | null
+          id: string
+          send_time: string | null
+          setting_type: string
+          template_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          days_before?: number | null
+          enabled?: boolean | null
+          hours_before?: number | null
+          id?: string
+          send_time?: string | null
+          setting_type: string
+          template_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          days_before?: number | null
+          enabled?: boolean | null
+          hours_before?: number | null
+          id?: string
+          send_time?: string | null
+          setting_type?: string
+          template_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string | null
@@ -493,6 +529,68 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      scheduled_messages: {
+        Row: {
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message_type: string
+          recipient_name: string | null
+          recipient_phone: string
+          recurrence_end_date: string | null
+          recurrence_pattern: string | null
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+          student_id: string | null
+          template_name: string
+          template_variables: Json
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_type: string
+          recipient_name?: string | null
+          recipient_phone: string
+          recurrence_end_date?: string | null
+          recurrence_pattern?: string | null
+          scheduled_for: string
+          sent_at?: string | null
+          status?: string
+          student_id?: string | null
+          template_name: string
+          template_variables?: Json
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_type?: string
+          recipient_name?: string | null
+          recipient_phone?: string
+          recurrence_end_date?: string | null
+          recurrence_pattern?: string | null
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+          student_id?: string | null
+          template_name?: string
+          template_variables?: Json
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_messages_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       schools: {
         Row: {
