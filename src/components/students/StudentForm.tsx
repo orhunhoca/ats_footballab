@@ -10,7 +10,7 @@ import { studentService } from "@/services/studentService";
 import { groupService } from "@/services/groupService";
 import { storageService } from "@/services/storageService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
-import { paymentService } from "@/services/paymentService";
+import { createPayment } from "@/services/paymentService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Camera, Upload, X } from "lucide-react";
@@ -389,7 +389,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
         // Create payment record if status changed from Bekliyor/Kısmi Ödeme to Ödendi
         if (previousPaymentStatus !== "Ödendi" && formData.payment_status === "Ödendi" && formData.payment_amount) {
-          await paymentService.createPayment({
+          await createPayment({
             student_id: studentId,
             amount: parseFloat(formData.payment_amount),
             payment_method: formData.payment_method,
@@ -401,7 +401,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
         // Create summer clothing payment if newly checked
         if (!previousSummerClothing && formData.summer_clothing_paid && formData.summer_clothing_price) {
-          await paymentService.createPayment({
+          await createPayment({
             student_id: studentId,
             amount: parseFloat(formData.summer_clothing_price),
             payment_method: formData.payment_method,
@@ -412,7 +412,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
         // Create winter clothing payment if newly checked
         if (!previousWinterClothing && formData.winter_clothing_paid && formData.winter_clothing_price) {
-          await paymentService.createPayment({
+          await createPayment({
             student_id: studentId,
             amount: parseFloat(formData.winter_clothing_price),
             payment_method: formData.payment_method,
@@ -452,7 +452,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
         // Create payment record if payment status is Ödendi
         if (formData.payment_status === "Ödendi" && formData.payment_amount) {
-          await paymentService.createPayment({
+          await createPayment({
             student_id: studentId,
             amount: parseFloat(formData.payment_amount),
             payment_method: formData.payment_method,
@@ -464,7 +464,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
         // Create summer clothing payment if checked
         if (formData.summer_clothing_paid && formData.summer_clothing_price) {
-          await paymentService.createPayment({
+          await createPayment({
             student_id: studentId,
             amount: parseFloat(formData.summer_clothing_price),
             payment_method: formData.payment_method,
@@ -475,7 +475,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
         // Create winter clothing payment if checked
         if (formData.winter_clothing_paid && formData.winter_clothing_price) {
-          await paymentService.createPayment({
+          await createPayment({
             student_id: studentId,
             amount: parseFloat(formData.winter_clothing_price),
             payment_method: formData.payment_method,
