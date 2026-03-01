@@ -1,6 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { pdfService } from "./pdfService";
+import { pdfService, type StudentData, type PaymentData } from "./pdfService";
 import { storageService } from "./storageService";
 import { whatsappService } from "./whatsappService";
 
@@ -34,6 +34,16 @@ export const documentService = {
 
       if (studentError) throw studentError;
 
+      // Map student data to interface
+      const studentData: StudentData = {
+        full_name: student.name, // mapped from name
+        age: student.age,
+        father_name: student.father_name,
+        father_phone: student.father_phone,
+        mother_name: student.mother_name,
+        mother_phone: student.mother_phone
+      };
+
       // Fetch performance tests for the month
       const monthStart = new Date(month + "-01");
       const monthEnd = new Date(monthStart);
@@ -60,11 +70,17 @@ export const documentService = {
 
       if (attendanceError) throw attendanceError;
 
-      // Generate PDF - Cast to any to bypass strict type checking for now since we know the data structure
+      // Generate PDF
       const pdfBlob = await pdfService.generatePerformanceReport(
-        student as any,
-        (tests || []) as any,
-        (attendance || []) as any,
+        studentData,
+        (tests || []).map(t => ({
+            test_date: t.test_date,
+            test_type: t.test_type,
+            value: t.value,
+            unit: t.unit,
+            notes: t.notes
+        })),
+        (attendance || []).map(a => ({ status: a.status })),
         month
       );
 
@@ -81,18 +97,19 @@ export const documentService = {
         student_id: studentId,
         media_type: "document",
         media_url: uploadResult.url!,
-        caption: `${student.full_name} - ${month} Performans Raporu`,
+        caption: `${studentData.full_name} - ${month} Performans Raporu`,
       });
 
       if (recordError) throw recordError;
 
       // Send via WhatsApp if requested
-      if (sendViaWhatsApp && student.parent_phone) {
+      const parentPhone = studentData.father_phone || studentData.mother_phone;
+      if (sendViaWhatsApp && parentPhone) {
         await whatsappService.sendDocumentMessage(
-          student.parent_phone,
+          parentPhone,
           uploadResult.url!,
-          `${student.full_name} - ${month} Performans Raporu.pdf`,
-          `Merhaba, ${student.full_name} için ${month} dönemi performans raporunu gönderiyoruz.`
+          `${studentData.full_name.replace(/\s+/g, '_')}_${month}_Raporu.pdf`,
+          `Merhaba, ${studentData.full_name} için ${month} dönemi performans raporunu gönderiyoruz.`
         );
       }
 
@@ -116,15 +133,17 @@ export const documentService = {
   ): Promise<{ success: boolean; pdfUrl?: string; error?: string }> {
     try {
       // Fetch payment data with student info
-      // Using explicit typing for the join query result
+      // Using payment_history table
       const { data: payment, error: paymentError } = await supabase
-        .from("payments")
+        .from("payment_history")
         .select(`
           *,
           students (
-            full_name,
-            parent_name,
-            parent_phone
+            name,
+            father_name,
+            father_phone,
+            mother_name,
+            mother_phone
           )
         `)
         .eq("id", paymentId)
@@ -133,15 +152,30 @@ export const documentService = {
       if (paymentError) throw paymentError;
       if (!payment.students) throw new Error("Student data not found for payment");
 
-      // Generate PDF
       // Transform data to match expected types
-      const studentData = Array.isArray(payment.students) 
-        ? payment.students[0] 
-        : payment.students;
+      const student = payment.students; // Single object because student_id is foreign key
+      
+      const studentData: StudentData = {
+          full_name: student.name,
+          father_name: student.father_name,
+          father_phone: student.father_phone,
+          mother_name: student.mother_name,
+          mother_phone: student.mother_phone
+      };
+      
+      const paymentData: PaymentData = {
+          id: payment.id,
+          payment_date: payment.payment_date,
+          amount: payment.amount,
+          payment_type: payment.payment_type,
+          payment_method: payment.payment_method,
+          notes: payment.notes
+      };
 
+      // Generate PDF
       const pdfBlob = await pdfService.generatePaymentReceipt(
-        payment as any, 
-        studentData as any
+        paymentData, 
+        studentData
       );
 
       // Upload to Supabase Storage
@@ -163,9 +197,10 @@ export const documentService = {
       if (recordError) throw recordError;
 
       // Send via WhatsApp if requested
-      if (sendViaWhatsApp && studentData.parent_phone) {
+      const parentPhone = studentData.father_phone || studentData.mother_phone;
+      if (sendViaWhatsApp && parentPhone) {
         await whatsappService.sendDocumentMessage(
-          studentData.parent_phone,
+          parentPhone,
           uploadResult.url!,
           `Odeme_Makbuzu_${Date.now()}.pdf`,
           `Merhaba, ${new Date(payment.payment_date).toLocaleDateString("tr-TR")} tarihli ${payment.amount} TL tutarındaki ödeme makbuzunuzu gönderiyoruz.`
@@ -201,28 +236,24 @@ export const documentService = {
 
       if (groupError) throw groupError;
 
-      // Fetch training sessions for the group
-      // Note: training_sessions might not exist in types yet if I just added it logic, 
-      // but let's assume it exists or use 'any' if needed.
-      // Based on previous errors, it seems training_sessions table might be missing or named differently.
-      // Let's use generic query to avoid type error if table is missing from types
-      const { data: sessions, error: sessionsError } = await supabase
-        .from("training_sessions" as any) 
+      // Fetch training schedule for the group
+      // Using group_schedule table (recurring weekly schedule)
+      const { data: scheduleData, error: scheduleError } = await supabase
+        .from("group_schedule")
         .select("*")
         .eq("group_id", groupId)
-        .order("session_date", { ascending: true });
+        .order("day_of_week", { ascending: true });
 
-      // If table doesn't exist, we handle it gracefully
-      if (sessionsError) {
-         console.warn("Training sessions table error (might not exist):", sessionsError);
-         // Fallback to empty schedule
-      }
+      if (scheduleError) throw scheduleError;
 
+      // Map day numbers to day names
+      const dayNames = ["Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"];
+      
       // Create schedule data
-      const schedule = (sessions || []).map((session: any) => ({
-        day: new Date(session.session_date).toLocaleDateString("tr-TR", { weekday: "long" }),
-        time: session.start_time || "-",
-        location: session.location || "-",
+      const schedule = (scheduleData || []).map((item) => ({
+        day: dayNames[item.day_of_week] || "Bilinmiyor",
+        time: `${item.start_time.slice(0, 5)} - ${item.end_time.slice(0, 5)}`,
+        location: "Tesis" // Default location since not in schema
       }));
 
       // Generate PDF
@@ -244,14 +275,37 @@ export const documentService = {
       if (sendViaWhatsApp) {
         const { data: students, error: studentsError } = await supabase
           .from("students")
-          .select("parent_phone, full_name")
-          .eq("group_id", groupId);
+          .select("id, name, father_phone, mother_phone") // Select needed fields
+          .eq("status", "Aktif"); 
+          // Note: Relationship for groups is via student_groups table, let's query via join
+        
+        // Correct way to get students in group via student_groups junction table
+        const { data: groupStudents, error: groupStudentsError } = await supabase
+            .from("student_groups")
+            .select(`
+                student_id,
+                students (
+                    name,
+                    father_phone,
+                    mother_phone
+                )
+            `)
+            .eq("group_id", groupId);
 
-        if (!studentsError && students) {
-          for (const student of students) {
-            if (student.parent_phone) {
+        if (!groupStudentsError && groupStudents) {
+          for (const item of groupStudents) {
+            const student = item.students;
+            if (!student) continue; // Skip if student data is missing
+            
+            // Check for student object properties (it might be an array or object depending on join)
+            // Supabase returns single object for foreign key relation usually
+            const s = Array.isArray(student) ? student[0] : student;
+            
+            const parentPhone = s.father_phone || s.mother_phone;
+            
+            if (parentPhone) {
               await whatsappService.sendDocumentMessage(
-                student.parent_phone,
+                parentPhone,
                 uploadResult.url!,
                 `Antrenman_Programi_${month}.pdf`,
                 `Merhaba, ${group.name} grubu için ${month} dönemi antrenman programını gönderiyoruz.`

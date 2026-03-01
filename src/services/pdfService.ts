@@ -1,34 +1,35 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import type { Database } from "@/integrations/supabase/types";
 
-// Define strict types for inputs to avoid database type conflicts
-interface StudentData {
-  full_name: string;
+// Define strict types for inputs based on actual DB schema
+export interface StudentData {
+  full_name: string; // mapped from name
   age?: number | null;
-  parent_name?: string | null;
-  parent_phone?: string | null;
+  father_name?: string | null;
+  father_phone?: string | null;
+  mother_name?: string | null;
+  mother_phone?: string | null;
 }
 
-interface TestData {
+export interface TestData {
   test_date: string;
   test_type?: string | null;
-  score?: number | string | null;
+  value?: number | string | null; // Database uses value
+  unit?: string | null;
   notes?: string | null;
-  value?: number | null; // Database uses value
 }
 
-interface PaymentData {
+export interface PaymentData {
   id: string;
   payment_date: string;
   amount: number;
-  month?: string | null;
   payment_type?: string | null;
-  status?: string | null;
+  payment_method?: string | null;
   notes?: string | null;
+  // payment_history doesn't have month or status columns directly, handled via logic
 }
 
-interface AttendanceData {
+export interface AttendanceData {
   status: string;
 }
 
@@ -86,11 +87,10 @@ export const pdfService = {
       doc.setFont("helvetica", "bold");
       doc.text("PERFORMANS TESTLERİ", 20, 145);
 
-      // Use value or score depending on what's available
       const testData = tests.map((test) => [
         new Date(test.test_date).toLocaleDateString("tr-TR"),
         test.test_type || "-",
-        test.value?.toString() || test.score?.toString() || "-",
+        `${test.value || "-"} ${test.unit || ""}`,
         test.notes || "-",
       ]);
 
@@ -152,8 +152,13 @@ export const pdfService = {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.text(`Ad Soyad: ${student.full_name}`, 20, 75);
-    doc.text(`Veli: ${student.parent_name || "-"}`, 20, 82);
-    doc.text(`Telefon: ${student.parent_phone || "-"}`, 20, 89);
+    
+    // Prefer father info, fallback to mother
+    const parentName = student.father_name || student.mother_name || "-";
+    const parentPhone = student.father_phone || student.mother_phone || "-";
+    
+    doc.text(`Veli: ${parentName}`, 20, 82);
+    doc.text(`Telefon: ${parentPhone}`, 20, 89);
 
     // Payment Details
     doc.setFont("helvetica", "bold");
@@ -163,8 +168,13 @@ export const pdfService = {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.text(`Ödeme Tarihi: ${new Date(payment.payment_date).toLocaleDateString("tr-TR")}`, 20, 115);
-    doc.text(`Dönem: ${payment.month || "-"}`, 20, 122);
-    doc.text(`Ödeme Türü: ${payment.payment_type === "full" ? "Tam" : payment.payment_type === "installment" ? "Taksit" : "Diğer"}`, 20, 129);
+    
+    const paymentTypeText = payment.payment_type === "registration" ? "Kayıt Ücreti" : 
+                            payment.payment_type === "summer_clothing" ? "Yazlık Kıyafet" :
+                            payment.payment_type === "winter_clothing" ? "Kışlık Kıyafet" : "Diğer";
+                            
+    doc.text(`Ödeme Türü: ${paymentTypeText}`, 20, 122);
+    doc.text(`Ödeme Yöntemi: ${payment.payment_method || "-"}`, 20, 129);
 
     // Amount Box
     doc.setFillColor(240, 240, 240);
@@ -182,10 +192,9 @@ export const pdfService = {
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
-    const statusText = payment.status === "paid" ? "✓ ÖDENDİ" : payment.status === "pending" ? "BEKLİYOR" : "GECİKMİŞ";
-    const statusColor = payment.status === "paid" ? [34, 197, 94] : payment.status === "pending" ? [251, 191, 36] : [239, 68, 68];
-    doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
-    doc.text(statusText, 30, 165);
+    // Assuming payment_history only records successful payments
+    doc.setTextColor(34, 197, 94);
+    doc.text("✓ ÖDENDİ", 30, 165);
 
     // Notes
     if (payment.notes) {
@@ -218,7 +227,7 @@ export const pdfService = {
   // Generate Training Schedule PDF
   async generateTrainingSchedule(
     groupName: string,
-    schedule: Array<{ day: string; time: string; location: string }>,
+    schedule: Array<{ day: string; time: string; location?: string }>,
     month: string
   ): Promise<Blob> {
     const doc = new jsPDF();
@@ -243,11 +252,11 @@ export const pdfService = {
     doc.text(`Dönem: ${month}`, 20, 62);
 
     // Schedule Table
-    const scheduleData = schedule.map((item) => [item.day, item.time, item.location]);
+    const scheduleData = schedule.map((item) => [item.day, item.time, "Tesis"]);
 
     autoTable(doc, {
       startY: 75,
-      head: [["Gün", "Saat", "Saha/Salon"]],
+      head: [["Gün", "Saat", "Konum"]],
       body: scheduleData,
       theme: "grid",
       headStyles: { fillColor: [139, 92, 246] },
