@@ -1,7 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { Database } from "@/integrations/supabase/types";
+import { iyzicoService } from "./iyzicoService";
+import { whatsappService } from "./whatsappService";
 
-export type PaymentHistory = Tables<"payment_history">;
+type PaymentHistory = Database["public"]["Tables"]["payment_history"]["Row"];
 export type PaymentMethod = "cash" | "credit_card" | "bank_transfer" | "other";
 export type PaymentStatus = "paid" | "pending" | "overdue" | "cancelled";
 export type PaymentType = "registration" | "summer_clothing" | "winter_clothing" | "other";
@@ -208,5 +210,69 @@ export async function deletePayment(paymentId: string) {
   // Recalculate student payment status
   if (payment?.student_id) {
     await updateStudentPaymentStatus(payment.student_id);
+  }
+}
+
+// Create online payment link
+async function createOnlinePayment(params: {
+  studentId: string;
+  amount: number;
+  paymentType: string;
+  description?: string;
+  sendViaWhatsApp?: boolean;
+}): Promise<{
+  success: boolean;
+  paymentLink?: string;
+  error?: string;
+}> {
+  try {
+    // Get student info
+    const { data: student, error: studentError } = await supabase
+      .from("students")
+      .select("name, father_phone, mother_phone, father_name, mother_name")
+      .eq("id", params.studentId)
+      .single();
+
+    if (studentError) throw studentError;
+
+    // Create payment link via iyzico
+    const result = await iyzicoService.createPaymentLink({
+      studentId: params.studentId,
+      studentName: student.name,
+      amount: params.amount,
+      paymentType: params.paymentType,
+      description: params.description,
+      parentPhone: student.father_phone || student.mother_phone || undefined
+    });
+
+    if (!result.success) {
+      return result;
+    }
+
+    // Send via WhatsApp if requested
+    if (params.sendViaWhatsApp && result.paymentLink) {
+      const parentPhone = student.father_phone || student.mother_phone;
+      
+      if (parentPhone) {
+        await whatsappService.sendCustomMessage(
+          parentPhone,
+          `🔐 SPORTEX ONLINE ÖDEME\n\n` +
+          `Öğrenci: ${student.name}\n` +
+          `Tutar: ${params.amount.toLocaleString("tr-TR")} TL\n` +
+          `Açıklama: ${params.description || params.paymentType}\n\n` +
+          `Güvenli ödeme linki:\n${result.paymentLink}\n\n` +
+          `⏰ Link 24 saat geçerlidir.\n` +
+          `✅ Ödemeniz onaylandığında otomatik bildirim alacaksınız.`
+        );
+      }
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error creating online payment:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Online ödeme oluşturulamadı"
+    };
   }
 }

@@ -297,6 +297,36 @@ export type Database = {
           },
         ]
       }
+      iyzico_settings: {
+        Row: {
+          api_key: string | null
+          base_url: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          secret_key: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          api_key?: string | null
+          base_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          secret_key?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          api_key?: string | null
+          base_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          secret_key?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       message_scheduler_settings: {
         Row: {
           created_at: string | null
@@ -370,6 +400,72 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notifications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      online_payments: {
+        Row: {
+          amount: number
+          callback_url: string | null
+          completed_at: string | null
+          conversation_id: string
+          created_at: string | null
+          error_message: string | null
+          expires_at: string
+          id: string
+          iyzico_payment_id: string | null
+          payment_history_id: string
+          payment_link: string
+          status: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          callback_url?: string | null
+          completed_at?: string | null
+          conversation_id: string
+          created_at?: string | null
+          error_message?: string | null
+          expires_at: string
+          id?: string
+          iyzico_payment_id?: string | null
+          payment_history_id: string
+          payment_link: string
+          status?: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          callback_url?: string | null
+          completed_at?: string | null
+          conversation_id?: string
+          created_at?: string | null
+          error_message?: string | null
+          expires_at?: string
+          id?: string
+          iyzico_payment_id?: string | null
+          payment_history_id?: string
+          payment_link?: string
+          status?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "online_payments_payment_history_id_fkey"
+            columns: ["payment_history_id"]
+            isOneToOne: false
+            referencedRelation: "payment_history"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "online_payments_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
