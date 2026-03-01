@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Database, Tables } from "@/integrations/supabase/types";
 
 export type PerformanceTest = Tables<"performance_tests"> & {
   test_protocols?: {
@@ -10,8 +10,8 @@ export type PerformanceTest = Tables<"performance_tests"> & {
   } | null;
 };
 
-export type PerformanceTestInsert = TablesInsert<"performance_tests">;
-export type PerformanceTestUpdate = TablesUpdate<"performance_tests">;
+export type PerformanceTestInsert = Database["public"]["Tables"]["performance_tests"]["Insert"];
+export type PerformanceTestUpdate = Database["public"]["Tables"]["performance_tests"]["Update"];
 
 export const performanceService = {
   // Alias for backward compatibility

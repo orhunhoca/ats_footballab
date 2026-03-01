@@ -1,9 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Database, Tables } from "@/integrations/supabase/types";
 
 type Group = Tables<"groups">;
-type GroupInsert = TablesInsert<"groups">;
-type GroupUpdate = TablesUpdate<"groups">;
+type GroupInsert = Database["public"]["Tables"]["groups"]["Insert"];
+type GroupUpdate = Database["public"]["Tables"]["groups"]["Update"];
 
 export const groupService = {
   // Get all groups with coach and students count

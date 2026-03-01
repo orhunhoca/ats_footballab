@@ -1,9 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Database, Tables } from "@/integrations/supabase/types";
 
 export type Student = Tables<"students">;
-export type StudentInsert = TablesInsert<"students">;
-export type StudentUpdate = TablesUpdate<"students">;
+export type StudentInsert = Database["public"]["Tables"]["students"]["Insert"];
+export type StudentUpdate = Database["public"]["Tables"]["students"]["Update"];
 
 export const studentService = {
   // Get all students with their groups

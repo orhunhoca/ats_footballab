@@ -1,11 +1,11 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Database, Tables } from "@/integrations/supabase/types";
 
 // We are transitioning from "users" table to "profiles" table + Supabase Auth
 // Keeping these types for legacy support until full migration
 export type User = Tables<"users">;
-export type UserInsert = TablesInsert<"users">;
-export type UserUpdate = TablesUpdate<"users">;
+export type UserInsert = Database["public"]["Tables"]["users"]["Insert"];
+export type UserUpdate = Database["public"]["Tables"]["users"]["Update"];
 
 export const userService = {
   /**

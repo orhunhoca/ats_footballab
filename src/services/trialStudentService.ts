@@ -1,9 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Database, Tables } from "@/integrations/supabase/types";
 
 type TrialStudent = Tables<"trial_students">;
-type TrialStudentInsert = TablesInsert<"trial_students">;
-type TrialStudentUpdate = TablesUpdate<"trial_students">;
+type TrialStudentInsert = Database["public"]["Tables"]["trial_students"]["Insert"];
+type TrialStudentUpdate = Database["public"]["Tables"]["trial_students"]["Update"];
 
 export const trialStudentService = {
   // Get all trial students

@@ -1,9 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Database, Tables } from "@/integrations/supabase/types";
 
 type Attendance = Tables<"attendance">;
-type AttendanceInsert = TablesInsert<"attendance">;
-type AttendanceUpdate = TablesUpdate<"attendance">;
+type AttendanceInsert = Database["public"]["Tables"]["attendance"]["Insert"];
+type AttendanceUpdate = Database["public"]["Tables"]["attendance"]["Update"];
 
 export const attendanceService = {
   // Get attendance for specific date and group

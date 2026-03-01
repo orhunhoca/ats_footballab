@@ -30,7 +30,7 @@ interface CreateExerciseData {
   program_id: string;
   exercise_name: string;
   duration_minutes: number;
-  equipment_needed?: string;
+  equipment_needed?: string[];
   instructions?: string;
   order_number: number;
 }

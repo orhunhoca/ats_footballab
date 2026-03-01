@@ -1,17 +1,17 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import type { Database, Tables } from "@/integrations/supabase/types";
 
 export type PaymentPlan = Tables<"payment_plans">;
-export type PaymentPlanInsert = TablesInsert<"payment_plans">;
-export type PaymentPlanUpdate = TablesUpdate<"payment_plans">;
+export type PaymentPlanInsert = Database["public"]["Tables"]["payment_plans"]["Insert"];
+export type PaymentPlanUpdate = Database["public"]["Tables"]["payment_plans"]["Update"];
 
 export type Setting = Tables<"settings">;
-export type SettingInsert = TablesInsert<"settings">;
-export type SettingUpdate = TablesUpdate<"settings">;
+export type SettingInsert = Database["public"]["Tables"]["settings"]["Insert"];
+export type SettingUpdate = Database["public"]["Tables"]["settings"]["Update"];
 
 export type TestProtocol = Tables<"test_protocols">;
-export type TestProtocolInsert = TablesInsert<"test_protocols">;
-export type TestProtocolUpdate = TablesUpdate<"test_protocols">;
+export type TestProtocolInsert = Database["public"]["Tables"]["test_protocols"]["Insert"];
+export type TestProtocolUpdate = Database["public"]["Tables"]["test_protocols"]["Update"];
 
 // Payment Plans
 export const settingsService = {
