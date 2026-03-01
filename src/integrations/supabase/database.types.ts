@@ -160,6 +160,60 @@ export type Database = {
           },
         ]
       }
+      group_training_assignments: {
+        Row: {
+          attendance_count: number | null
+          created_at: string | null
+          created_by: string | null
+          group_id: string
+          id: string
+          notes: string | null
+          scheduled_date: string
+          status: string
+          training_program_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          attendance_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          group_id: string
+          id?: string
+          notes?: string | null
+          scheduled_date: string
+          status?: string
+          training_program_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          attendance_count?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          group_id?: string
+          id?: string
+          notes?: string | null
+          scheduled_date?: string
+          status?: string
+          training_program_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_training_assignments_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "group_training_assignments_training_program_id_fkey"
+            columns: ["training_program_id"]
+            isOneToOne: false
+            referencedRelation: "training_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       groups: {
         Row: {
           age_group: string
@@ -250,6 +304,60 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "notifications_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_history: {
+        Row: {
+          amount: number
+          created_at: string | null
+          created_by: string | null
+          id: string
+          installment_number: number | null
+          notes: string | null
+          payment_date: string
+          payment_method: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          installment_number?: number | null
+          notes?: string | null
+          payment_date?: string
+          payment_method: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          installment_number?: number | null
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_history_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_history_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
@@ -614,6 +722,95 @@ export type Database = {
           name?: string
           unit?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      training_exercises: {
+        Row: {
+          coaching_points: string[] | null
+          created_at: string | null
+          duration_minutes: number
+          equipment_needed: string[] | null
+          exercise_name: string
+          id: string
+          instructions: string
+          order_number: number
+          program_id: string
+        }
+        Insert: {
+          coaching_points?: string[] | null
+          created_at?: string | null
+          duration_minutes: number
+          equipment_needed?: string[] | null
+          exercise_name: string
+          id?: string
+          instructions: string
+          order_number: number
+          program_id: string
+        }
+        Update: {
+          coaching_points?: string[] | null
+          created_at?: string | null
+          duration_minutes?: number
+          equipment_needed?: string[] | null
+          exercise_name?: string
+          id?: string
+          instructions?: string
+          order_number?: number
+          program_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_exercises_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "training_programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      training_programs: {
+        Row: {
+          category: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          difficulty_level: string
+          duration_minutes: number
+          id: string
+          name: string
+          objectives: string[] | null
+          session_number: number
+          updated_at: string | null
+          week_number: number
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          difficulty_level: string
+          duration_minutes: number
+          id?: string
+          name: string
+          objectives?: string[] | null
+          session_number: number
+          updated_at?: string | null
+          week_number: number
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          difficulty_level?: string
+          duration_minutes?: number
+          id?: string
+          name?: string
+          objectives?: string[] | null
+          session_number?: number
+          updated_at?: string | null
+          week_number?: number
         }
         Relationships: []
       }
