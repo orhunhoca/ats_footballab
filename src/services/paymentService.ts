@@ -4,11 +4,13 @@ import type { Tables } from "@/integrations/supabase/types";
 export type PaymentHistory = Tables<"payment_history">;
 export type PaymentMethod = "cash" | "credit_card" | "bank_transfer" | "other";
 export type PaymentStatus = "paid" | "pending" | "overdue" | "cancelled";
+export type PaymentType = "registration" | "summer_clothing" | "winter_clothing" | "other";
 
 interface CreatePaymentData {
   student_id: string;
   amount: number;
   payment_method: PaymentMethod;
+  payment_type: PaymentType;
   installment_number?: number;
   notes?: string;
 }

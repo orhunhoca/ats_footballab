@@ -94,6 +94,19 @@ export const studentService = {
     }
   },
 
+  // Update student status (Delete/Archive)
+  async updateStudentStatus(id: string, status: string) {
+    const { error } = await supabase
+      .from("students")
+      .update({ status: status })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Error updating student status:", error);
+      throw error;
+    }
+  },
+
   // Assign student to group
   async assignToGroup(studentId: string, groupId: string) {
     const { data, error } = await supabase

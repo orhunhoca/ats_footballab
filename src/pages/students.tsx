@@ -5,11 +5,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2, AlertTriangle, Shirt, Clock, MessageCircle } from "lucide-react";
+import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2, AlertTriangle, Shirt, Clock, MessageCircle, Trash2, Edit, MoreHorizontal } from "lucide-react";
 import { studentService } from "@/services/studentService";
 import { StudentForm } from "@/components/students/StudentForm";
 import type { Tables } from "@/integrations/supabase/types";
 import { TableHead } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 
 // Extend type locally until generated types catch up
 type Student = Tables<"students"> & {
@@ -28,12 +49,18 @@ type Student = Tables<"students"> & {
 };
 
 export default function StudentsPage() {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ active: 0, inactive: 0 });
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  
+  // Delete dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  const [deleteReason, setDeleteReason] = useState<"Kayıt İptali" | "Ara Veriyor" | "Yönetim Sildi">("Kayıt İptali");
 
   useEffect(() => {
     loadStudents();
@@ -47,6 +74,11 @@ export default function StudentsPage() {
       setStudents(data as any);
     } catch (error) {
       console.error("Error loading students:", error);
+      toast({
+        title: "Hata",
+        description: "Öğrenciler yüklenirken bir hata oluştu.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -103,6 +135,38 @@ export default function StudentsPage() {
       return "90" + cleaned;
     }
     return cleaned;
+  };
+
+  const handleDeleteClick = (student: Student) => {
+    setStudentToDelete(student);
+    setDeleteReason("Kayıt İptali"); // Default value
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!studentToDelete) return;
+
+    try {
+      await studentService.updateStudentStatus(studentToDelete.id, deleteReason);
+      
+      toast({
+        title: "Başarılı",
+        description: `Öğrenci durumu "${deleteReason}" olarak güncellendi.`,
+      });
+      
+      loadStudents();
+      loadStats();
+    } catch (error) {
+      console.error("Error updating student status:", error);
+      toast({
+        title: "Hata",
+        description: "İşlem sırasında bir hata oluştu.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setStudentToDelete(null);
+    }
   };
 
   return (
@@ -345,12 +409,41 @@ export default function StudentsPage() {
                          <div className="text-xs text-gray-500">
                            {student.payment_plan}
                          </div>
-                         <Button variant="outline" size="sm" className="mt-2" onClick={() => {
-                           setEditingStudent(student);
-                           setIsFormOpen(true);
-                         }}>
-                            Düzenle
-                         </Button>
+                         
+                         <div className="flex gap-2 mt-2">
+                           <Button variant="outline" size="sm" onClick={() => {
+                             setEditingStudent(student);
+                             setIsFormOpen(true);
+                           }}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Düzenle
+                           </Button>
+                           
+                           <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
+                                  <span className="sr-only">Menü</span>
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>İşlemler</DropdownMenuLabel>
+                                <DropdownMenuItem onClick={() => {
+                                  setEditingStudent(student);
+                                  setIsFormOpen(true);
+                                }}>
+                                  <Edit className="mr-2 h-4 w-4" /> Düzenle
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteClick(student)}
+                                  className="text-red-600 focus:text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" /> Kaydı Sil / İptal Et
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                           </DropdownMenu>
+                         </div>
                       </div>
                     </div>
                   </CardContent>
@@ -372,6 +465,43 @@ export default function StudentsPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* Delete/Status Change Dialog */}
+          <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Öğrenci Kaydı İşlemi</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {studentToDelete?.name} isimli öğrenci için işlem nedenini seçiniz.
+                  Bu işlem öğrenciyi listeden kaldıracak ancak verileri saklayacaktır.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              
+              <div className="py-4">
+                <RadioGroup value={deleteReason} onValueChange={(v) => setDeleteReason(v as any)}>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <RadioGroupItem value="Kayıt İptali" id="r1" />
+                    <Label htmlFor="r1">Kayıt İptali (Veli İsteği)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2 mb-2">
+                    <RadioGroupItem value="Ara Veriyor" id="r2" />
+                    <Label htmlFor="r2">Ara Veriyor (Geçici Dondurma)</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="Yönetim Sildi" id="r3" />
+                    <Label htmlFor="r3">Yönetim Tarafından Silindi (Disiplin vb.)</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              <AlertDialogFooter>
+                <AlertDialogCancel>İptal</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+                  Onayla ve Uygula
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
         
         <StudentForm 

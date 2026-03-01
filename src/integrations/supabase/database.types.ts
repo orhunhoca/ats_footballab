@@ -321,6 +321,7 @@ export type Database = {
           notes: string | null
           payment_date: string
           payment_method: string
+          payment_type: string
           student_id: string
           updated_at: string | null
         }
@@ -333,6 +334,7 @@ export type Database = {
           notes?: string | null
           payment_date?: string
           payment_method: string
+          payment_type: string
           student_id: string
           updated_at?: string | null
         }
@@ -345,6 +347,7 @@ export type Database = {
           notes?: string | null
           payment_date?: string
           payment_method?: string
+          payment_type?: string
           student_id?: string
           updated_at?: string | null
         }

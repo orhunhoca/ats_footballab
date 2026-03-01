@@ -74,6 +74,8 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       
       // If editing, load student data into form
       if (student) {
+        console.log("Editing student:", student); // Debug log
+        
         setFormData({
           name: student.name || "",
           birth_date: student.birth_date || "",
@@ -106,6 +108,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         }
       } else {
         // Reset form for new student
+        console.log("New student form"); // Debug log
         setFormData({
           name: "",
           birth_date: "",
@@ -132,9 +135,13 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           winter_clothing_price: "3000"
         });
         setSelectedGroup("");
+        setSelectedPlan(null);
+        setPhotoFile(null);
+        setPhotoPreview(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
       }
     }
-  }, [open, student]);
+  }, [open, student]); // Depend on open AND student
 
   const loadSchools = async () => {
     try {
