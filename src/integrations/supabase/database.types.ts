@@ -1028,6 +1028,44 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_chatbot_logs: {
+        Row: {
+          bot_response: string
+          command_type: string | null
+          created_at: string | null
+          id: string
+          incoming_message: string
+          phone_number: string
+          student_id: string | null
+        }
+        Insert: {
+          bot_response: string
+          command_type?: string | null
+          created_at?: string | null
+          id?: string
+          incoming_message: string
+          phone_number: string
+          student_id?: string | null
+        }
+        Update: {
+          bot_response?: string
+          command_type?: string | null
+          created_at?: string | null
+          id?: string
+          incoming_message?: string
+          phone_number?: string
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_chatbot_logs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_media: {
         Row: {
           caption: string | null
@@ -1100,6 +1138,7 @@ export type Database = {
           delivered_at: string | null
           error_message: string | null
           id: string
+          incoming_message_id: string | null
           message_content: string | null
           message_type: string | null
           read_at: string | null
@@ -1118,6 +1157,7 @@ export type Database = {
           delivered_at?: string | null
           error_message?: string | null
           id?: string
+          incoming_message_id?: string | null
           message_content?: string | null
           message_type?: string | null
           read_at?: string | null
@@ -1136,6 +1176,7 @@ export type Database = {
           delivered_at?: string | null
           error_message?: string | null
           id?: string
+          incoming_message_id?: string | null
           message_content?: string | null
           message_type?: string | null
           read_at?: string | null
