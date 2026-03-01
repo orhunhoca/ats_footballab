@@ -900,6 +900,150 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_messages: {
+        Row: {
+          created_at: string | null
+          delivered_at: string | null
+          error_message: string | null
+          id: string
+          message_content: string | null
+          message_type: string | null
+          read_at: string | null
+          recipient_name: string | null
+          recipient_phone: string
+          sent_at: string | null
+          status: string | null
+          student_id: string | null
+          template_id: string | null
+          template_name: string | null
+          template_variables: Json | null
+          whatsapp_message_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_content?: string | null
+          message_type?: string | null
+          read_at?: string | null
+          recipient_name?: string | null
+          recipient_phone: string
+          sent_at?: string | null
+          status?: string | null
+          student_id?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          template_variables?: Json | null
+          whatsapp_message_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          delivered_at?: string | null
+          error_message?: string | null
+          id?: string
+          message_content?: string | null
+          message_type?: string | null
+          read_at?: string | null
+          recipient_name?: string | null
+          recipient_phone?: string
+          sent_at?: string | null
+          status?: string | null
+          student_id?: string | null
+          template_id?: string | null
+          template_name?: string | null
+          template_variables?: Json | null
+          whatsapp_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_messages_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_settings: {
+        Row: {
+          access_token: string | null
+          business_account_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          phone_number_id: string | null
+          updated_at: string | null
+          webhook_verify_token: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          business_account_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone_number_id?: string | null
+          updated_at?: string | null
+          webhook_verify_token?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          business_account_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          phone_number_id?: string | null
+          updated_at?: string | null
+          webhook_verify_token?: string | null
+        }
+        Relationships: []
+      }
+      whatsapp_templates: {
+        Row: {
+          created_at: string | null
+          id: string
+          language: string | null
+          message_content: string
+          status: string | null
+          template_id: string | null
+          template_name: string
+          template_type: string | null
+          updated_at: string | null
+          variables: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          message_content: string
+          status?: string | null
+          template_id?: string | null
+          template_name: string
+          template_type?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          language?: string | null
+          message_content?: string
+          status?: string | null
+          template_id?: string | null
+          template_name?: string
+          template_type?: string | null
+          updated_at?: string | null
+          variables?: Json | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

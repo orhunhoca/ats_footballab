@@ -7,8 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/authService";
+import { whatsappService } from "@/services/whatsappService";
 import { useState, useEffect } from "react";
-import { Settings, Shield, Bell, Building2, User, Loader2 } from "lucide-react";
+import { Settings, Shield, Bell, Building2, User, Loader2, MessageSquare, CheckCircle2, AlertCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -48,8 +49,19 @@ export default function SettingsPage() {
     email: "",
   });
 
+  // WhatsApp settings
+  const [whatsappSettings, setWhatsappSettings] = useState({
+    phone_number_id: "",
+    access_token: "",
+    business_account_id: "",
+    is_active: false
+  });
+  const [whatsappTestPhone, setWhatsappTestPhone] = useState("");
+  const [testingWhatsapp, setTestingWhatsapp] = useState(false);
+
   useEffect(() => {
     loadUserData();
+    loadWhatsappSettings();
   }, []);
 
   const loadUserData = async () => {
@@ -72,6 +84,80 @@ export default function SettingsPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadWhatsappSettings = async () => {
+    const settings = await whatsappService.getSettings();
+    if (settings) {
+      setWhatsappSettings({
+        phone_number_id: settings.phone_number_id || "",
+        access_token: settings.access_token || "",
+        business_account_id: settings.business_account_id || "",
+        is_active: settings.is_active || false
+      });
+    }
+  };
+
+  const handleSaveWhatsappSettings = async () => {
+    try {
+      setSaving(true);
+      const result = await whatsappService.saveSettings(whatsappSettings);
+      
+      if (result.success) {
+        toast({
+          title: "Başarılı",
+          description: "WhatsApp ayarları kaydedildi",
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error("WhatsApp settings error:", error);
+      toast({
+        title: "Hata",
+        description: "WhatsApp ayarları kaydedilirken hata oluştu",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTestWhatsappConnection = async () => {
+    if (!whatsappTestPhone) {
+      toast({
+        title: "Hata",
+        description: "Lütfen test için bir telefon numarası girin",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setTestingWhatsapp(true);
+      // Save settings first if changed
+      await whatsappService.saveSettings(whatsappSettings);
+      
+      const result = await whatsappService.testConnection(whatsappTestPhone);
+      
+      if (result.success) {
+        toast({
+          title: "Başarılı",
+          description: "Test mesajı başarıyla gönderildi!",
+        });
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error("WhatsApp test error:", error);
+      toast({
+        title: "Hata",
+        description: `Test başarısız: ${error instanceof Error ? error.message : "Bilinmeyen hata"}`,
+        variant: "destructive",
+      });
+    } finally {
+      setTestingWhatsapp(false);
     }
   };
 
@@ -201,6 +287,10 @@ export default function SettingsPage() {
               <TabsTrigger value="school">
                 <Building2 className="w-4 h-4 mr-2" />
                 Okul Ayarları
+              </TabsTrigger>
+              <TabsTrigger value="whatsapp">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                WhatsApp
               </TabsTrigger>
             </TabsList>
 
@@ -406,6 +496,121 @@ export default function SettingsPage() {
                   </div>
                   <div className="pt-4">
                     <Button>Kaydet</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* WhatsApp Settings Tab */}
+            <TabsContent value="whatsapp">
+              <Card>
+                <CardHeader>
+                  <CardTitle>WhatsApp Entegrasyonu</CardTitle>
+                  <CardDescription>
+                    WhatsApp Business API yapılandırması
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">WhatsApp Entegrasyonu</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Otomatik bildirimler için WhatsApp'ı etkinleştirin
+                      </p>
+                    </div>
+                    <Switch
+                      checked={whatsappSettings.is_active}
+                      onCheckedChange={(checked) =>
+                        setWhatsappSettings({ ...whatsappSettings, is_active: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="grid gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone-number-id">Telefon Numarası ID (Phone Number ID)</Label>
+                      <Input
+                        id="phone-number-id"
+                        value={whatsappSettings.phone_number_id}
+                        onChange={(e) =>
+                          setWhatsappSettings({ ...whatsappSettings, phone_number_id: e.target.value })
+                        }
+                        placeholder="Örn: 104xxxxxxxxxxxxx"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Meta Business Manager &gt; WhatsApp &gt; API Kurulumu sayfasından alabilirsiniz.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="access-token">Erişim Anahtarı (Access Token)</Label>
+                      <Input
+                        id="access-token"
+                        type="password"
+                        value={whatsappSettings.access_token}
+                        onChange={(e) =>
+                          setWhatsappSettings({ ...whatsappSettings, access_token: e.target.value })
+                        }
+                        placeholder="Kalıcı erişim anahtarınızı girin"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="business-account-id">İşletme Hesabı ID (Business Account ID)</Label>
+                      <Input
+                        id="business-account-id"
+                        value={whatsappSettings.business_account_id}
+                        onChange={(e) =>
+                          setWhatsappSettings({ ...whatsappSettings, business_account_id: e.target.value })
+                        }
+                        placeholder="Örn: 101xxxxxxxxxxxxx"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex items-center justify-between border-t mt-4">
+                    <Button onClick={handleSaveWhatsappSettings} disabled={saving}>
+                      {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Ayarları Kaydet
+                    </Button>
+                  </div>
+
+                  <div className="border-t pt-6 mt-6">
+                    <h3 className="text-lg font-medium mb-4">Bağlantı Testi</h3>
+                    <div className="flex gap-4 items-end">
+                      <div className="grid gap-2 flex-1">
+                        <Label htmlFor="test-phone">Test Telefon Numarası</Label>
+                        <Input
+                          id="test-phone"
+                          value={whatsappTestPhone}
+                          onChange={(e) => setWhatsappTestPhone(e.target.value)}
+                          placeholder="905xxxxxxxxx"
+                        />
+                      </div>
+                      <Button 
+                        variant="secondary" 
+                        onClick={handleTestWhatsappConnection}
+                        disabled={testingWhatsapp || !whatsappSettings.is_active}
+                      >
+                        {testingWhatsapp ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Test Ediliyor...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Test Mesajı Gönder
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    {!whatsappSettings.is_active && (
+                      <div className="flex items-center gap-2 mt-2 text-amber-600 text-sm">
+                        <AlertCircle className="w-4 h-4" />
+                        Test etmek için önce entegrasyonu etkinleştirin ve kaydedin.
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
