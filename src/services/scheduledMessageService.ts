@@ -250,7 +250,6 @@ export const scheduledMessageService = {
     const { data, error } = await supabase
       .from("scheduled_messages")
       .select("*")
-      // @ts-ignore - metadata querying
       .contains("metadata", { studentId })
       .order("scheduled_for", { ascending: false });
 
@@ -365,46 +364,42 @@ export const scheduledMessageService = {
     birthday_enabled?: boolean;
     anniversary_enabled?: boolean;
   }): Promise<void> {
-    const updates: Promise<any>[] = [];
-
-    // Training Reminder
+    // Update Training Reminder
     if (settings.training_reminder_enabled !== undefined || settings.training_reminder_hours_before !== undefined) {
-      updates.push(
-        supabase.from("message_scheduler_settings")
-          .update({
-            enabled: settings.training_reminder_enabled,
-            hours_before: settings.training_reminder_hours_before,
-            updated_at: new Date().toISOString()
-          })
-          .eq("setting_type", "training_reminder")
-      );
+      const { error } = await supabase.from("message_scheduler_settings")
+        .update({
+          enabled: settings.training_reminder_enabled,
+          hours_before: settings.training_reminder_hours_before,
+          updated_at: new Date().toISOString()
+        })
+        .eq("setting_type", "training_reminder");
+      
+      if (error) throw error;
     }
 
-    // Payment Reminder
+    // Update Payment Reminder
     if (settings.payment_reminder_enabled !== undefined) {
-      updates.push(
-        supabase.from("message_scheduler_settings")
-          .update({
-            enabled: settings.payment_reminder_enabled,
-            // days_before: settings.payment_reminder_days, // Assuming single val for now
-            updated_at: new Date().toISOString()
-          })
-          .eq("setting_type", "payment_reminder")
-      );
+      const { error } = await supabase.from("message_scheduler_settings")
+        .update({
+          enabled: settings.payment_reminder_enabled,
+          // days_before: settings.payment_reminder_days, // Assuming single val for now
+          updated_at: new Date().toISOString()
+        })
+        .eq("setting_type", "payment_reminder");
+
+      if (error) throw error;
     }
 
-    // Birthday Greeting
+    // Update Birthday Greeting
     if (settings.birthday_enabled !== undefined) {
-      updates.push(
-        supabase.from("message_scheduler_settings")
-          .update({
-            enabled: settings.birthday_enabled,
-            updated_at: new Date().toISOString()
-          })
-          .eq("setting_type", "birthday_greeting")
-      );
-    }
+      const { error } = await supabase.from("message_scheduler_settings")
+        .update({
+          enabled: settings.birthday_enabled,
+          updated_at: new Date().toISOString()
+        })
+        .eq("setting_type", "birthday_greeting");
 
-    await Promise.all(updates);
+      if (error) throw error;
+    }
   },
 };

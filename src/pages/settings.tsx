@@ -8,8 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { authService } from "@/services/authService";
 import { whatsappService } from "@/services/whatsappService";
+import { scheduledMessageService } from "@/services/scheduledMessageService";
 import { useState, useEffect } from "react";
-import { Settings, Shield, Bell, Building2, User, Loader2, MessageSquare, CheckCircle2, AlertCircle } from "lucide-react";
+import { Settings, Shield, Bell, Building2, User, Loader2, MessageSquare, CheckCircle2, AlertCircle, CalendarClock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -59,10 +60,67 @@ export default function SettingsPage() {
   const [whatsappTestPhone, setWhatsappTestPhone] = useState("");
   const [testingWhatsapp, setTestingWhatsapp] = useState(false);
 
+  // Scheduler settings
+  const [schedulerSettings, setSchedulerSettings] = useState({
+    training_reminder_enabled: true,
+    training_reminder_hours_before: 1,
+    payment_reminder_enabled: true,
+    birthday_enabled: true,
+    anniversary_enabled: true
+  });
+
   useEffect(() => {
     loadUserData();
     loadWhatsappSettings();
+    loadSchedulerSettings();
   }, []);
+
+  const loadSchedulerSettings = async () => {
+    try {
+      const settings = await scheduledMessageService.getSchedulerSettings();
+      if (settings && settings.length > 0) {
+        const newSettings = { ...schedulerSettings };
+        
+        settings.forEach(setting => {
+          if (setting.setting_type === 'training_reminder') {
+            newSettings.training_reminder_enabled = setting.enabled ?? true;
+            newSettings.training_reminder_hours_before = setting.hours_before ?? 1;
+          } else if (setting.setting_type === 'payment_reminder') {
+            newSettings.payment_reminder_enabled = setting.enabled ?? true;
+          } else if (setting.setting_type === 'birthday_greeting') {
+            newSettings.birthday_enabled = setting.enabled ?? true;
+          } else if (setting.setting_type === 'anniversary_greeting') {
+            newSettings.anniversary_enabled = setting.enabled ?? true;
+          }
+        });
+        
+        setSchedulerSettings(newSettings);
+      }
+    } catch (error) {
+      console.error("Error loading scheduler settings:", error);
+    }
+  };
+
+  const handleSaveSchedulerSettings = async () => {
+    try {
+      setSaving(true);
+      await scheduledMessageService.updateSchedulerSettings(schedulerSettings);
+      
+      toast({
+        title: "Başarılı",
+        description: "Otomatik mesaj ayarları güncellendi",
+      });
+    } catch (error) {
+      console.error("Scheduler settings error:", error);
+      toast({
+        title: "Hata",
+        description: "Ayarlar kaydedilirken hata oluştu",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const loadUserData = async () => {
     try {
@@ -291,6 +349,10 @@ export default function SettingsPage() {
               <TabsTrigger value="whatsapp">
                 <MessageSquare className="w-4 h-4 mr-2" />
                 WhatsApp
+              </TabsTrigger>
+              <TabsTrigger value="scheduler">
+                <CalendarClock className="w-4 h-4 mr-2" />
+                Otomatik Mesajlar
               </TabsTrigger>
             </TabsList>
 
@@ -611,6 +673,108 @@ export default function SettingsPage() {
                         Test etmek için önce entegrasyonu etkinleştirin ve kaydedin.
                       </div>
                     )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Scheduler Settings Tab */}
+            <TabsContent value="scheduler">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Otomatik Mesaj Ayarları</CardTitle>
+                  <CardDescription>
+                    Sistemin otomatik göndereceği WhatsApp mesajlarını yapılandırın
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Antrenman Hatırlatıcı */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">Antrenman Hatırlatıcısı</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Antrenmandan önce velilere otomatik hatırlatma gönder
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {schedulerSettings.training_reminder_enabled && (
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            type="number" 
+                            min="1" 
+                            max="24"
+                            className="w-20 text-center"
+                            value={schedulerSettings.training_reminder_hours_before}
+                            onChange={(e) => setSchedulerSettings({
+                              ...schedulerSettings, 
+                              training_reminder_hours_before: parseInt(e.target.value) || 1
+                            })}
+                          />
+                          <span className="text-sm text-muted-foreground">saat önce</span>
+                        </div>
+                      )}
+                      <Switch
+                        checked={schedulerSettings.training_reminder_enabled}
+                        onCheckedChange={(checked) =>
+                          setSchedulerSettings({ ...schedulerSettings, training_reminder_enabled: checked })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* Ödeme Hatırlatıcı */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">Ödeme Hatırlatıcısı</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Ödeme günü yaklaşan velilere otomatik hatırlatma (15 gün, 7 gün ve son gün)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={schedulerSettings.payment_reminder_enabled}
+                      onCheckedChange={(checked) =>
+                        setSchedulerSettings({ ...schedulerSettings, payment_reminder_enabled: checked })
+                      }
+                    />
+                  </div>
+
+                  {/* Doğum Günü Kutlaması */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">Doğum Günü Kutlaması</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Öğrencilerin doğum günlerinde otomatik kutlama mesajı gönder (09:00)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={schedulerSettings.birthday_enabled}
+                      onCheckedChange={(checked) =>
+                        setSchedulerSettings({ ...schedulerSettings, birthday_enabled: checked })
+                      }
+                    />
+                  </div>
+
+                  {/* Yıl Dönümü Kutlaması */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                    <div className="space-y-0.5">
+                      <Label className="text-base">Kayıt Yıl Dönümü</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Kayıt yıl dönümlerinde tebrik mesajı gönder (10:00)
+                      </p>
+                    </div>
+                    <Switch
+                      checked={schedulerSettings.anniversary_enabled}
+                      onCheckedChange={(checked) =>
+                        setSchedulerSettings({ ...schedulerSettings, anniversary_enabled: checked })
+                      }
+                    />
+                  </div>
+
+                  <div className="pt-4 flex justify-end">
+                    <Button onClick={handleSaveSchedulerSettings} disabled={saving}>
+                      {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                      Ayarları Güncelle
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
