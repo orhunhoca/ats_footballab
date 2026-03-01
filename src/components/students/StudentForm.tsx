@@ -10,6 +10,7 @@ import { studentService } from "@/services/studentService";
 import { groupService } from "@/services/groupService";
 import { storageService } from "@/services/storageService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
+import { paymentService } from "@/services/paymentService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Camera, Upload, X } from "lucide-react";
@@ -56,6 +57,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     registration_type: "Yeni Kayıt",
     payment_plan: "",
     payment_amount: "",
+    payment_method: "cash" as "cash" | "credit_card" | "bank_transfer",
     clothing_payment_status: "Ödenmedi",
     payment_status: "Bekliyor",
     registration_start_date: new Date().toISOString().split('T')[0],
@@ -92,6 +94,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           registration_type: student.registration_type || "Yeni Kayıt",
           payment_plan: student.payment_plan || "",
           payment_amount: student.payment_amount?.toString() || "",
+          payment_method: "cash" as "cash" | "credit_card" | "bank_transfer",
           clothing_payment_status: student.clothing_payment_status || "Ödenmedi",
           payment_status: student.payment_status || "Bekliyor",
           registration_start_date: student.registration_start_date || new Date().toISOString().split('T')[0],
@@ -125,6 +128,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           registration_type: "Yeni Kayıt",
           payment_plan: "",
           payment_amount: "",
+          payment_method: "cash" as "cash" | "credit_card" | "bank_transfer",
           clothing_payment_status: "Ödenmedi",
           payment_status: "Bekliyor",
           registration_start_date: new Date().toISOString().split('T')[0],
@@ -368,6 +372,10 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
       if (student) {
         // Update existing student
+        const previousPaymentStatus = student.payment_status;
+        const previousSummerClothing = student.summer_clothing_paid;
+        const previousWinterClothing = student.winter_clothing_paid;
+
         await studentService.updateStudent(student.id, studentData);
         studentId = student.id;
         
@@ -377,6 +385,40 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           await studentService.updateStudent(studentId, { photo_url: photoUrl });
         } else if (photoPreview === null && student.photo_url) {
           await studentService.updateStudent(studentId, { photo_url: null });
+        }
+
+        // Create payment record if status changed from Bekliyor/Kısmi Ödeme to Ödendi
+        if (previousPaymentStatus !== "Ödendi" && formData.payment_status === "Ödendi" && formData.payment_amount) {
+          await paymentService.createPayment({
+            student_id: studentId,
+            amount: parseFloat(formData.payment_amount),
+            payment_method: formData.payment_method,
+            payment_type: "registration",
+            installment_number: 1,
+            notes: `${formData.payment_plan} - Kayıt Ödemesi`
+          });
+        }
+
+        // Create summer clothing payment if newly checked
+        if (!previousSummerClothing && formData.summer_clothing_paid && formData.summer_clothing_price) {
+          await paymentService.createPayment({
+            student_id: studentId,
+            amount: parseFloat(formData.summer_clothing_price),
+            payment_method: formData.payment_method,
+            payment_type: "summer_clothing",
+            notes: "Yazlık Kıyafet Ödemesi"
+          });
+        }
+
+        // Create winter clothing payment if newly checked
+        if (!previousWinterClothing && formData.winter_clothing_paid && formData.winter_clothing_price) {
+          await paymentService.createPayment({
+            student_id: studentId,
+            amount: parseFloat(formData.winter_clothing_price),
+            payment_method: formData.payment_method,
+            payment_type: "winter_clothing",
+            notes: "Kışlık Kıyafet Ödemesi"
+          });
         }
 
         // Update group assignment if changed
@@ -408,6 +450,40 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           await studentService.updateStudent(studentId, { photo_url: photoUrl });
         }
 
+        // Create payment record if payment status is Ödendi
+        if (formData.payment_status === "Ödendi" && formData.payment_amount) {
+          await paymentService.createPayment({
+            student_id: studentId,
+            amount: parseFloat(formData.payment_amount),
+            payment_method: formData.payment_method,
+            payment_type: "registration",
+            installment_number: 1,
+            notes: `${formData.payment_plan} - Kayıt Ödemesi`
+          });
+        }
+
+        // Create summer clothing payment if checked
+        if (formData.summer_clothing_paid && formData.summer_clothing_price) {
+          await paymentService.createPayment({
+            student_id: studentId,
+            amount: parseFloat(formData.summer_clothing_price),
+            payment_method: formData.payment_method,
+            payment_type: "summer_clothing",
+            notes: "Yazlık Kıyafet Ödemesi"
+          });
+        }
+
+        // Create winter clothing payment if checked
+        if (formData.winter_clothing_paid && formData.winter_clothing_price) {
+          await paymentService.createPayment({
+            student_id: studentId,
+            amount: parseFloat(formData.winter_clothing_price),
+            payment_method: formData.payment_method,
+            payment_type: "winter_clothing",
+            notes: "Kışlık Kıyafet Ödemesi"
+          });
+        }
+
         toast({
           title: "Başarılı",
           description: "Öğrenci gruba başarıyla atandı.",
@@ -430,6 +506,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         registration_type: "Yeni Kayıt",
         payment_plan: "",
         payment_amount: "",
+        payment_method: "cash" as "cash" | "credit_card" | "bank_transfer",
         clothing_payment_status: "Ödenmedi",
         payment_status: "Bekliyor",
         registration_start_date: new Date().toISOString().split('T')[0],
@@ -783,6 +860,22 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                     <SelectItem value="Bekliyor">Bekliyor</SelectItem>
                     <SelectItem value="Ödendi">Ödendi</SelectItem>
                     <SelectItem value="Kısmi Ödeme">Kısmi Ödeme</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ödeme Yöntemi</Label>
+                <Select 
+                  onValueChange={v => setFormData({...formData, payment_method: v as "cash" | "credit_card" | "bank_transfer"})}
+                  value={formData.payment_method}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">Nakit</SelectItem>
+                    <SelectItem value="credit_card">Kredi Kartı</SelectItem>
+                    <SelectItem value="bank_transfer">Banka Havalesi</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
