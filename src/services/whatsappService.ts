@@ -3,6 +3,7 @@ import type { Database } from "@/integrations/supabase/types";
 
 type WhatsAppSettings = Database["public"]["Tables"]["whatsapp_settings"]["Row"];
 type WhatsAppMessage = Database["public"]["Tables"]["whatsapp_messages"]["Row"];
+type WhatsAppMessageInsert = Database["public"]["Tables"]["whatsapp_messages"]["Insert"];
 type WhatsAppTemplate = Database["public"]["Tables"]["whatsapp_templates"]["Row"];
 type MessageStatus = "pending" | "sent" | "delivered" | "read" | "failed";
 
@@ -258,6 +259,20 @@ export const whatsappService = {
     }
 
     return { success: successCount, failed: failedCount, errors };
+  },
+
+  // Send template message (wrapper for sendMessage)
+  async sendTemplateMessage(
+    phoneNumber: string,
+    templateName: string,
+    variables: Record<string, string>
+  ): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    return this.sendMessage({
+      phoneNumber,
+      templateName,
+      variables,
+      messageType: "custom"
+    });
   },
 
   // Send custom text message (for scheduled messages)
