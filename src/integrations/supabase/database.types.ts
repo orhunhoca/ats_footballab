@@ -418,11 +418,12 @@ export type Database = {
           expires_at: string
           id: string
           iyzico_payment_id: string | null
-          payment_history_id: string
+          payment_history_id: string | null
           payment_link: string
           payment_type: string
           status: string
           student_id: string
+          token: string | null
           updated_at: string | null
         }
         Insert: {
@@ -435,11 +436,12 @@ export type Database = {
           expires_at: string
           id?: string
           iyzico_payment_id?: string | null
-          payment_history_id: string
+          payment_history_id?: string | null
           payment_link: string
           payment_type?: string
           status?: string
           student_id: string
+          token?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -452,11 +454,12 @@ export type Database = {
           expires_at?: string
           id?: string
           iyzico_payment_id?: string | null
-          payment_history_id?: string
+          payment_history_id?: string | null
           payment_link?: string
           payment_type?: string
           status?: string
           student_id?: string
+          token?: string | null
           updated_at?: string | null
         }
         Relationships: [

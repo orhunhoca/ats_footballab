@@ -67,6 +67,7 @@ export default function SettingsPage() {
     training_reminder_hours_before: 1,
     payment_reminder_enabled: false,
     birthday_enabled: false,
+    anniversary_enabled: false,
   });
 
   // iyzico settings state
