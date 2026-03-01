@@ -38,28 +38,55 @@ export const storageService = {
 
   // Delete student photo
   async deleteStudentPhoto(photoUrl: string): Promise<void> {
-    try {
-      // Extract file path from URL
-      const urlParts = photoUrl.split("/");
-      const fileName = urlParts[urlParts.length - 1];
+    const fileName = photoUrl.split("/").pop();
+    if (!fileName) return;
 
-      const { error } = await supabase.storage
-        .from(STUDENT_PHOTOS_BUCKET)
-        .remove([fileName]);
+    const { error } = await supabase.storage
+      .from("student-photos")
+      .remove([fileName]);
 
-      if (error) {
-        console.error("Error deleting photo:", error);
-        throw error;
-      }
-    } catch (error) {
-      console.error("Error in deleteStudentPhoto:", error);
+    if (error) {
       throw error;
     }
   },
 
+  // Upload any file to a bucket
+  async uploadFile(
+    file: Blob | File,
+    fileName: string,
+    bucketName: string = "documents"
+  ): Promise<{ success: boolean; url?: string; error?: string }> {
+    try {
+      // Check if bucket exists, if not create it (buckets usually created in dashboard, but good to handle)
+      // For now assume bucket exists
+
+      const { data, error } = await supabase.storage
+        .from(bucketName)
+        .upload(fileName, file, {
+          upsert: true,
+          contentType: 'application/pdf'
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucketName)
+        .getPublicUrl(fileName);
+
+      return { success: true, url: publicUrl };
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : "Upload failed" 
+      };
+    }
+  },
+
   // Get photo URL
-  getPhotoUrl(photoUrl: string | null | undefined): string | null {
-    if (!photoUrl) return null;
+  getPhotoUrl(photoUrl: string): string {
+    if (!photoUrl) return "/placeholder.svg";
+    if (photoUrl.startsWith("http")) return photoUrl;
     return photoUrl;
   }
 };

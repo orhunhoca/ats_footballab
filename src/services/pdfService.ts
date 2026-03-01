@@ -2,17 +2,42 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Database } from "@/integrations/supabase/types";
 
-type Student = Database["public"]["Tables"]["students"]["Row"];
-type PerformanceTest = Database["public"]["Tables"]["performance_tests"]["Row"];
-type Payment = Database["public"]["Tables"]["payments"]["Row"];
-type AttendanceRecord = Database["public"]["Tables"]["attendance"]["Row"];
+// Define strict types for inputs to avoid database type conflicts
+interface StudentData {
+  full_name: string;
+  age?: number | null;
+  parent_name?: string | null;
+  parent_phone?: string | null;
+}
+
+interface TestData {
+  test_date: string;
+  test_type?: string | null;
+  score?: number | string | null;
+  notes?: string | null;
+  value?: number | null; // Database uses value
+}
+
+interface PaymentData {
+  id: string;
+  payment_date: string;
+  amount: number;
+  month?: string | null;
+  payment_type?: string | null;
+  status?: string | null;
+  notes?: string | null;
+}
+
+interface AttendanceData {
+  status: string;
+}
 
 export const pdfService = {
   // Generate Performance Report PDF
   async generatePerformanceReport(
-    student: Student,
-    tests: PerformanceTest[],
-    attendanceRecords: AttendanceRecord[],
+    student: StudentData,
+    tests: TestData[],
+    attendanceRecords: AttendanceData[],
     month: string
   ): Promise<Blob> {
     const doc = new jsPDF();
@@ -38,7 +63,7 @@ export const pdfService = {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.text(`Ad Soyad: ${student.full_name}`, 20, 65);
-    doc.text(`Yaş: ${student.age || "-"}`, 20, 72);
+    doc.text(`Yaş: ${student.age?.toString() || "-"}`, 20, 72);
     doc.text(`Dönem: ${month}`, 20, 79);
     doc.text(`Rapor Tarihi: ${new Date().toLocaleDateString("tr-TR")}`, 20, 86);
 
@@ -61,10 +86,11 @@ export const pdfService = {
       doc.setFont("helvetica", "bold");
       doc.text("PERFORMANS TESTLERİ", 20, 145);
 
+      // Use value or score depending on what's available
       const testData = tests.map((test) => [
         new Date(test.test_date).toLocaleDateString("tr-TR"),
         test.test_type || "-",
-        test.score?.toString() || "-",
+        test.value?.toString() || test.score?.toString() || "-",
         test.notes || "-",
       ]);
 
@@ -95,8 +121,8 @@ export const pdfService = {
 
   // Generate Payment Receipt PDF
   async generatePaymentReceipt(
-    payment: Payment,
-    student: Student
+    payment: PaymentData,
+    student: StudentData
   ): Promise<Blob> {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
