@@ -57,9 +57,19 @@ export async function createTrainingProgram(data: CreateProgramData) {
  * Add exercise to a training program
  */
 export async function addExerciseToProgram(data: CreateExerciseData) {
+  const exerciseData = {
+    program_id: data.program_id,
+    exercise_name: data.exercise_name,
+    duration_minutes: data.duration_minutes,
+    order_number: data.order_number,
+    instructions: data.instructions || "", // Provide default empty string
+    equipment_needed: data.equipment_needed || [], // Provide default empty array
+    coaching_points: [] // Initialize with empty array
+  };
+
   const { data: exercise, error } = await supabase
     .from("training_exercises")
-    .insert(data)
+    .insert(exerciseData)
     .select()
     .single();
 
