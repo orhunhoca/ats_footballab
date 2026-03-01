@@ -13,9 +13,10 @@ interface CoachFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  coach?: Tables<"coaches">;
 }
 
-export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
+export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormProps) {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -58,18 +59,46 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
   };
 
   useEffect(() => {
-    if (open && !formData.password) {
-      generateRandomPassword();
+    if (open) {
+      if (coach) {
+        // Edit mode - load existing coach data
+        setFormData({
+          name: coach.name,
+          phone: coach.phone || "",
+          email: coach.email || "",
+          password: "", // Don't show existing password
+          specialty: coach.specialty || "",
+          experience: coach.experience || "",
+          license: coach.license || "",
+          status: coach.status || "Aktif"
+        });
+        setShowPassword(false);
+      } else {
+        // Create mode - generate password
+        if (!formData.password) {
+          generateRandomPassword();
+        }
+      }
     }
-  }, [open]);
+  }, [open, coach]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name || !formData.phone || !formData.email || !formData.password) {
+    if (!formData.name || !formData.phone || !formData.email) {
       toast({
         title: "Eksik Bilgi",
         description: "Lütfen tüm zorunlu alanları doldurun.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Password is only required for new coaches
+    if (!coach && !formData.password) {
+      toast({
+        title: "Eksik Bilgi",
+        description: "Yeni antrenör için şifre gereklidir.",
         variant: "destructive"
       });
       return;
@@ -88,51 +117,69 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     setLoading(true);
 
     try {
-      // Use the new method that doesn't sign out the admin
-      const { user } = await authService.createUserWithoutLogin(
-        formData.email,
-        formData.password,
-        formData.name,
-        "coach"
-      );
-
-      if (user) {
-        await coachService.createCoach({
+      if (coach) {
+        // Update existing coach
+        await coachService.updateCoach(coach.id, {
           name: formData.name,
           phone: formData.phone,
           email: formData.email,
           specialty: formData.specialty || null,
           experience: formData.experience || null,
           license: formData.license || null,
-          status: formData.status,
-          user_id: user.id,
-          invite_status: "accepted", // Auto-accept since we set the password
-          invite_token: null,
-          invite_sent_at: null,
-          invite_expires_at: null
+          status: formData.status
         });
 
         toast({
-          title: "✅ Antrenör Başarıyla Eklendi!",
-          description: `${formData.name} kaydedildi. Belirlenen şifre ile giriş yapabilir.`,
+          title: "✅ Antrenör Güncellendi!",
+          description: `${formData.name} bilgileri güncellendi.`,
         });
-        
-        setFormData({
-          name: "",
-          phone: "",
-          email: "",
-          password: "",
-          specialty: "",
-          experience: "",
-          license: "",
-          status: "Aktif"
-        });
-        
-        onSuccess();
-        onOpenChange(false);
+      } else {
+        // Create new coach
+        const { user } = await authService.createUserWithoutLogin(
+          formData.email,
+          formData.password,
+          formData.name,
+          "coach"
+        );
+
+        if (user) {
+          await coachService.createCoach({
+            name: formData.name,
+            phone: formData.phone,
+            email: formData.email,
+            specialty: formData.specialty || null,
+            experience: formData.experience || null,
+            license: formData.license || null,
+            status: formData.status,
+            user_id: user.id,
+            invite_status: "accepted",
+            invite_token: null,
+            invite_sent_at: null,
+            invite_expires_at: null
+          });
+
+          toast({
+            title: "✅ Antrenör Başarıyla Eklendi!",
+            description: `${formData.name} kaydedildi. Belirlenen şifre ile giriş yapabilir.`,
+          });
+        }
       }
+      
+      setFormData({
+        name: "",
+        phone: "",
+        email: "",
+        password: "",
+        specialty: "",
+        experience: "",
+        license: "",
+        status: "Aktif"
+      });
+      
+      onSuccess();
+      onOpenChange(false);
     } catch (error: any) {
-      console.error("Coach creation error:", error);
+      console.error("Coach operation error:", error);
       
       if (error?.message?.includes("User already registered")) {
         toast({
@@ -143,7 +190,7 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
       } else {
         toast({
           title: "Hata",
-          description: error?.message || "Antrenör eklenirken bir hata oluştu.",
+          description: error?.message || `Antrenör ${coach ? 'güncellenirken' : 'eklenirken'} bir hata oluştu.`,
           variant: "destructive"
         });
       }
@@ -156,9 +203,11 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Antrenör Ekle</DialogTitle>
+          <DialogTitle>{coach ? 'Antrenör Düzenle' : 'Antrenör Ekle'}</DialogTitle>
           <p className="text-sm text-gray-600 mt-2">
-            Geçici şifre ile hesap oluşturulacak. Antrenör ilk girişte şifresini değiştirebilir.
+            {coach 
+              ? 'Antrenör bilgilerini güncelleyin.' 
+              : 'Geçici şifre ile hesap oluşturulacak. Antrenör ilk girişte şifresini değiştirebilir.'}
           </p>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -180,51 +229,59 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
               placeholder="ornek@email.com"
               value={formData.email}
               onChange={e => setFormData({...formData, email: e.target.value})}
+              disabled={!!coach}
             />
+            {coach && (
+              <p className="text-xs text-amber-600">
+                ⚠️ Email adresi düzenlenemez.
+              </p>
+            )}
           </div>
 
-          <div className="space-y-2">
-            <Label>Geçici Şifre *</Label>
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Input 
-                  required
-                  type={showPassword ? "text" : "password"}
-                  value={formData.password}
-                  onChange={e => setFormData({...formData, password: e.target.value})}
-                  className="pr-10"
-                />
-                <button
+          {!coach && (
+            <div className="space-y-2">
+              <Label>Geçici Şifre *</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input 
+                    required
+                    type={showPassword ? "text" : "password"}
+                    value={formData.password}
+                    onChange={e => setFormData({...formData, password: e.target.value})}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                <Button
                   type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  variant="outline"
+                  size="icon"
+                  onClick={generateRandomPassword}
+                  title="Yeni şifre oluştur"
                 >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={copyPassword}
+                  title="Şifreyi kopyala"
+                >
+                  {passwordCopied ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                </Button>
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={generateRandomPassword}
-                title="Yeni şifre oluştur"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={copyPassword}
-                title="Şifreyi kopyala"
-              >
-                {passwordCopied ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-              </Button>
+              <p className="text-xs text-amber-600">
+                ⚠️ Bu şifreyi antrenöre iletin. İlk girişte değiştirebilir.
+              </p>
             </div>
-            <p className="text-xs text-amber-600">
-              ⚠️ Bu şifreyi antrenöre iletin. İlk girişte değiştirebilir.
-            </p>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label>Telefon *</Label>
@@ -288,10 +345,10 @@ export function CoachForm({ open, onOpenChange, onSuccess }: CoachFormProps) {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Ekleniyor...
+                  {coach ? 'Güncelleniyor...' : 'Ekleniyor...'}
                 </>
               ) : (
-                "Antrenör Ekle"
+                coach ? 'Antrenörü Güncelle' : 'Antrenör Ekle'
               )}
             </Button>
           </DialogFooter>

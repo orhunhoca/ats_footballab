@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Phone, Mail, UserCircle, Award, Calendar, Loader2 } from "lucide-react";
+import { Search, Plus, Phone, Mail, UserCircle, Award, Calendar, Loader2, Trash2, Edit } from "lucide-react";
 import { coachService } from "@/services/coachService";
 import { CoachForm } from "@/components/coaches/CoachForm";
+import { useToast } from "@/hooks/use-toast";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Coach = Tables<"coaches">;
@@ -18,6 +20,10 @@ export default function CoachesPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({ active: 0, inactive: 0 });
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedCoach, setSelectedCoach] = useState<Coach | undefined>(undefined);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [coachToDelete, setCoachToDelete] = useState<Coach | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     loadCoaches();
@@ -42,6 +48,39 @@ export default function CoachesPage() {
       setStats(data);
     } catch (error) {
       console.error("Error loading stats:", error);
+    }
+  };
+
+  const handleEdit = (coach: Coach) => {
+    setSelectedCoach(coach);
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = (coach: Coach) => {
+    setCoachToDelete(coach);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!coachToDelete) return;
+
+    try {
+      await coachService.deleteCoach(coachToDelete.id);
+      toast({
+        title: "Antrenör Silindi",
+        description: `${coachToDelete.name} başarıyla pasif duruma getirildi.`,
+      });
+      loadCoaches();
+      loadStats();
+      setDeleteDialogOpen(false);
+      setCoachToDelete(null);
+    } catch (error) {
+      console.error("Error deleting coach:", error);
+      toast({
+        title: "Hata",
+        description: "Antrenör silinirken bir hata oluştu.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -168,9 +207,16 @@ export default function CoachesPage() {
                               <p className="text-lg text-gray-600 font-medium">{coach.specialty}</p>
                             )}
                           </div>
-                          <Button variant="outline">
-                            Düzenle
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button variant="outline" onClick={() => handleEdit(coach)}>
+                              <Edit className="w-4 h-4 mr-2" />
+                              Düzenle
+                            </Button>
+                            <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(coach)}>
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Sil
+                            </Button>
+                          </div>
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-4 mb-4">
@@ -234,12 +280,34 @@ export default function CoachesPage() {
         
         <CoachForm 
           open={isFormOpen} 
-          onOpenChange={setIsFormOpen} 
+          onOpenChange={(open) => {
+            setIsFormOpen(open);
+            if (!open) setSelectedCoach(undefined);
+          }} 
           onSuccess={() => {
             loadCoaches();
             loadStats();
-          }} 
+            setSelectedCoach(undefined);
+          }}
+          coach={selectedCoach}
         />
+
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Antrenörü Sil</AlertDialogTitle>
+              <AlertDialogDescription>
+                {coachToDelete?.name} adlı antrenörü silmek istediğinizden emin misiniz? Bu işlem antrenörü pasif duruma getirecektir.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>İptal</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+                Sil
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </>
   );
