@@ -113,4 +113,118 @@ Haftalık antrenman programına 20 dakika ekstra dayanıklılık koşuları ve d
       throw error;
     }
   },
+
+  // Get group performance comparison
+  async getGroupPerformanceComparison(groupId?: string): Promise<any[]> {
+    let query = supabase
+      .from("performance_tests")
+      .select(`
+        *,
+        students!performance_tests_student_id_fkey(
+          id,
+          name,
+          student_groups!student_groups_student_id_fkey(
+            group_id,
+            groups!student_groups_group_id_fkey(
+              id,
+              name
+            )
+          )
+        ),
+        test_protocols(
+          id,
+          name,
+          category,
+          unit
+        )
+      `)
+      .order("test_date", { ascending: false });
+
+    if (groupId) {
+      // Filter by specific group through student_groups relationship
+      const { data: studentIds } = await supabase
+        .from("student_groups")
+        .select("student_id")
+        .eq("group_id", groupId);
+      
+      if (studentIds && studentIds.length > 0) {
+        const ids = studentIds.map(s => s.student_id);
+        query = query.in("student_id", ids);
+      }
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error("Error fetching group performance:", error);
+      throw error;
+    }
+
+    return data || [];
+  },
+
+  // Calculate performance statistics
+  async getPerformanceStats(studentId: string): Promise<{
+    totalTests: number;
+    improvementRate: number;
+    averageScore: number;
+    lastTestDate: string | null;
+  }> {
+    const tests = await this.getStudentPerformanceTests(studentId);
+    
+    if (tests.length === 0) {
+      return {
+        totalTests: 0,
+        improvementRate: 0,
+        averageScore: 0,
+        lastTestDate: null
+      };
+    }
+
+    // Calculate improvement rate (comparing first vs last tests by protocol)
+    const testsByProtocol: Record<string, PerformanceTest[]> = {};
+    tests.forEach(test => {
+      const key = test.test_protocol_id || test.test_type || "other";
+      if (!testsByProtocol[key]) {
+        testsByProtocol[key] = [];
+      }
+      testsByProtocol[key].push(test);
+    });
+
+    let totalImprovement = 0;
+    let protocolsWithMultipleTests = 0;
+
+    Object.values(testsByProtocol).forEach(protocolTests => {
+      if (protocolTests.length >= 2) {
+        const sorted = protocolTests.sort((a, b) => 
+          new Date(a.test_date).getTime() - new Date(b.test_date).getTime()
+        );
+        const first = Number(sorted[0].value);
+        const last = Number(sorted[sorted.length - 1].value);
+        const improvement = ((last - first) / first) * 100;
+        totalImprovement += improvement;
+        protocolsWithMultipleTests++;
+      }
+    });
+
+    const improvementRate = protocolsWithMultipleTests > 0 
+      ? totalImprovement / protocolsWithMultipleTests 
+      : 0;
+
+    // Calculate average score
+    const averageScore = tests.reduce((sum, t) => sum + Number(t.value), 0) / tests.length;
+
+    // Get last test date
+    const sortedByDate = [...tests].sort((a, b) => 
+      new Date(b.test_date).getTime() - new Date(a.test_date).getTime()
+    );
+    const lastTestDate = sortedByDate[0]?.test_date || null;
+
+    return {
+      totalTests: tests.length,
+      improvementRate: Math.round(improvementRate * 10) / 10,
+      averageScore: Math.round(averageScore * 10) / 10,
+      lastTestDate
+    };
+  },
 };
