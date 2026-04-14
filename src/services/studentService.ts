@@ -7,23 +7,13 @@ export type StudentUpdate = Database["public"]["Tables"]["students"]["Update"];
 
 export const studentService = {
   // Get all students with their groups
-  async getAllStudents() {
+  async getAllStudents(): Promise<Student[]> {
     const { data, error } = await supabase
       .from("students")
-      .select(`
-        *,
-        student_groups!student_groups_student_id_fkey(
-          groups!student_groups_group_id_fkey(*)
-        )
-      `)
-      .eq("status", "Aktif")
+      .select("*")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching students:", error);
-      throw error;
-    }
-
+    if (error) throw error;
     return data || [];
   },
 

@@ -845,11 +845,17 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Nakit">Nakit</SelectItem>
-                    <SelectItem value="Kredi Kartı">Kredi Kartı</SelectItem>
-                    <SelectItem value="Havale/EFT">Havale/EFT</SelectItem>
+                    <SelectItem value="Nakit">💵 Nakit</SelectItem>
+                    <SelectItem value="Kredi Kartı">💳 POS</SelectItem>
+                    <SelectItem value="Havale/EFT">🏦 Havale/EFT</SelectItem>
+                    <SelectItem value="Online Ödeme">🌐 Online Ödeme</SelectItem>
                   </SelectContent>
                 </Select>
+                {formData.payment_method === "Online Ödeme" && (
+                  <p className="text-sm text-blue-600 mt-2">
+                    💡 Online ödeme linki oluşturmak için <strong>Ödemeler</strong> sayfasını kullanın.
+                  </p>
+                )}
               </div>
             </div>
             

@@ -53,6 +53,7 @@ export function Navigation() {
     { href: "/performance", label: "Performans", icon: TrendingUp },
     { href: "/payments", label: "Ödemeler", icon: CreditCard },
     { href: "/training", label: "Antrenman Programları", icon: Dumbbell },
+    { href: "/gallery", label: "Galeri", icon: Camera },
     { href: "/notifications", label: "Bildirimler", icon: Bell },
     { href: "/reports", label: "Raporlar", icon: BarChart3 },
   ];

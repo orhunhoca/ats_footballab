@@ -32,6 +32,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
+// Define extended student type with relations
+type StudentWithGroups = Tables<"students"> & {
+  student_groups?: { group_id: string }[] | null;
+};
+
 // Extend type locally until generated types catch up
 type Student = Tables<"students"> & {
   clothing_size?: string;
