@@ -97,20 +97,19 @@ export const studentService = {
     }
   },
 
-  // Assign student to group
-  async assignToGroup(studentId: string, groupId: string) {
-    const { data, error } = await supabase
+  // Assign student to a group
+  async assignToGroup(studentId: string, groupId: string): Promise<void> {
+    const { error } = await supabase
       .from("student_groups")
-      .insert({ student_id: studentId, group_id: groupId })
-      .select()
-      .single();
+      .insert({
+        student_id: studentId,
+        group_id: groupId,
+      });
 
     if (error) {
       console.error("Error assigning student to group:", error);
       throw error;
     }
-
-    return data;
   },
 
   // Remove student from group
