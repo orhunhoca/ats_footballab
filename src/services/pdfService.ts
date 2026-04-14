@@ -337,8 +337,8 @@ export const pdfService = {
     doc.setFontSize(11);
     doc.text(`Öğrenci: ${studentName}`, 20, 65);
     doc.text(`Rapor Tarihi: ${new Date().toLocaleDateString("tr-TR")}`, 20, 72);
-    doc.text(`Toplam Test: ${stats.totalTests}`, 20, 79);
-    doc.text(`Son Test: ${stats.lastTestDate ? new Date(stats.lastTestDate).toLocaleDateString("tr-TR") : "-"}`, 20, 86);
+    doc.text(`Toplam Test Sayısı: ${stats.totalTests}`, 20, 79);
+    doc.text(`Son Test Tarihi: ${stats.lastTestDate ? new Date(stats.lastTestDate).toLocaleDateString("tr-TR") : "Henüz test yapılmadı"}`, 20, 86);
 
     // Performance Stats Box
     doc.setFillColor(240, 240, 240);
@@ -350,8 +350,8 @@ export const pdfService = {
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    const improvementText = `Gelişim Oranı: ${stats.improvementRate > 0 ? '+' : ''}${stats.improvementRate}%`;
-    const avgText = `Ortalama Skor: ${stats.averageScore}`;
+    const improvementText = `Gelişim Oranı: ${stats.improvementRate > 0 ? '+' : ''}${stats.improvementRate.toFixed(1)}%`;
+    const avgText = `Ortalama Skor: ${stats.averageScore.toFixed(1)}`;
     
     doc.text(improvementText, 30, 113);
     doc.text(avgText, 120, 113);
@@ -359,16 +359,20 @@ export const pdfService = {
     // Set color based on improvement
     if (stats.improvementRate > 5) {
       doc.setTextColor(34, 197, 94); // Green
-      doc.text("↗ Gelişme Eğilimi", pageWidth - 30, 113, { align: "right" });
+      doc.setFont("helvetica", "bold");
+      doc.text("Gelişme Trendi", pageWidth - 30, 113, { align: "right" });
     } else if (stats.improvementRate < -5) {
       doc.setTextColor(239, 68, 68); // Red
-      doc.text("↘ Dikkat Gerekli", pageWidth - 30, 113, { align: "right" });
+      doc.setFont("helvetica", "bold");
+      doc.text("Dikkat Gerekli", pageWidth - 30, 113, { align: "right" });
     } else {
       doc.setTextColor(107, 114, 128); // Gray
-      doc.text("→ Stabil", pageWidth - 30, 113, { align: "right" });
+      doc.setFont("helvetica", "bold");
+      doc.text("Stabil Performans", pageWidth - 30, 113, { align: "right" });
     }
 
     doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
 
     // Test Results Table
     let startY = 130;
@@ -380,20 +384,34 @@ export const pdfService = {
 
       const testData = tests.slice(0, 15).map((test) => [
         new Date(test.test_date).toLocaleDateString("tr-TR"),
-        test.test_type || "-",
+        test.test_type || "Belirtilmemiş",
         `${test.value} ${test.unit || ""}`.trim(),
-        test.improvement || "-",
-        test.notes || "-",
+        test.improvement || "Veri yok",
+        test.notes || "Not yok",
       ]);
 
       autoTable(doc, {
         startY: startY + 5,
-        head: [["Tarih", "Test Türü", "Sonuç", "Gelişim", "Notlar"]],
+        head: [["Tarih", "Test Türü", "Sonuç", "Değişim", "Notlar"]],
         body: testData,
         theme: "grid",
-        headStyles: { fillColor: [59, 130, 246] },
+        headStyles: { 
+          fillColor: [59, 130, 246],
+          fontSize: 10,
+          fontStyle: "bold"
+        },
         margin: { left: 20, right: 20 },
-        styles: { fontSize: 9 },
+        styles: { 
+          fontSize: 9,
+          cellPadding: 3
+        },
+        columnStyles: {
+          0: { cellWidth: 25 },  // Tarih
+          1: { cellWidth: 35 },  // Test Türü
+          2: { cellWidth: 30 },  // Sonuç
+          3: { cellWidth: 25 },  // Değişim
+          4: { cellWidth: 'auto' }  // Notlar
+        }
       });
 
       startY = (doc as any).lastAutoTable?.finalY + 15 || 200;
@@ -409,7 +427,7 @@ export const pdfService = {
 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(12);
-      doc.text("🤖 AI DESTEKLI PERFORMANS ANALİZİ", 20, startY);
+      doc.text("YAPAY ZEKA DESTEKLİ PERFORMANS ANALİZİ", 20, startY);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
@@ -420,13 +438,20 @@ export const pdfService = {
     }
 
     // Footer
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setTextColor(128, 128, 128);
     const footerY = doc.internal.pageSize.getHeight() - 10;
     doc.text(
-      "Bu rapor Sportex Futbol Okulu tarafından otomatik olarak oluşturulmuştur.",
+      `Bu rapor Sportex Futbol Okulu tarafından ${new Date().toLocaleDateString("tr-TR")} tarihinde otomatik olarak oluşturulmuştur.`,
       pageWidth / 2,
       footerY,
+      { align: "center" }
+    );
+    doc.setFontSize(7);
+    doc.text(
+      "Sorularınız için: info@sportex.com",
+      pageWidth / 2,
+      footerY + 4,
       { align: "center" }
     );
 
