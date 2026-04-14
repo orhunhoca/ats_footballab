@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, XCircle, Users } from "lucide-react";
+import { CheckCircle2, XCircle, Users, FileSpreadsheet } from "lucide-react";
 import { useState, useEffect } from "react";
 import { attendanceService } from "@/services/attendanceService";
 import { groupService } from "@/services/groupService";
+import { excelService } from "@/services/excelService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -174,6 +175,121 @@ export default function AttendancePage() {
     }
   };
 
+  const handleExportAttendanceList = async () => {
+    if (!selectedGroup) {
+      toast({
+        title: "Uyarı",
+        description: "Lütfen bir grup seçin",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const dateStr = date.toISOString().split('T')[0];
+      const records = await attendanceService.getAttendanceByDate(dateStr, selectedGroup);
+      
+      const groupName = groups.find(g => g.id === selectedGroup)?.name || "Grup";
+      
+      const excelData = records.map(record => ({
+        date: new Date(record.attendance_date).toLocaleDateString("tr-TR"),
+        studentName: students.find(s => s.id === record.student_id)?.name || "-",
+        groupName: groupName,
+        status: record.status,
+      }));
+
+      const blob = await excelService.generateAttendanceListExcel(
+        excelData,
+        groupName,
+        date.toLocaleDateString("tr-TR")
+      );
+
+      excelService.downloadBlob(
+        blob,
+        `Yoklama_Listesi_${groupName}_${date.toLocaleDateString("tr-TR").replace(/\./g, "-")}.xlsx`
+      );
+
+      toast({
+        title: "Excel İndirildi",
+        description: "Yoklama listesi başarıyla oluşturuldu.",
+      });
+    } catch (error) {
+      console.error("Error exporting attendance list:", error);
+      toast({
+        title: "Hata",
+        description: "Excel oluşturulurken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleExportAttendanceReport = async () => {
+    if (!selectedGroup) {
+      toast({
+        title: "Uyarı",
+        description: "Lütfen bir grup seçin",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // Get attendance records for the selected month
+      const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+      const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+
+      const { data: monthRecords, error } = await supabase
+        .from("attendance")
+        .select("*")
+        .eq("group_id", selectedGroup)
+        .gte("attendance_date", startOfMonth.toISOString().split('T')[0])
+        .lte("attendance_date", endOfMonth.toISOString().split('T')[0]);
+
+      if (error) throw error;
+
+      // Calculate statistics per student
+      const studentStats = students.map(student => {
+        const studentRecords = monthRecords?.filter(r => r.student_id === student.id) || [];
+        const presentDays = studentRecords.filter(r => r.status === 'present').length;
+        const totalDays = studentRecords.length;
+        const absentDays = totalDays - presentDays;
+        const attendanceRate = totalDays > 0 
+          ? `%${((presentDays / totalDays) * 100).toFixed(1)}`
+          : "%0";
+
+        return {
+          studentName: student.name,
+          totalDays,
+          presentDays,
+          absentDays,
+          attendanceRate,
+        };
+      });
+
+      const dateRange = `${startOfMonth.toLocaleDateString("tr-TR")} - ${endOfMonth.toLocaleDateString("tr-TR")}`;
+      
+      const blob = await excelService.generateAttendanceReportExcel(studentStats, dateRange);
+
+      const groupName = groups.find(g => g.id === selectedGroup)?.name || "Grup";
+      excelService.downloadBlob(
+        blob,
+        `Yoklama_Raporu_${groupName}_${date.getMonth() + 1}-${date.getFullYear()}.xlsx`
+      );
+
+      toast({
+        title: "Excel İndirildi",
+        description: "Yoklama raporu başarıyla oluşturuldu.",
+      });
+    } catch (error) {
+      console.error("Error exporting attendance report:", error);
+      toast({
+        title: "Hata",
+        description: "Rapor oluşturulurken bir hata oluştu.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const stats = {
     total: students.length,
     present: Object.values(attendance).filter(v => v).length,
@@ -196,6 +312,24 @@ export default function AttendancePage() {
             <p className="text-gray-600 dark:text-gray-400">
               Öğrenci devam durumunu kaydedin
             </p>
+            <div className="flex gap-2 mt-4">
+              <Button 
+                onClick={handleExportAttendanceList}
+                disabled={!selectedGroup || students.length === 0}
+                variant="outline"
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Günlük Liste (Excel)
+              </Button>
+              <Button 
+                onClick={handleExportAttendanceReport}
+                disabled={!selectedGroup || students.length === 0}
+                variant="outline"
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                Aylık Rapor (Excel)
+              </Button>
+            </div>
           </div>
 
           <div className="grid gap-6 mb-6 md:grid-cols-3">

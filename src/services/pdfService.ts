@@ -293,4 +293,143 @@ export const pdfService = {
 
     return doc.output("blob");
   },
+
+  // Generate Performance Analysis Report PDF (NEW)
+  async generatePerformanceAnalysisReport(
+    studentName: string,
+    tests: Array<{
+      test_date: string;
+      test_type: string;
+      value: number | string;
+      unit?: string;
+      notes?: string;
+      improvement?: string;
+    }>,
+    stats: {
+      totalTests: number;
+      improvementRate: number;
+      averageScore: number;
+      lastTestDate: string | null;
+    },
+    aiAnalysis?: string
+  ): Promise<Blob> {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Header
+    doc.setFillColor(59, 130, 246); // Blue
+    doc.rect(0, 0, pageWidth, 40, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.text("SPORTEX FUTBOL OKULU", pageWidth / 2, 20, { align: "center" });
+
+    doc.setFontSize(14);
+    doc.text("PERFORMANS ANALİZ RAPORU", pageWidth / 2, 30, { align: "center" });
+
+    // Student Info
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("ÖĞRENCİ BİLGİLERİ", 20, 55);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.text(`Öğrenci: ${studentName}`, 20, 65);
+    doc.text(`Rapor Tarihi: ${new Date().toLocaleDateString("tr-TR")}`, 20, 72);
+    doc.text(`Toplam Test: ${stats.totalTests}`, 20, 79);
+    doc.text(`Son Test: ${stats.lastTestDate ? new Date(stats.lastTestDate).toLocaleDateString("tr-TR") : "-"}`, 20, 86);
+
+    // Performance Stats Box
+    doc.setFillColor(240, 240, 240);
+    doc.rect(20, 95, pageWidth - 40, 25, "F");
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("PERFORMANS İSTATİSTİKLERİ", 30, 105);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const improvementText = `Gelişim Oranı: ${stats.improvementRate > 0 ? '+' : ''}${stats.improvementRate}%`;
+    const avgText = `Ortalama Skor: ${stats.averageScore}`;
+    
+    doc.text(improvementText, 30, 113);
+    doc.text(avgText, 120, 113);
+
+    // Set color based on improvement
+    if (stats.improvementRate > 5) {
+      doc.setTextColor(34, 197, 94); // Green
+      doc.text("↗ Gelişme Eğilimi", pageWidth - 30, 113, { align: "right" });
+    } else if (stats.improvementRate < -5) {
+      doc.setTextColor(239, 68, 68); // Red
+      doc.text("↘ Dikkat Gerekli", pageWidth - 30, 113, { align: "right" });
+    } else {
+      doc.setTextColor(107, 114, 128); // Gray
+      doc.text("→ Stabil", pageWidth - 30, 113, { align: "right" });
+    }
+
+    doc.setTextColor(0, 0, 0);
+
+    // Test Results Table
+    let startY = 130;
+    
+    if (tests.length > 0) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("TEST SONUÇLARI", 20, startY);
+
+      const testData = tests.slice(0, 15).map((test) => [
+        new Date(test.test_date).toLocaleDateString("tr-TR"),
+        test.test_type || "-",
+        `${test.value} ${test.unit || ""}`.trim(),
+        test.improvement || "-",
+        test.notes || "-",
+      ]);
+
+      autoTable(doc, {
+        startY: startY + 5,
+        head: [["Tarih", "Test Türü", "Sonuç", "Gelişim", "Notlar"]],
+        body: testData,
+        theme: "grid",
+        headStyles: { fillColor: [59, 130, 246] },
+        margin: { left: 20, right: 20 },
+        styles: { fontSize: 9 },
+      });
+
+      startY = (doc as any).lastAutoTable?.finalY + 15 || 200;
+    }
+
+    // AI Analysis Section
+    if (aiAnalysis) {
+      // Check if we need a new page
+      if (startY > 220) {
+        doc.addPage();
+        startY = 20;
+      }
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("🤖 AI DESTEKLI PERFORMANS ANALİZİ", 20, startY);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      
+      // Split AI analysis into lines
+      const analysisLines = doc.splitTextToSize(aiAnalysis, pageWidth - 40);
+      doc.text(analysisLines, 20, startY + 8);
+    }
+
+    // Footer
+    doc.setFontSize(9);
+    doc.setTextColor(128, 128, 128);
+    const footerY = doc.internal.pageSize.getHeight() - 10;
+    doc.text(
+      "Bu rapor Sportex Futbol Okulu tarafından otomatik olarak oluşturulmuştur.",
+      pageWidth / 2,
+      footerY,
+      { align: "center" }
+    );
+
+    return doc.output("blob");
+  },
 };

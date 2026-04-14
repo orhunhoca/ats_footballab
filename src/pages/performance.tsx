@@ -49,6 +49,7 @@ import {
   Calendar,
   Award,
   Minus,
+  FileDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import { tr } from "date-fns/locale";
@@ -59,6 +60,7 @@ import {
 } from "@/services/performanceService";
 import { settingsService, type TestProtocol } from "@/services/settingsService";
 import { groupService } from "@/services/groupService";
+import { pdfService } from "@/services/pdfService";
 import { PerformanceTestForm } from "@/components/students/PerformanceTestForm";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -195,6 +197,57 @@ export default function PerformancePage() {
       });
     } finally {
       setIsGeneratingAI(false);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    if (!selectedStudent || !performanceStats) return;
+
+    try {
+      // Prepare test data for PDF
+      const testData = filteredTests.map((test) => {
+        const improvement = getImprovement(test.test_protocol_id || null, test.test_type || null);
+        return {
+          test_date: test.test_date,
+          test_type: test.test_protocols?.name || test.test_type || "Bilinmeyen",
+          value: test.value,
+          unit: test.test_protocols?.unit || test.unit || "",
+          notes: test.notes || "",
+          improvement: improvement 
+            ? `${improvement.isImprovement ? '+' : '-'}${improvement.percentage}%`
+            : "-",
+        };
+      });
+
+      // Generate PDF
+      const pdfBlob = await pdfService.generatePerformanceAnalysisReport(
+        selectedStudent.name,
+        testData,
+        performanceStats,
+        aiAnalysis || undefined
+      );
+
+      // Download PDF
+      const url = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${selectedStudent.name}_Performans_Raporu_${new Date().toLocaleDateString("tr-TR").replace(/\./g, "-")}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast({
+        title: "PDF İndirildi",
+        description: "Performans raporu başarıyla oluşturuldu.",
+      });
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      toast({
+        title: "Hata",
+        description: "PDF oluşturulurken bir hata oluştu.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -409,6 +462,14 @@ export default function PerformancePage() {
                                 AI Analizi
                               </>
                             )}
+                          </Button>
+                          <Button 
+                            onClick={handleExportPDF}
+                            disabled={tests.length === 0}
+                            variant="outline"
+                          >
+                            <FileDown className="mr-2 h-4 w-4" />
+                            PDF İndir
                           </Button>
                           <Button onClick={() => setIsFormOpen(true)}>
                             <Plus className="mr-2 h-4 w-4" />
