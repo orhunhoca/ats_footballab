@@ -287,7 +287,7 @@ export default function GroupsPage() {
                         </div>
                         <div>
                           <h4 className="font-semibold text-gray-900">{student.name}</h4>
-                          <p className="text-sm text-gray-600">Yaş Grubu: {student.age_group || "-"}</p>
+                          <p className="text-sm text-gray-600">Doğum Tarihi: {student.birth_date ? new Date(student.birth_date).toLocaleDateString("tr-TR") : "-"}</p>
                           {student.father_phone && (
                             <div className="flex items-center gap-1 mt-1 text-sm text-gray-600">
                               <Phone className="w-3 h-3" />
