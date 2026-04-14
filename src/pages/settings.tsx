@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 import { authService } from "@/services/authService";
 import { whatsappService } from "@/services/whatsappService";
 import { scheduledMessageService } from "@/services/scheduledMessageService";
 import { iyzicoService } from "@/services/iyzicoService";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { Settings, Shield, Bell, Building2, User, Loader2, MessageSquare, CheckCircle2, AlertCircle, CalendarClock, CreditCard } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { Tables } from "@/integrations/supabase/types";
@@ -19,6 +21,8 @@ type Profile = Tables<"profiles">;
 
 export default function SettingsPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const { role, loading: roleLoading, isAdmin } = useUserRole();
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [saving, setSaving] = useState(false);
@@ -83,6 +87,18 @@ export default function SettingsPage() {
     loadWhatsappSettings();
     loadSchedulerSettings();
   }, []);
+
+  // Redirect non-admin users
+  useEffect(() => {
+    if (!roleLoading && !isAdmin) {
+      toast({
+        title: "Erişim Reddedildi",
+        description: "Bu sayfaya erişim yetkiniz yok. Sadece yöneticiler ayarlara erişebilir.",
+        variant: "destructive",
+      });
+      router.push("/");
+    }
+  }, [roleLoading, isAdmin, router, toast]);
 
   const loadSchedulerSettings = async () => {
     try {
@@ -324,7 +340,7 @@ export default function SettingsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <>
         <SEO title="Ayarlar" />
@@ -337,6 +353,11 @@ export default function SettingsPage() {
         </div>
       </>
     );
+  }
+
+  // If not admin, don't render the page (redirect will happen via useEffect)
+  if (!isAdmin) {
+    return null;
   }
 
   return (
