@@ -4,13 +4,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Users, Plus, TrendingUp, UserCircle, Clock, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Users, Plus, TrendingUp, UserCircle, Clock, Loader2, Phone, Mail } from "lucide-react";
 import { groupService } from "@/services/groupService";
 import { GroupForm } from "@/components/groups/GroupForm";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Group = Tables<"groups"> & {
   student_count?: number;
+  students?: Tables<"students">[];
   coaches?: Tables<"coaches"> | null;
 };
 
@@ -18,6 +20,8 @@ export default function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
+  const [isStudentListOpen, setIsStudentListOpen] = useState(false);
 
   useEffect(() => {
     loadGroups();
@@ -33,6 +37,11 @@ export default function GroupsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleShowStudents = (group: Group) => {
+    setSelectedGroup(group);
+    setIsStudentListOpen(true);
   };
 
   const colorClasses: Record<string, string> = {
@@ -217,9 +226,13 @@ export default function GroupsPage() {
                       </Tabs>
 
                       <div className="mt-4 pt-4 border-t">
-                        <Button className="w-full" variant="outline">
+                        <Button 
+                          className="w-full" 
+                          variant="outline"
+                          onClick={() => handleShowStudents(group)}
+                        >
                           <Users className="w-4 h-4 mr-2" />
-                          Öğrencileri Gör
+                          Öğrencileri Gör ({group.student_count || 0})
                         </Button>
                       </div>
                     </CardContent>
@@ -235,7 +248,7 @@ export default function GroupsPage() {
                 <UserCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Grup bulunamadı</h3>
                 <p className="text-gray-600 mb-4">Henüz kayıtlı grup bulunmuyor. Yeni grup oluşturun.</p>
-                <Button className="bg-emerald-600 hover:bg-emerald-700">
+                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsFormOpen(true)}>
                   <Plus className="w-4 h-4 mr-2" />
                   İlk Grubu Oluştur
                 </Button>
@@ -244,6 +257,7 @@ export default function GroupsPage() {
           )}
         </div>
         
+        {/* Group Form Dialog */}
         <GroupForm 
           open={isFormOpen} 
           onOpenChange={setIsFormOpen} 
@@ -251,6 +265,58 @@ export default function GroupsPage() {
             loadGroups();
           }} 
         />
+
+        {/* Student List Dialog */}
+        <Dialog open={isStudentListOpen} onOpenChange={setIsStudentListOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5 text-emerald-600" />
+                {selectedGroup?.name} - Öğrenci Listesi
+              </DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4 mt-4">
+              {selectedGroup && selectedGroup.students && selectedGroup.students.length > 0 ? (
+                selectedGroup.students.map((student) => (
+                  <Card key={student.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
+                          <UserCircle className="w-6 h-6 text-emerald-600" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-900">{student.name}</h4>
+                          <p className="text-sm text-gray-600">Yaş Grubu: {student.age_group || "-"}</p>
+                          {student.father_phone && (
+                            <div className="flex items-center gap-1 mt-1 text-sm text-gray-600">
+                              <Phone className="w-3 h-3" />
+                              <span>{student.father_phone}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          student.status === "Aktif" 
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}>
+                          {student.status}
+                        </span>
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <div className="text-center py-8">
+                  <UserCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">Bu grupta henüz öğrenci bulunmuyor.</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );

@@ -13,7 +13,9 @@ export const groupService = {
       .select(`
         *,
         coaches!groups_coach_id_fkey(*),
-        student_groups!student_groups_group_id_fkey(count)
+        student_groups!student_groups_group_id_fkey(
+          students!student_groups_student_id_fkey(*)
+        )
       `)
       .order("name", { ascending: true });
 
@@ -22,10 +24,11 @@ export const groupService = {
       throw error;
     }
 
-    // Transform data to include student_count
+    // Transform data to include student_count and students array
     return data?.map(group => ({
       ...group,
-      student_count: group.student_groups?.[0]?.count || 0
+      student_count: group.student_groups?.length || 0,
+      students: group.student_groups?.map((sg: any) => sg.students).filter(Boolean) || []
     })) || [];
   },
 
