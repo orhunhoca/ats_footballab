@@ -296,8 +296,8 @@ export default function StudentsPage() {
                           
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-sm text-gray-600">
                             <div className="flex items-center gap-2">
-                              <UserCircle2 className="w-4 h-4" />
-                              <span>{calculateAge(student.birth_date)} yaşında</span>
+                              <Calendar className="w-4 h-4" />
+                              <span>Doğum: {student.birth_date ? new Date(student.birth_date).toLocaleDateString('tr-TR') : '-'}</span>
                             </div>
                             
                             {student.work_group_hour && (
