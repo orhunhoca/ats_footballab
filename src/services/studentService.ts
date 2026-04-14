@@ -10,7 +10,16 @@ export const studentService = {
   async getAllStudents(): Promise<Student[]> {
     const { data, error } = await supabase
       .from("students")
-      .select("*")
+      .select(`
+        *,
+        student_groups!student_groups_student_id_fkey(
+          group_id,
+          groups!student_groups_group_id_fkey(
+            id,
+            name
+          )
+        )
+      `)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
@@ -24,6 +33,7 @@ export const studentService = {
       .select(`
         *,
         student_groups!student_groups_student_id_fkey(
+          group_id,
           groups!student_groups_group_id_fkey(*)
         )
       `)
@@ -97,8 +107,23 @@ export const studentService = {
     }
   },
 
-  // Assign student to a group
+  // Assign student to a group (with duplicate prevention)
   async assignToGroup(studentId: string, groupId: string): Promise<void> {
+    // First, check if this assignment already exists
+    const { data: existing } = await supabase
+      .from("student_groups")
+      .select("*")
+      .eq("student_id", studentId)
+      .eq("group_id", groupId)
+      .maybeSingle();
+
+    // If already assigned to this group, do nothing (no error)
+    if (existing) {
+      console.log("Student already assigned to this group, skipping...");
+      return;
+    }
+
+    // If not assigned, create new assignment
     const { error } = await supabase
       .from("student_groups")
       .insert({
@@ -242,7 +267,7 @@ export const studentService = {
       .select("id, name, registration_end_date, mother_phone, father_phone")
       .eq("status", "Aktif")
       .lte("registration_end_date", futureDate.toISOString().split('T')[0])
-      .gte("registration_end_date", today.toISOString().split('T')[0]) // Don't show already expired ones in this specific list if preferred, or remove this line to show all expired
+      .gte("registration_end_date", today.toISOString().split('T')[0])
       .order("registration_end_date", { ascending: true });
 
     if (error) {
