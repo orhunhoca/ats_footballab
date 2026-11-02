@@ -9,9 +9,16 @@ export const authService = {
    * Runs server-side in the `admin-create-user` Edge Function so that public
    * sign-ups can stay disabled and roles cannot be chosen by the client.
    */
-  async createUserWithoutLogin(email: string, password: string, fullName: string, _role: string = "coach") {
+  async createUserWithoutLogin(
+    email: string,
+    password: string,
+    fullName: string,
+    _role: string = "coach",
+    coach?: Record<string, unknown>
+  ) {
+    // coach verilirse antrenör kaydı aynı işlemde oluşturulur; başarısız olursa hesap da geri alınır.
     const { data, error } = await supabase.functions.invoke("admin-create-user", {
-      body: { email, password, fullName },
+      body: { email, password, fullName, coach },
     });
 
     if (error) {
@@ -30,7 +37,10 @@ export const authService = {
       throw new Error(data?.error || "Kullanıcı oluşturulamadı");
     }
 
-    return { user: data.user as { id: string; email: string } };
+    return {
+      user: data.user as { id: string; email: string },
+      coach: (data.coach ?? null) as Record<string, unknown> | null,
+    };
   },
 
   /**
