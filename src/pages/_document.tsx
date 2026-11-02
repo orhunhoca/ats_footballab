@@ -7,14 +7,6 @@ export default function Document() {
     <Html lang="tr">
       <Head>
         <SEOElements />
-        {/* Softgen izleme script'i yalnızca geliştirme ortamında yüklenir */}
-        {process.env.NODE_ENV === "development" && (
-          <script
-            src="https://cdn.softgen.ai/script.js"
-            async
-            data-softgen-monitoring="true"
-          />
-        )}
       </Head>
       <body
         className={cn(
@@ -23,15 +15,6 @@ export default function Document() {
       >
         <Main />
         <NextScript />
-
-        {/* Visual Editor Script */}
-        {process.env.NODE_ENV === "development" && (
-          <script
-            src="https://cdn.softgen.dev/visual-editor.min.js"
-            async
-            data-softgen-visual-editor="true"
-          />
-        )}
       </body>
     </Html>
   );

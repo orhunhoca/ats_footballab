@@ -2,6 +2,17 @@
 
 Futbol okulu yönetim paneli — Next.js + Supabase.
 
+- Canlı site: https://alltimesports.vercel.app (Vercel, `main` branch'ine her push'ta otomatik deploy)
+- Veritabanı / Auth / Edge Functions: Supabase (Frankfurt)
+
+## Geliştirme
+
+```bash
+npm install
+cp .env.example .env.local   # değerleri doldurun
+npm run dev
+```
+
 ## Güvenlik kurulumu (zorunlu)
 
 `supabase/migrations/20261102120000_security_hardening.sql` ile:
