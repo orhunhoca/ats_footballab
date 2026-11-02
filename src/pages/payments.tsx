@@ -205,7 +205,7 @@ export default function PaymentsPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
-        <SEO title="Ödemeler - FootballLab" description="Ödeme takip ve yönetim sistemi" />
+        <SEO title="Ödemeler - FootbalLab" description="Ödeme takip ve yönetim sistemi" />
         <Navigation />
         <div className="flex items-center justify-center h-[80vh]">
           <Loader2 className="h-8 w-8 animate-spin text-green-600" />
@@ -216,7 +216,7 @@ export default function PaymentsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50">
-      <SEO title="Ödemeler - FootballLab" description="Ödeme takip ve yönetim sistemi" />
+      <SEO title="Ödemeler - FootbalLab" description="Ödeme takip ve yönetim sistemi" />
       <Navigation />
       
       <main className="container mx-auto px-4 py-4 sm:py-8">

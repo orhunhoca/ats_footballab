@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-export const BRAND_NAME = "FootballLab";
+export const BRAND_NAME = "FootbalLab";
 
 interface BrandProps {
   className?: string;

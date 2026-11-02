@@ -50,7 +50,7 @@ export const pdfService = {
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
-    doc.text("FOOTBALLLAB FUTBOL OKULU", pageWidth / 2, 20, { align: "center" });
+    doc.text("FOOTBALLAB FUTBOL OKULU", pageWidth / 2, 20, { align: "center" });
 
     doc.setFontSize(14);
     doc.text("AYLIK PERFORMANS RAPORU", pageWidth / 2, 30, { align: "center" });
@@ -109,7 +109,7 @@ export const pdfService = {
     doc.setFontSize(9);
     doc.setTextColor(128, 128, 128);
     doc.text(
-      "Bu rapor FootballLab Futbol Okulu tarafından otomatik olarak oluşturulmuştur.",
+      "Bu rapor FootbalLab Futbol Okulu tarafından otomatik olarak oluşturulmuştur.",
       pageWidth / 2,
       finalY + 20,
       { align: "center" }
@@ -133,7 +133,7 @@ export const pdfService = {
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
-    doc.text("FOOTBALLLAB FUTBOL OKULU", pageWidth / 2, 20, { align: "center" });
+    doc.text("FOOTBALLAB FUTBOL OKULU", pageWidth / 2, 20, { align: "center" });
 
     doc.setFontSize(14);
     doc.text("ÖDEME MAKBUZU", pageWidth / 2, 30, { align: "center" });
@@ -239,7 +239,7 @@ export const pdfService = {
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
-    doc.text("FOOTBALLLAB FUTBOL OKULU", pageWidth / 2, 20, { align: "center" });
+    doc.text("FOOTBALLAB FUTBOL OKULU", pageWidth / 2, 20, { align: "center" });
 
     doc.setFontSize(14);
     doc.text("ANTRENMAN PROGRAMI", pageWidth / 2, 30, { align: "center" });
@@ -322,7 +322,7 @@ export const pdfService = {
 
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
-    doc.text("FOOTBALLLAB FUTBOL OKULU", pageWidth / 2, 20, { align: "center" });
+    doc.text("FOOTBALLAB FUTBOL OKULU", pageWidth / 2, 20, { align: "center" });
 
     doc.setFontSize(14);
     doc.text("PERFORMANS ANALİZ RAPORU", pageWidth / 2, 30, { align: "center" });
@@ -442,7 +442,7 @@ export const pdfService = {
     doc.setTextColor(128, 128, 128);
     const footerY = doc.internal.pageSize.getHeight() - 10;
     doc.text(
-      `Bu rapor FootballLab Futbol Okulu tarafından ${new Date().toLocaleDateString("tr-TR")} tarihinde otomatik olarak oluşturulmuştur.`,
+      `Bu rapor FootbalLab Futbol Okulu tarafından ${new Date().toLocaleDateString("tr-TR")} tarihinde otomatik olarak oluşturulmuştur.`,
       pageWidth / 2,
       footerY,
       { align: "center" }

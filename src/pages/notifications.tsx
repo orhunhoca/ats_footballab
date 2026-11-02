@@ -218,7 +218,7 @@ export default function NotificationsPage() {
 
   return (
     <>
-      <SEO title="Bildirimler - FootballLab Futbol Okulu" />
+      <SEO title="Bildirimler - FootbalLab Futbol Okulu" />
       <div className="min-h-screen bg-gray-50">
         <Navigation />
         <div className="container mx-auto p-6 max-w-7xl">

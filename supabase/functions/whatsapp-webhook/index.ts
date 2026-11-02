@@ -155,7 +155,7 @@ serve(async (req) => {
           }
         } else if (messageText.toLowerCase().startsWith("#iletisim")) {
           commandType = "contact";
-          botResponse = "📞 FOOTBALLLAB FUTBOL OKULU\n\n📱 Telefon: 0XXX XXX XX XX\n📧 E-posta: [E-posta adresi]\n📍 Adres: [Adres bilgisi]\n\n🕐 Çalışma Saatleri:\nPazartesi-Cuma: 09:00-18:00";
+          botResponse = "📞 FOOTBALLAB FUTBOL OKULU\n\n📱 Telefon: 0XXX XXX XX XX\n📧 E-posta: [E-posta adresi]\n📍 Adres: [Adres bilgisi]\n\n🕐 Çalışma Saatleri:\nPazartesi-Cuma: 09:00-18:00";
         } else {
           commandType = "help";
           botResponse = "👋 Merhaba! Size nasıl yardımcı olabilirim?\n\n📋 Komutlar:\n#yoklama - Yoklama durumu\n#odeme - Ödeme bilgileri\n#program - Antrenman programı\n#iletisim - İletişim bilgileri\n\nℹ️ Diğer sorularınız için lütfen okul ile iletişime geçin.";

@@ -39,7 +39,7 @@ export default function LoginPage() {
           <div className="flex justify-center mb-4">
             <Brand size={64} showName={false} />
           </div>
-          <CardTitle className="text-2xl font-bold">FootballLab</CardTitle>
+          <CardTitle className="text-2xl font-bold">FootbalLab</CardTitle>
           <CardDescription>Yönetim paneline giriş yapın</CardDescription>
         </CardHeader>
         <CardContent>
