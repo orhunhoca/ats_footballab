@@ -144,35 +144,26 @@ export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormPro
           description: `${formData.name} bilgileri güncellendi.`,
         });
       } else {
-        // Create new coach
-        const { user } = await authService.createUserWithoutLogin(
+        // Create new coach: hesap ve antrenör kaydı tek işlemde oluşturulur
+        await authService.createUserWithoutLogin(
           formData.email,
           formData.password,
           formData.name,
-          "coach"
-        );
-
-        if (user) {
-          await coachService.createCoach({
+          "coach",
+          {
             name: formData.name,
             phone: formData.phone,
-            email: formData.email,
             specialty: formData.specialty || null,
             experience: formData.experience || null,
             license: formData.license || null,
-            status: formData.status,
-            user_id: user.id,
-            invite_status: "accepted",
-            invite_token: null,
-            invite_sent_at: null,
-            invite_expires_at: null
-          });
+            status: formData.status
+          }
+        );
 
-          toast({
-            title: "✅ Antrenör Başarıyla Eklendi!",
-            description: `${formData.name} kaydedildi. Belirlenen şifre ile giriş yapabilir.`,
-          });
-        }
+        toast({
+          title: "✅ Antrenör Başarıyla Eklendi!",
+          description: `${formData.name} kaydedildi. Belirlenen şifre ile giriş yapabilir.`,
+        });
       }
       
       setFormData({

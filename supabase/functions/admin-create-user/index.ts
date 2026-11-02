@@ -22,7 +22,7 @@ serve(async (req) => {
     const supabase = serviceClient();
     await requireStaff(req, supabase, { adminOnly: true });
 
-    const { email, password, fullName } = await req.json();
+    const { email, password, fullName, coach } = await req.json();
 
     if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new HttpError(400, "Geçersiz email");
@@ -46,21 +46,59 @@ serve(async (req) => {
       throw new HttpError(400, message);
     }
 
+    const userId = data.user.id;
+
+    // Sonraki adımlardan biri başarısız olursa yarım hesap bırakmamak için geri al
+    const rollback = async (reason: string): Promise<never> => {
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(userId);
+      if (deleteError) console.error("Rollback failed:", deleteError);
+      throw new HttpError(400, reason);
+    };
+
     // Trigger profili 'pending' olarak oluşturur; personel rolünü burada veriyoruz.
     const { error: profileError } = await supabase
       .from("profiles")
       .upsert({
-        id: data.user.id,
+        id: userId,
         email,
         full_name: fullName || email,
         role: "user",
       });
 
     if (profileError) {
-      throw new HttpError(500, `Profil oluşturulamadı: ${profileError.message}`);
+      await rollback(`Profil oluşturulamadı: ${profileError.message}`);
     }
 
-    return jsonResponse({ success: true, user: { id: data.user.id, email: data.user.email } });
+    // İsteğe bağlı: antrenör kaydını aynı işlemde oluştur
+    let coachRecord: Record<string, unknown> | null = null;
+    if (coach && typeof coach === "object") {
+      const { data: created, error: coachError } = await supabase
+        .from("coaches")
+        .insert({
+          name: coach.name || fullName || email,
+          phone: coach.phone ?? null,
+          email,
+          specialty: coach.specialty || null,
+          experience: coach.experience || null,
+          license: coach.license || null,
+          status: coach.status || "Aktif",
+          user_id: userId,
+          invite_status: "accepted",
+        })
+        .select()
+        .single();
+
+      if (coachError) {
+        await rollback(`Antrenör kaydı oluşturulamadı: ${coachError.message}`);
+      }
+      coachRecord = created;
+    }
+
+    return jsonResponse({
+      success: true,
+      user: { id: userId, email: data.user.email },
+      coach: coachRecord,
+    });
   } catch (error) {
     return errorResponse(error);
   }
