@@ -8,7 +8,7 @@ export default function NotFound() {
   return (
     <>
       <Head>
-        <title>404 - Sayfa Bulunamadı | FootballLab</title>
+        <title>404 - Sayfa Bulunamadı | FootbalLab</title>
         <meta name="description" content="Sayfa bulunamadı" />
         <link rel="icon" href="/favicon.ico" />
       </Head>

@@ -11,6 +11,7 @@ import type { PerformanceTest } from "@/services/performanceService";
 import type { Student } from "@/services/studentService";
 import { analyzeStudentTests, buildParentSummary, buildResultsLine } from "@/lib/performanceAnalysis";
 import { formatTrPhone, normalizeTrPhone } from "@/lib/phone";
+import { buildPerformanceReportText } from "@/lib/whatsappTemplates";
 import { useToast } from "@/hooks/use-toast";
 
 interface Props {
@@ -75,7 +76,13 @@ export function SendPerformanceReportDialog({ open, onOpenChange, student, tests
   const canSend = isConfigured === true && chosen.length > 0 && evaluation.trim().length > 0 && stats.metrics.length > 0 && !sending;
 
   const previewFor = (r: Recipient) =>
-    `Sayın ${r.name}, ${student.name} adlı öğrencimizin ${testDate} tarihli performans test sonuçları: ${resultsLine} Değerlendirme: ${evaluation.trim()} FootballLab Futbol Okulu`;
+    buildPerformanceReportText({
+      parentName: r.name,
+      studentName: student.name,
+      testDate,
+      results: resultsLine,
+      evaluation: evaluation.trim(),
+    });
 
   const handleSend = async () => {
     setSending(true);

@@ -117,7 +117,7 @@ export default function TrialStudentsPage() {
 
   return (
     <>
-      <SEO title="Deneme Antrenmanları - FootballLab Futbol Okulu" />
+      <SEO title="Deneme Antrenmanları - FootbalLab Futbol Okulu" />
       <div className="min-h-screen bg-gray-50">
         <Navigation />
         <div className="container mx-auto p-6 max-w-7xl">

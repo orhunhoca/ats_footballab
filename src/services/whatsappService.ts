@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { buildPerformanceReportText } from "@/lib/whatsappTemplates";
 
 // Sırlar (access_token, webhook_verify_token) istemciden okunamaz; yalnızca yazılabilir.
 type WhatsAppSettings = Pick<
@@ -282,7 +283,13 @@ export const whatsappService = {
       },
       studentId: params.studentId,
       recipientName: params.parentName,
-      messagePreview: `Sayın ${params.parentName}, ${params.studentName} adlı öğrencimizin ${params.testDate} tarihli performans test sonuçları: ${params.results} Değerlendirme: ${params.evaluation} FootballLab Futbol Okulu`,
+      messagePreview: buildPerformanceReportText({
+        parentName: params.parentName,
+        studentName: params.studentName,
+        testDate: params.testDate,
+        results: params.results,
+        evaluation: params.evaluation
+      }),
       messageType: "performance_report"
     });
   },

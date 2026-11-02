@@ -299,7 +299,7 @@ export default function AttendancePage() {
   return (
     <>
       <SEO 
-        title="Yoklama | FootballLab Futbol Okulu"
+        title="Yoklama | FootbalLab Futbol Okulu"
         description="Öğrenci yoklama sistemi"
       />
       <Navigation />

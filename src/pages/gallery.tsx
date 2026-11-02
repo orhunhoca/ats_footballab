@@ -207,7 +207,7 @@ export default function Gallery() {
   return (
     <>
       <SEO 
-        title="Fotoğraf Galerisi - FootballLab Futbol Okulu"
+        title="Fotoğraf Galerisi - FootbalLab Futbol Okulu"
         description="Antrenman fotoğraflarını yönetin ve velilere gönderin"
       />
       <Navigation />

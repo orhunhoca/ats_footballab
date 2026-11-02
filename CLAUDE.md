@@ -1,6 +1,6 @@
-# CLAUDE.md — ATS FootballLab (FootballLab Futbol Okulu)
+# CLAUDE.md — ATS FootbalLab (FootbalLab Futbol Okulu)
 
-Bu dosya yeni oturumlarda otomatik okunur. Projenin güncel durumunu, altyapısını, alınmış kararları ve açık işleri özetler. Son güncelleme: 2026-11-02. Marka adı artık **FootballLab** (eski adı Sportex); logo `public/logo.png`, kod `src/components/Brand.tsx`.
+Bu dosya yeni oturumlarda otomatik okunur. Projenin güncel durumunu, altyapısını, alınmış kararları ve açık işleri özetler. Son güncelleme: 2026-11-02. Marka adı artık **FootbalLab** (eski adı Sportex); logo `public/logo.png`, kod `src/components/Brand.tsx`.
 
 ## Kullanıcı ve çalışma şekli
 - Proje sahibi: Orhun Güngördü (`orhunhoca@gmail.com`). **Yazılımcı değil.** Türkçe konuş, kendi yapması gereken adımları numaralı ve sade yaz, menü yollarını tam ver.
