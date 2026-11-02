@@ -1,4 +1,4 @@
-# ATS FootballLab (Sportex)
+# ATS FootballLab
 
 Futbol okulu yönetim paneli — Next.js + Supabase.
 

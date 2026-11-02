@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
-import Image from "next/image";
+import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,17 +37,9 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="relative w-20 h-20">
-              <Image
-                src="/sportex-logo.png"
-                alt="Sportex Logo"
-                fill
-                className="object-contain"
-                priority
-              />
-            </div>
+            <Brand size={64} showName={false} />
           </div>
-          <CardTitle className="text-2xl font-bold">Sportex Futbol Okulu</CardTitle>
+          <CardTitle className="text-2xl font-bold">FootballLab</CardTitle>
           <CardDescription>Yönetim paneline giriş yapın</CardDescription>
         </CardHeader>
         <CardContent>

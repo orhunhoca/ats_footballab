@@ -7,6 +7,7 @@ import { authService } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { Brand } from "@/components/Brand";
 
 export function Navigation() {
   const router = useRouter();
@@ -70,13 +71,8 @@ export function Navigation() {
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="p-2 bg-gradient-to-br from-green-500 to-blue-600 rounded-lg">
-                <UserCircle2 className="w-6 h-6 text-white" />
-              </div>
-              <span className="font-bold text-xl bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-                Sportex
-              </span>
+            <Link href="/" className="flex items-center" aria-label="FootballLab ana sayfa">
+              <Brand size={40} />
             </Link>
 
             <nav className="hidden lg:flex items-center gap-1">

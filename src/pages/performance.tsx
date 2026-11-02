@@ -352,7 +352,7 @@ export default function PerformancePage() {
   return (
     <>
       <SEO
-        title="Performans Testleri - Sportex"
+        title="Performans Testleri - FootballLab"
         description="Öğrenci performans takibi ve AI destekli analiz"
       />
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
