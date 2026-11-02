@@ -1,5 +1,22 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Tables } from "@/integrations/supabase/types";
+import {
+  analyzeStudentTests,
+  buildParentSummary,
+  buildRuleBasedAnalysis,
+  toAiPayload,
+} from "@/lib/performanceAnalysis";
+
+export interface StudentAnalysisResult {
+  /** Markdown rapor (koç için) */
+  analysis: string;
+  /** Veliye gidecek tek satırlık değerlendirme */
+  parentSummary: string;
+  /** "ai": yapay zekâ üretti, "rule": kayıtlı verilerden kural tabanlı üretildi */
+  source: "ai" | "rule";
+  /** Yapay zekâ kullanılamadıysa nedeni (kullanıcıya gösterilir) */
+  notice?: string;
+}
 
 export type PerformanceTest = Tables<"performance_tests"> & {
   test_protocols?: {
@@ -43,29 +60,47 @@ export const performanceService = {
     return data || [];
   },
 
-  // Generate AI Analysis (Mock implementation for now)
-  async generateAIAnalysis(studentId: string, studentName: string): Promise<string> {
-    // In a real app, this would call an Edge Function with OpenAI
-    // For now, return a simulated analysis
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    return `
-# ${studentName} İçin Performans Analizi
+  // Öğrenci analizi: önce gerçek verilerden kural tabanlı rapor üretilir,
+  // yapay zekâ servisi yapılandırılmışsa rapor onunla zenginleştirilir.
+  async analyzeStudent(
+    student: { name: string; age?: number | null },
+    tests: PerformanceTest[]
+  ): Promise<StudentAnalysisResult> {
+    const stats = analyzeStudentTests(tests);
+    const ruleBased: StudentAnalysisResult = {
+      analysis: buildRuleBasedAnalysis(student.name, student.age, stats),
+      parentSummary: buildParentSummary(stats),
+      source: "rule",
+    };
 
-## Genel Değerlendirme
-Öğrencinin son test verilerine göre hız ve çabukluk parametrelerinde belirgin bir artış gözlenmektedir. Özellikle son 3 ayda yapılan sprint testlerinde %12'lik bir gelişim kaydedilmiştir.
+    if (stats.metrics.length === 0) return ruleBased;
 
-## Güçlü Yönler
-- **Patlayıcı Kuvvet:** Dikey sıçrama testlerinde yaş grubunun üzerinde performans.
-- **Sprint:** 20m sprint derecesi istikrarlı şekilde düşüyor.
+    try {
+      const { data, error } = await supabase.functions.invoke("analyze-performance", {
+        body: toAiPayload(student.age, stats),
+      });
 
-## Gelişim Alanları
-- **Dayanıklılık:** Yo-Yo test sonuçları aerobik kapasitenin artırılması gerektiğini işaret ediyor.
-- **Esneklik:** Hamstring esnekliği sakatlık riski açısından geliştirilmeli.
+      if (error) throw error;
+      if (!data?.configured) {
+        return {
+          ...ruleBased,
+          notice: "Yapay zekâ anahtarı tanımlı değil; kayıtlı verilere dayalı otomatik analiz gösteriliyor.",
+        };
+      }
+      if (!data.analysis) throw new Error("Boş yanıt");
 
-## Öneriler
-Haftalık antrenman programına 20 dakika ekstra dayanıklılık koşuları ve düzenli stretching rutini eklenmesi önerilir.
-    `.trim();
+      return {
+        analysis: `# ${student.name} İçin Performans Analizi\n\n${data.analysis}`,
+        parentSummary: data.parentSummary || ruleBased.parentSummary,
+        source: "ai",
+      };
+    } catch (error) {
+      console.error("AI analysis unavailable, using rule-based analysis:", error);
+      return {
+        ...ruleBased,
+        notice: "Yapay zekâ servisine ulaşılamadı; kayıtlı verilere dayalı otomatik analiz gösteriliyor.",
+      };
+    }
   },
 
   // Create new performance test

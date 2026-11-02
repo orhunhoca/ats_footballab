@@ -1,6 +1,6 @@
-# CLAUDE.md — ATS FootballLab (Sportex Futbol Okulu)
+# CLAUDE.md — ATS FootballLab (FootballLab Futbol Okulu)
 
-Bu dosya yeni oturumlarda otomatik okunur. Projenin güncel durumunu, altyapısını, alınmış kararları ve açık işleri özetler. Son güncelleme: 2026-11-02.
+Bu dosya yeni oturumlarda otomatik okunur. Projenin güncel durumunu, altyapısını, alınmış kararları ve açık işleri özetler. Son güncelleme: 2026-11-02. Marka adı artık **FootballLab** (eski adı Sportex); logo `public/logo.png`, kod `src/components/Brand.tsx`.
 
 ## Kullanıcı ve çalışma şekli
 - Proje sahibi: Orhun Güngördü (`orhunhoca@gmail.com`). **Yazılımcı değil.** Türkçe konuş, kendi yapması gereken adımları numaralı ve sade yaz, menü yollarını tam ver.
@@ -43,7 +43,8 @@ Ortak kod `_shared/security.ts` (`requireStaff`, `serviceClient`, kimlik bilgisi
 | Fonksiyon | verify_jwt | Yetki |
 |---|---|---|
 | `admin-create-user` | true | yalnız admin; hesap + (opsiyonel) antrenör kaydını birlikte oluşturur, hata olursa hesabı siler |
-| `send-whatsapp` | true | personel |
+| `send-whatsapp` | true | personel; şablon (`template_type`/`template_id` ile bulunur), 24 saat içinde serbest metin/doküman/görsel |
+| `analyze-performance` | true | personel; `ANTHROPIC_API_KEY` yoksa `{configured:false}` döner, istemci kural tabanlı analize düşer (`ANTHROPIC_MODEL` opsiyonel) |
 | `create-iyzico-payment` | true | personel |
 | `process-scheduled-messages` | false | `x-cron-secret` = `CRON_SECRET` ya da personel JWT |
 | `whatsapp-webhook` | false | GET doğrulama + `X-Hub-Signature-256` (`WHATSAPP_APP_SECRET` yoksa her isteği reddeder) |
@@ -66,7 +67,7 @@ Eski seed migration (`20260226203219_…`) artık admin şifresini sıfırlamıy
 ## Açık işler / bilinen sorunlar (öncelik sırasıyla)
 1. **Admin şifresi**: `orhunhoca@gmail.com` hesabında oturumda verilen *geçici şifre* hâlâ geçerli (Ayarlar → Güvenlik'te değiştirme kaydedilmedi). Kullanıcı "böyle kalsın" dedi; uygun anda değiştirmesini hatırlat. Değerini hiçbir yere yazma.
 2. **iyzico online ödeme çalışmıyor**: `src/pages/api/iyzico-callback.ts` oturumsuz anon client kullanıyor (RLS yüzünden ayarları/ödemeyi okuyamaz). `Authorization: IYZWS key:secret` iyzico'nun beklediği HMAC imzası (IYZWSv2) değil; aynı hata `create-iyzico-payment`'ta da var. Idempotency yok (çift kayıt riski). Callback'in sunucu tarafında service-role ile çalışması gerekiyor; bunun için Vercel'e `SUPABASE_SERVICE_ROLE_KEY` env gerekecek. Kullanıcıya önerilen sıradaki iş bu.
-3. `send-whatsapp` yalnız şablon mesajı destekliyor; istemci custom/document/image da gönderiyor (eskiden beri bozuk).
+3. `send-whatsapp` yeniden yazıldı (şablon kolonları düzeltildi, telefon normalizasyonu, text/document/image). Performans raporu veliye `performance_report` şablonuyla gider (`mother_phone`/`father_phone`). Canlıda test edilmedi: WhatsApp bağlantısı + Meta şablon onayı gerekir; şablonlar Meta'da `template_id` adıyla (`performance_report`, `payment_reminder`, `attendance_notification`, `general_announcement`) oluşturulmalı. Şablon gövdeleri `whatsapp_templates.message_content`'te.
 4. WhatsApp devreye alınırsa: `WHATSAPP_APP_SECRET` (zorunlu), zamanlayıcı için `CRON_SECRET` secret'ları + Meta webhook kurulumu.
 5. Antrenörler ödemeler dahil tüm operasyonel verilere erişebiliyor; daraltma bir ürün kararı.
 6. Teknik borç: test yok; kullanılmayan `stripe` / `@stripe/*` / `vercel` bağımlılıkları; `xlsx@0.18.5` bilinen açıklar; yaygın `console.log`; büyük dosyalar (`settings.tsx`, `StudentForm.tsx`); Ayarlar'da 7 sekme `grid-cols-4` içinde; `userService` içinde eski/ölü kod.
