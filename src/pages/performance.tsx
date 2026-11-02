@@ -357,7 +357,7 @@ export default function PerformancePage() {
       />
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
         <Navigation />
-        <div className="container mx-auto px-4 py-8 mt-16">
+        <div className="container mx-auto px-4 py-4 sm:py-8">
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
               Performans Analiz Paneli

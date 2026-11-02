@@ -83,8 +83,8 @@ export default function Home() {
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
           <Navigation />
           
-          <main className="container mx-auto px-4 py-8">
-            <div className="flex items-center justify-between mb-8">
+          <main className="container mx-auto px-4 py-4 sm:py-8">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
                   Merhaba, {userName} 👋

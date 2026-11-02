@@ -140,7 +140,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Hedef Doğum Yılları</Label>
               <Input 
@@ -200,7 +200,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Renk Teması</Label>
               <Select 

@@ -70,9 +70,9 @@ export default function ReportsPage() {
       <div className="min-h-screen bg-gray-50">
         <Navigation />
 
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-4 sm:py-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Raporlar & İstatistikler</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Raporlar & İstatistikler</h1>
             <p className="text-gray-600 mt-1">Mali durum, katılım oranları ve performans analizleri</p>
           </div>
 

@@ -223,7 +223,7 @@ export default function NotificationsPage() {
         <Navigation />
         <div className="container mx-auto p-6 max-w-7xl">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">Bildirimler ve Hatırlatıcılar</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bildirimler ve Hatırlatıcılar</h1>
             <p className="text-muted-foreground">
               Üyelik yenileme, ödeme ve sağlık raporu hatırlatıcıları
             </p>
@@ -303,7 +303,7 @@ export default function NotificationsPage() {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="all" className="w-full">
-                <TabsList className="grid w-full grid-cols-7">
+                <TabsList className="flex w-full justify-start">
                   <TabsTrigger value="all">
                     Tümü ({notifications.length})
                   </TabsTrigger>

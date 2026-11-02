@@ -159,8 +159,8 @@ export default function TrainingPage() {
       <SEO title="Antrenman Programları - Sportex" description="Antrenman programları ve egzersiz yönetimi" />
       <Navigation />
       
-      <main className="container mx-auto px-4 py-8 mt-16">
-        <div className="flex items-center justify-between mb-8">
+      <main className="container mx-auto px-4 py-4 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Antrenman Programları</h1>
             <p className="text-gray-600">Haftalık antrenman planları ve egzersizler</p>
@@ -191,7 +191,7 @@ export default function TrainingPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="category">Kategori *</Label>
                       <Select
@@ -231,7 +231,7 @@ export default function TrainingPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="week">Hafta</Label>
                       <Input
@@ -341,7 +341,7 @@ export default function TrainingPage() {
 
         {/* Category Filter */}
         <Tabs value={selectedCategory} onValueChange={(value) => setSelectedCategory(value as TrainingCategory | "all")} className="mb-6">
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8">
+          <TabsList className="flex w-full justify-start">
             <TabsTrigger value="all">Tümü</TabsTrigger>
             <TabsTrigger value="defense">Savunma</TabsTrigger>
             <TabsTrigger value="offense">Hücum</TabsTrigger>

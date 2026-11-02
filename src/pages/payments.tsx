@@ -219,8 +219,8 @@ export default function PaymentsPage() {
       <SEO title="Ödemeler - Sportex" description="Ödeme takip ve yönetim sistemi" />
       <Navigation />
       
-      <main className="container mx-auto px-4 py-8 mt-16">
-        <div className="flex items-center justify-between mb-8">
+      <main className="container mx-auto px-4 py-4 sm:py-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-4xl font-bold text-gray-900 mb-2">Ödemeler</h1>
             <p className="text-gray-600">Ödeme takip ve yönetim sistemi</p>
@@ -458,7 +458,7 @@ export default function PaymentsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Toplam Tahsilat</CardTitle>
@@ -524,9 +524,9 @@ export default function PaymentsPage() {
                 payments.map((payment) => (
                   <div
                     key={payment.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+                    className="flex items-center justify-between gap-3 p-3 sm:p-4 border rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                       <div className="p-2 bg-green-100 rounded-lg">
                         {getPaymentMethodIcon(payment.payment_method)}
                       </div>
@@ -541,8 +541,8 @@ export default function PaymentsPage() {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-lg font-bold text-green-600">₺{payment.amount.toLocaleString("tr-TR")}</p>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-base sm:text-lg font-bold text-green-600">₺{payment.amount.toLocaleString("tr-TR")}</p>
                       <Badge variant="outline" className="mt-1">
                         {payment.payment_method}
                       </Badge>

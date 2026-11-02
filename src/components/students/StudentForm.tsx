@@ -570,7 +570,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           {/* Öğrenci Bilgileri */}
           <div className="space-y-4">
             <h3 className="font-semibold text-lg">Öğrenci Bilgileri</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Ad Soyad *</Label>
                 <Input 
@@ -712,7 +712,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           {/* Veli Bilgileri */}
           <div className="space-y-4 border-t pt-4">
             <h3 className="font-semibold text-lg">Veli Bilgileri</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Anne Adı Soyadı</Label>
                 <Input 
@@ -751,7 +751,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           {/* Ödeme Bilgileri */}
           <div className="border-t pt-4">
             <h3 className="font-semibold text-lg mb-3">Kayıt Bilgileri</h3>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div className="space-y-2">
                 <Label>Kayıt Başlangıç Tarihi *</Label>
                 <Input 
@@ -773,7 +773,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
             </div>
             
             <h3 className="font-semibold text-lg mb-3 mt-6">Ödeme Bilgileri</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Kayıt Tipi</Label>
                 <Select 
