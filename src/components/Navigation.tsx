@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
 import { Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera, UserCircle2, CalendarCheck } from "lucide-react";
 import { userService, type User } from "@/services/userService";
+import { authService } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -33,7 +34,9 @@ export function Navigation() {
 
   const handleLogout = async () => {
     try {
-      await userService.logout();
+      // userService.logout yalnızca eski bir localStorage kaydını siliyordu;
+      // Supabase oturumunu gerçekten kapat.
+      await authService.signOut();
       toast({
         title: "Çıkış Yapıldı",
         description: "Başarıyla çıkış yaptınız.",

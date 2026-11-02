@@ -16,7 +16,9 @@ export default function App({ Component, pageProps }: AppProps) {
       const isPublicPath = publicPaths.includes(router.pathname);
       
       try {
-        const session = await authService.getSession();
+        // Oturumu sunucuya doğrulat: silinmiş/geçersiz kullanıcının
+        // tarayıcıda kalan oturumu temizlenir, yönlendirme döngüsü oluşmaz.
+        const session = await authService.getValidSession();
         const isLoggedIn = !!session;
 
         if (!isPublicPath && !isLoggedIn) {

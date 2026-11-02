@@ -143,6 +143,25 @@ export const authService = {
   },
 
   /**
+   * Get the session only if the server still accepts it.
+   * A session stored in the browser can outlive its user (e.g. the user was
+   * deleted). In that case the local session is cleared and null is returned.
+   */
+  async getValidSession() {
+    const session = await this.getSession();
+    if (!session) return null;
+
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data?.user) {
+      console.warn("Stored session is no longer valid, signing out locally:", error?.message);
+      await supabase.auth.signOut({ scope: "local" });
+      return null;
+    }
+
+    return session;
+  },
+
+  /**
    * Get current user profile
    */
   async getCurrentUser(): Promise<Profile | null> {
