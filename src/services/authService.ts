@@ -1,44 +1,36 @@
 import { supabase } from "@/integrations/supabase/client";
-import { createClient } from "@supabase/supabase-js";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Profile = Tables<"profiles">;
 
 export const authService = {
   /**
-   * Create a new user without signing in (prevents signing out the admin)
-   * Uses a temporary client instance
+   * Create a new staff/coach user without signing in (admin only).
+   * Runs server-side in the `admin-create-user` Edge Function so that public
+   * sign-ups can stay disabled and roles cannot be chosen by the client.
    */
-  async createUserWithoutLogin(email: string, password: string, fullName: string, role: string = "coach") {
-    try {
-      // Create a temporary client to avoid affecting the current session
-      const tempClient = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+  async createUserWithoutLogin(email: string, password: string, fullName: string, _role: string = "coach") {
+    const { data, error } = await supabase.functions.invoke("admin-create-user", {
+      body: { email, password, fullName },
+    });
 
-      const { data: authData, error: authError } = await tempClient.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: role
-          }
-        }
-      });
-
-      if (authError) {
-        console.error("Create user error:", authError);
-        throw authError;
+    if (error) {
+      let message = error.message;
+      try {
+        const body = await (error as { context?: Response }).context?.json();
+        if (body?.error) message = body.error;
+      } catch {
+        // response body was not JSON
       }
-
-      console.log("User created successfully (without login):", authData);
-      return authData;
-    } catch (error) {
-      console.error("Error in createUserWithoutLogin:", error);
-      throw error;
+      console.error("Create user error:", message);
+      throw new Error(message);
     }
+
+    if (!data?.success) {
+      throw new Error(data?.error || "Kullanıcı oluşturulamadı");
+    }
+
+    return { user: data.user as { id: string; email: string } };
   },
 
   /**

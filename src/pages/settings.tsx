@@ -122,8 +122,9 @@ export default function SettingsPage() {
       const iyzico = await iyzicoService.getSettings();
       if (iyzico) {
         setIyzicoSettings({
-          api_key: iyzico.api_key || "",
-          secret_key: iyzico.secret_key || "",
+          // Sırlar sunucudan okunamaz; boş bırakılırsa kayıtlı değer korunur
+          api_key: "",
+          secret_key: "",
           base_url: iyzico.base_url || "https://sandbox-api.iyzipay.com",
           is_active: iyzico.is_active || false
         });
@@ -194,7 +195,8 @@ export default function SettingsPage() {
     if (settings) {
       setWhatsappSettings({
         phone_number_id: settings.phone_number_id || "",
-        access_token: settings.access_token || "",
+        // Sır sunucudan okunamaz; boş bırakılırsa kayıtlı değer korunur
+        access_token: "",
         business_account_id: settings.business_account_id || "",
         is_active: settings.is_active || false
       });
@@ -666,7 +668,7 @@ export default function SettingsPage() {
                         onChange={(e) =>
                           setWhatsappSettings({ ...whatsappSettings, access_token: e.target.value })
                         }
-                        placeholder="Kalıcı erişim anahtarınızı girin"
+                        placeholder="Kayıtlı değer korunur — değiştirmek için yeni anahtar girin"
                       />
                     </div>
 
@@ -862,7 +864,7 @@ export default function SettingsPage() {
                         <Input
                           value={iyzicoSettings.api_key}
                           onChange={(e) => setIyzicoSettings({ ...iyzicoSettings, api_key: e.target.value })}
-                          placeholder="iyzico API Key"
+                          placeholder="Kayıtlı değer korunur — değiştirmek için yeni değer girin"
                           type="password"
                         />
                       </div>
@@ -871,7 +873,7 @@ export default function SettingsPage() {
                         <Input
                           value={iyzicoSettings.secret_key}
                           onChange={(e) => setIyzicoSettings({ ...iyzicoSettings, secret_key: e.target.value })}
-                          placeholder="iyzico Secret Key"
+                          placeholder="Kayıtlı değer korunur — değiştirmek için yeni değer girin"
                           type="password"
                         />
                       </div>

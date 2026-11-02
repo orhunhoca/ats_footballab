@@ -1,10 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import {
+  corsHeaders,
+  errorResponse,
+  getIyzicoCredentials,
+  HttpError,
+  jsonResponse,
+  requireStaff,
+  serviceClient,
+} from "../_shared/security.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,29 +15,29 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = serviceClient();
 
-    // Get iyzico settings
-    const { data: settings } = await supabase
-      .from("iyzico_settings")
-      .select("*")
-      .eq("is_active", true)
-      .single();
+    // Yalnızca giriş yapmış personel/admin ödeme linki oluşturabilir
+    await requireStaff(req, supabase);
 
-    if (!settings) {
-      throw new Error("iyzico ayarları bulunamadı");
-    }
+    const { apiKey, secretKey, baseUrl } = await getIyzicoCredentials(supabase);
 
     const body = await req.json();
+
+    const amount = Number(body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new HttpError(400, "Geçersiz tutar");
+    }
+    if (!Array.isArray(body?.basketItems) || body.basketItems.length === 0) {
+      throw new HttpError(400, "Sepet boş olamaz");
+    }
 
     // Create iyzico payment request
     const iyzicoRequest = {
       locale: "tr",
       conversationId: body.conversationId,
-      price: body.amount.toFixed(2),
-      paidPrice: body.amount.toFixed(2),
+      price: amount.toFixed(2),
+      paidPrice: amount.toFixed(2),
       currency: "TRY",
       basketId: body.basketId,
       paymentGroup: "PRODUCT",
@@ -45,18 +48,18 @@ serve(async (req) => {
       billingAddress: body.billingAddress,
       basketItems: body.basketItems.map((item: any) => ({
         ...item,
-        price: item.price.toFixed(2)
-      }))
+        price: Number(item.price).toFixed(2),
+      })),
     };
 
     // Call iyzico API
-    const iyzicoUrl = `${settings.base_url}/payment/iyzipos/checkoutform/initialize/auth/ecom`;
-    
+    const iyzicoUrl = `${baseUrl}/payment/iyzipos/checkoutform/initialize/auth/ecom`;
+
     const response = await fetch(iyzicoUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `IYZWS ${settings.api_key}:${settings.secret_key}`,
+        "Authorization": `IYZWS ${apiKey}:${secretKey}`,
       },
       body: JSON.stringify(iyzicoRequest),
     });
@@ -64,30 +67,16 @@ serve(async (req) => {
     const iyzicoResponse = await response.json();
 
     if (iyzicoResponse.status !== "success") {
-      throw new Error(iyzicoResponse.errorMessage || "iyzico ödeme oluşturulamadı");
+      throw new HttpError(502, iyzicoResponse.errorMessage || "iyzico ödeme oluşturulamadı");
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        paymentPageUrl: iyzicoResponse.paymentPageUrl,
-        token: iyzicoResponse.token,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    return jsonResponse({
+      success: true,
+      paymentPageUrl: iyzicoResponse.paymentPageUrl,
+      token: iyzicoResponse.token,
+    });
   } catch (error) {
     console.error("iyzico payment error:", error);
-    return new Response(
-      JSON.stringify({ 
-        success: false,
-        error: error instanceof Error ? error.message : "Bilinmeyen hata" 
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
-    );
+    return errorResponse(error);
   }
 });

@@ -105,6 +105,15 @@ export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormPro
       return;
     }
 
+    if (!coach && formData.password.length < 8) {
+      toast({
+        title: "Zayıf Şifre",
+        description: "Şifre en az 8 karakter olmalıdır.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       toast({

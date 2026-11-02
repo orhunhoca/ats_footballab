@@ -1,11 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+import {
+  corsHeaders,
+  errorResponse,
+  getWhatsAppCredentials,
+  HttpError,
+  requireStaff,
+  serviceClient,
+} from "../_shared/security.ts";
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -14,23 +15,22 @@ serve(async (req) => {
   }
 
   try {
-    const { phoneNumber, templateName, variables, messageId } = await req.json();
+    // Initialize Supabase client (service role, yalnızca sunucu tarafında)
+    const supabaseClient = serviceClient();
 
-    // Initialize Supabase client
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    // Yalnızca giriş yapmış personel/admin mesaj gönderebilir
+    await requireStaff(req, supabaseClient);
+
+    const { phoneNumber, templateName, variables } = await req.json();
+
+    if (typeof phoneNumber !== "string" || !phoneNumber.trim()) {
+      throw new HttpError(400, "Telefon numarası gerekli");
+    }
 
     // Get WhatsApp settings
-    const { data: settings, error: settingsError } = await supabaseClient
-      .from("whatsapp_settings")
-      .select("*")
-      .eq("is_active", true)
-      .single();
-
-    if (settingsError || !settings) {
-      throw new Error("WhatsApp settings not found or inactive");
+    const settings = await getWhatsAppCredentials(supabaseClient);
+    if (!settings.isActive || !settings.phoneNumberId || !settings.accessToken) {
+      throw new HttpError(400, "WhatsApp settings not found or inactive");
     }
 
     // Get template details
@@ -57,7 +57,7 @@ serve(async (req) => {
     if (template.template_variables && Array.isArray(template.template_variables)) {
       const bodyParameters = template.template_variables.map((varName: string) => ({
         type: "text",
-        text: variables[varName] || ""
+        text: variables?.[varName] || ""
       }));
 
       if (bodyParameters.length > 0) {
@@ -70,11 +70,11 @@ serve(async (req) => {
 
     // Send message via WhatsApp Business API
     const whatsappResponse = await fetch(
-      `https://graph.facebook.com/v18.0/${settings.phone_number_id}/messages`,
+      `https://graph.facebook.com/v18.0/${settings.phoneNumberId}/messages`,
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${settings.access_token}`,
+          "Authorization": `Bearer ${settings.accessToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -113,15 +113,6 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error in send-whatsapp function:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      }
-    );
+    return errorResponse(error);
   }
 });

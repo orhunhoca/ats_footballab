@@ -1,10 +1,28 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import {
+  corsHeaders,
+  getWhatsAppCredentials,
+  hmacSha256Hex,
+  safeEqual,
+  serviceClient,
+} from "../_shared/security.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+/**
+ * Meta, her webhook isteğini uygulama sırrı (App Secret) ile imzalar:
+ *   X-Hub-Signature-256: sha256=<hex hmac>
+ * WHATSAPP_APP_SECRET tanımlı değilse istekler reddedilir (fail-closed).
+ */
+async function verifyMetaSignature(req: Request, rawBody: string): Promise<boolean> {
+  const appSecret = Deno.env.get("WHATSAPP_APP_SECRET");
+  if (!appSecret) {
+    console.error("WHATSAPP_APP_SECRET tanımlı değil; webhook istekleri reddediliyor");
+    return false;
+  }
+  const header = req.headers.get("x-hub-signature-256") ?? "";
+  if (!header.startsWith("sha256=")) return false;
+  const expected = await hmacSha256Hex(appSecret, rawBody);
+  return safeEqual(header.slice("sha256=".length).toLowerCase(), expected);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -12,12 +30,36 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = serviceClient();
 
-    const body = await req.json();
-    
+    // Meta webhook doğrulama adımı (abonelik kurulurken GET ile gelir)
+    if (req.method === "GET") {
+      const url = new URL(req.url);
+      const mode = url.searchParams.get("hub.mode");
+      const token = url.searchParams.get("hub.verify_token") ?? "";
+      const challenge = url.searchParams.get("hub.challenge") ?? "";
+      const { verifyToken } = await getWhatsAppCredentials(supabase);
+
+      if (mode === "subscribe" && verifyToken && safeEqual(token, verifyToken)) {
+        return new Response(challenge, { status: 200 });
+      }
+      return new Response("Forbidden", { status: 403 });
+    }
+
+    if (req.method !== "POST") {
+      return new Response("Method not allowed", { status: 405 });
+    }
+
+    const rawBody = await req.text();
+    if (!(await verifyMetaSignature(req, rawBody))) {
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401,
+      });
+    }
+
+    const body = JSON.parse(rawBody);
+
     if (body.object === "whatsapp_business_account") {
       const entry = body.entry?.[0];
       const changes = entry?.changes?.[0];
@@ -26,7 +68,8 @@ serve(async (req) => {
 
       if (messages && messages.length > 0) {
         const message = messages[0];
-        const fromPhone = message.from;
+        // Filtre enjeksiyonunu önlemek için yalnızca rakamlar
+        const fromPhone = String(message.from ?? "").replace(/\D/g, "");
         const messageText = message.text?.body || "";
         const messageId = message.id;
 
@@ -126,19 +169,15 @@ serve(async (req) => {
           command_type: commandType,
         });
 
-        const settings = await supabase
-          .from("whatsapp_settings")
-          .select("phone_number_id, access_token")
-          .eq("is_active", true)
-          .single();
+        const settings = await getWhatsAppCredentials(supabase);
 
-        if (settings.data) {
-          const whatsappUrl = `https://graph.facebook.com/v17.0/${settings.data.phone_number_id}/messages`;
+        if (settings.phoneNumberId && settings.accessToken) {
+          const whatsappUrl = `https://graph.facebook.com/v17.0/${settings.phoneNumberId}/messages`;
           
           await fetch(whatsappUrl, {
             method: "POST",
             headers: {
-              "Authorization": `Bearer ${settings.data.access_token}`,
+              "Authorization": `Bearer ${settings.accessToken}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -158,7 +197,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Webhook error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,

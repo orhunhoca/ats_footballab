@@ -46,12 +46,8 @@ BEGIN
       '',
       ''
     );
-  ELSE
-    -- Kullanıcı varsa şifresini güncelle
-    UPDATE auth.users
-    SET encrypted_password = crypt('admin123', gen_salt('bf')),
-        updated_at = NOW()
-    WHERE id = new_user_id;
+  -- GÜVENLİK: Mevcut kullanıcının şifresi artık 'admin123' olarak sıfırlanmıyor.
+  -- İlk kurulumdan sonra bu hesabın şifresini Supabase panelinden mutlaka değiştirin.
   END IF;
 
   -- 2. Profil tablosunu güncelle (Trigger çalışmazsa diye manuel garantiye alıyoruz)

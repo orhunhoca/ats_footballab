@@ -1,7 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type IyzicoSettings = Database["public"]["Tables"]["iyzico_settings"]["Row"];
+// Sırlar (api_key, secret_key) istemciden okunamaz; yalnızca yazılabilir.
+type IyzicoSettings = Pick<
+  Database["public"]["Tables"]["iyzico_settings"]["Row"],
+  "id" | "base_url" | "is_active" | "created_at" | "updated_at"
+>;
+const IYZICO_PUBLIC_COLUMNS = "id, base_url, is_active, created_at, updated_at";
 type OnlinePayment = Database["public"]["Tables"]["online_payments"]["Row"];
 type OnlinePaymentInsert = Database["public"]["Tables"]["online_payments"]["Insert"];
 
@@ -20,7 +25,7 @@ export const iyzicoService = {
   async getSettings(): Promise<IyzicoSettings | null> {
     const { data, error } = await supabase
       .from("iyzico_settings")
-      .select("*")
+      .select(IYZICO_PUBLIC_COLUMNS)
       .eq("is_active", true)
       .single();
 
@@ -40,6 +45,11 @@ export const iyzicoService = {
     is_active?: boolean;
   }): Promise<{ success: boolean; error?: string }> {
     try {
+      // Boş bırakılan sır alanları mevcut değerin üzerine yazılmasın
+      settings = { ...settings };
+      if (!settings.api_key) delete settings.api_key;
+      if (!settings.secret_key) delete settings.secret_key;
+
       const { data: existing } = await supabase
         .from("iyzico_settings")
         .select("id")

@@ -1,10 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
+import {
+  corsHeaders,
+  errorResponse,
+  getWhatsAppCredentials,
+  requireStaff,
+  safeEqual,
+  serviceClient,
+} from "../_shared/security.ts";
 
 interface ScheduledMessage {
   id: string;
@@ -24,9 +26,15 @@ serve(async (req) => {
 
   try {
     // Create Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = serviceClient();
+
+    // Zamanlayıcı (cron) CRON_SECRET ile, kullanıcılar ise personel JWT'si ile çağırabilir
+    const cronSecret = Deno.env.get("CRON_SECRET");
+    const providedSecret = req.headers.get("x-cron-secret") ?? "";
+    const isCron = !!cronSecret && !!providedSecret && safeEqual(providedSecret, cronSecret);
+    if (!isCron) {
+      await requireStaff(req, supabase);
+    }
 
     // Get scheduler settings
     const { data: settings } = await supabase
@@ -50,12 +58,9 @@ serve(async (req) => {
     }
 
     // Get WhatsApp settings
-    const { data: whatsappSettings } = await supabase
-      .from("whatsapp_settings")
-      .select("*")
-      .single();
+    const whatsappSettings = await getWhatsAppCredentials(supabase);
 
-    if (!whatsappSettings || !whatsappSettings.is_active) {
+    if (!whatsappSettings.isActive || !whatsappSettings.phoneNumberId || !whatsappSettings.accessToken) {
       return new Response(
         JSON.stringify({
           success: false,
@@ -88,7 +93,7 @@ serve(async (req) => {
         const messageContent = message.message_content || {};
         
         // Prepare WhatsApp API request
-        const whatsappApiUrl = `https://graph.facebook.com/v18.0/${whatsappSettings.phone_number_id}/messages`;
+        const whatsappApiUrl = `https://graph.facebook.com/v18.0/${whatsappSettings.phoneNumberId}/messages`;
         
         let whatsappPayload: any = {
           messaging_product: "whatsapp",
@@ -125,7 +130,7 @@ serve(async (req) => {
         const whatsappResponse = await fetch(whatsappApiUrl, {
           method: "POST",
           headers: {
-            "Authorization": `Bearer ${whatsappSettings.access_token}`,
+            "Authorization": `Bearer ${whatsappSettings.accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(whatsappPayload),
@@ -187,15 +192,6 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("Error processing scheduled messages:", error);
-    return new Response(
-      JSON.stringify({
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
-    );
+    return errorResponse(error);
   }
 });
