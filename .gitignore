@@ -37,3 +37,7 @@ next-env.d.ts
 
 # firebase
 firebase-service-account.json
+
+# logs & local tool state
+/logs
+supabase/.temp

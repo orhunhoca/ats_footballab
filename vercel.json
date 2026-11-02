@@ -1,12 +1,5 @@
 {
   "framework": "nextjs",
-  "redirects": [
-    {
-      "source": "/old-path",
-      "destination": "/new-path",
-      "permanent": true
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -19,5 +12,8 @@
     }
   ],
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "regions": [
+    "fra1"
+  ]
 }
