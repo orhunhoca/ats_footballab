@@ -1,7 +1,12 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 
-type WhatsAppSettings = Database["public"]["Tables"]["whatsapp_settings"]["Row"];
+// Sırlar (access_token, webhook_verify_token) istemciden okunamaz; yalnızca yazılabilir.
+type WhatsAppSettings = Pick<
+  Database["public"]["Tables"]["whatsapp_settings"]["Row"],
+  "id" | "phone_number_id" | "business_account_id" | "is_active" | "created_at" | "updated_at"
+>;
+const WHATSAPP_PUBLIC_COLUMNS = "id, phone_number_id, business_account_id, is_active, created_at, updated_at";
 type WhatsAppMessage = Database["public"]["Tables"]["whatsapp_messages"]["Row"];
 type WhatsAppMessageInsert = Database["public"]["Tables"]["whatsapp_messages"]["Insert"];
 type WhatsAppTemplate = Database["public"]["Tables"]["whatsapp_templates"]["Row"];
@@ -20,7 +25,7 @@ export const whatsappService = {
   async getSettings(): Promise<WhatsAppSettings | null> {
     const { data, error } = await supabase
       .from("whatsapp_settings")
-      .select("*")
+      .select(WHATSAPP_PUBLIC_COLUMNS)
       .eq("is_active", true)
       .single();
 
@@ -41,6 +46,11 @@ export const whatsappService = {
     is_active?: boolean;
   }): Promise<{ success: boolean; error?: string }> {
     try {
+      // Boş bırakılan sır alanları mevcut değerin üzerine yazılmasın
+      settings = { ...settings };
+      if (!settings.access_token) delete settings.access_token;
+      if (!settings.webhook_verify_token) delete settings.webhook_verify_token;
+
       const { data: existing } = await supabase
         .from("whatsapp_settings")
         .select("id")
