@@ -9,7 +9,7 @@ interface SEOProps {
 
 // SEO elements that can be used in _document.tsx (returns JSX without Head wrapper)
 export function SEOElements({
-  title = "Sportex Futbol Okulu",
+  title = "FootballLab Futbol Okulu",
   description = "Futbol okulu yönetim paneli",
   image = "/og-image.png",
   url,
@@ -39,7 +39,7 @@ export function SEOElements({
 // SEO component for use in pages/_app.tsx or individual pages (uses next/head)
 // Note: Flattened structure (no fragment) for better Next.js Head compatibility during hot reload
 export function SEO({
-  title = "Sportex Futbol Okulu",
+  title = "FootballLab Futbol Okulu",
   description = "Futbol okulu yönetim paneli",
   image = "/og-image.png",
   url,

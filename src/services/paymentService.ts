@@ -264,7 +264,7 @@ export const paymentService = {
         if (parentPhone) {
           await whatsappService.sendCustomMessage(
             parentPhone,
-            `🔐 SPORTEX ONLINE ÖDEME\n\n` +
+            `🔐 FOOTBALLLAB ONLINE ÖDEME\n\n` +
             `Öğrenci: ${student.name}\n` +
             `Tutar: ${params.amount.toLocaleString("tr-TR")} TL\n` +
             `Açıklama: ${params.description || params.paymentType}\n\n` +

@@ -42,6 +42,7 @@ import {
   TrendingDown,
   Activity,
   Brain,
+  MessageCircle,
   Loader2,
   Search,
   Users,
@@ -62,6 +63,8 @@ import { settingsService, type TestProtocol } from "@/services/settingsService";
 import { groupService } from "@/services/groupService";
 import { pdfService } from "@/services/pdfService";
 import { PerformanceTestForm } from "@/components/students/PerformanceTestForm";
+import { SendPerformanceReportDialog } from "@/components/students/SendPerformanceReportDialog";
+import { MarkdownLite } from "@/components/MarkdownLite";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -81,6 +84,10 @@ export default function PerformancePage() {
   const [isLoadingTests, setIsLoadingTests] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
+  const [aiParentSummary, setAiParentSummary] = useState<string>("");
+  const [aiNotice, setAiNotice] = useState<string>("");
+  const [aiSource, setAiSource] = useState<"ai" | "rule" | null>(null);
+  const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   const [performanceStats, setPerformanceStats] = useState<{
     totalTests: number;
@@ -96,11 +103,20 @@ export default function PerformancePage() {
   }, []);
 
   useEffect(() => {
+    // Önceki öğrencinin analizi yeni öğrenciye (veya WhatsApp özetine) sızmasın
+    resetAnalysis();
     if (selectedStudent) {
       loadTests();
       loadPerformanceStats();
     }
   }, [selectedStudent]);
+
+  const resetAnalysis = () => {
+    setAiAnalysis("");
+    setAiParentSummary("");
+    setAiNotice("");
+    setAiSource(null);
+  };
 
   const loadStudents = async () => {
     setIsLoadingStudents(true);
@@ -179,14 +195,14 @@ export default function PerformancePage() {
 
     setIsGeneratingAI(true);
     try {
-      const analysis = await performanceService.generateAIAnalysis(
-        selectedStudent.id,
-        selectedStudent.name
-      );
-      setAiAnalysis(analysis);
+      const result = await performanceService.analyzeStudent(selectedStudent, tests);
+      setAiAnalysis(result.analysis);
+      setAiParentSummary(result.parentSummary);
+      setAiNotice(result.notice || "");
+      setAiSource(result.source);
       toast({
-        title: "AI Analizi Tamamlandı",
-        description: "Performans analizi başarıyla oluşturuldu.",
+        title: result.source === "ai" ? "AI Analizi Tamamlandı" : "Analiz Hazır",
+        description: result.notice || "Performans analizi başarıyla oluşturuldu.",
       });
     } catch (error) {
       console.error("Error generating AI analysis:", error);
@@ -352,7 +368,7 @@ export default function PerformancePage() {
   return (
     <>
       <SEO
-        title="Performans Testleri - Sportex"
+        title="Performans Testleri - FootballLab"
         description="Öğrenci performans takibi ve AI destekli analiz"
       />
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
@@ -436,7 +452,7 @@ export default function PerformancePage() {
                   {/* Student Info & Actions */}
                   <Card>
                     <CardHeader>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
                         <div>
                           <CardTitle className="text-2xl">
                             {selectedStudent.name}
@@ -445,7 +461,7 @@ export default function PerformancePage() {
                             {tests.length} test kaydı
                           </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <Button
                             onClick={handleGenerateAI}
                             disabled={isGeneratingAI || tests.length === 0}
@@ -470,6 +486,15 @@ export default function PerformancePage() {
                           >
                             <FileDown className="mr-2 h-4 w-4" />
                             PDF İndir
+                          </Button>
+                          <Button
+                            onClick={() => setIsWhatsAppOpen(true)}
+                            disabled={tests.length === 0}
+                            variant="outline"
+                            className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                          >
+                            <MessageCircle className="mr-2 h-4 w-4" />
+                            Veliye Gönder
                           </Button>
                           <Button onClick={() => setIsFormOpen(true)}>
                             <Plus className="mr-2 h-4 w-4" />
@@ -555,15 +580,22 @@ export default function PerformancePage() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Brain className="h-5 w-5 text-purple-500" />
-                          AI Destekli Gelişim Analizi
+                          {aiSource === "ai" ? "AI Destekli Gelişim Analizi" : "Gelişim Analizi"}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="prose dark:prose-invert max-w-none">
-                          <div className="whitespace-pre-wrap text-sm">
-                            {aiAnalysis}
+                        {aiNotice && (
+                          <p className="mb-3 rounded-md bg-amber-50 border border-amber-100 px-3 py-2 text-xs text-amber-800">
+                            {aiNotice}
+                          </p>
+                        )}
+                        <MarkdownLite text={aiAnalysis} />
+                        {aiParentSummary && (
+                          <div className="mt-4 rounded-md border bg-muted/40 p-3">
+                            <p className="text-xs font-semibold text-muted-foreground mb-1">Veli özeti</p>
+                            <p className="text-sm">{aiParentSummary}</p>
                           </div>
-                        </div>
+                        )}
                       </CardContent>
                     </Card>
                   )}
@@ -760,12 +792,23 @@ export default function PerformancePage() {
               onSuccess={() => {
                 loadTests();
                 loadPerformanceStats();
+                resetAnalysis();
                 setIsFormOpen(false);
               }}
               onCancel={() => setIsFormOpen(false)}
             />
           </DialogContent>
         </Dialog>
+      )}
+
+      {selectedStudent && (
+        <SendPerformanceReportDialog
+          open={isWhatsAppOpen}
+          onOpenChange={setIsWhatsAppOpen}
+          student={selectedStudent}
+          tests={tests}
+          suggestedEvaluation={aiParentSummary || undefined}
+        />
       )}
     </>
   );

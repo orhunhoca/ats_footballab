@@ -79,7 +79,7 @@ export default function Home() {
   if (isLoggedIn) {
     return (
       <>
-        <SEO title="Panel - Sportex" />
+        <SEO title="Panel - FootballLab" />
         <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
           <Navigation />
           
@@ -157,7 +157,7 @@ export default function Home() {
   // Landing Page (Not Logged In)
   return (
     <>
-      <SEO title="Sportex - Futbol Okulu Yönetim Sistemi" />
+      <SEO title="FootballLab - Futbol Okulu Yönetim Sistemi" />
       
       <div className="min-h-screen bg-slate-50 dark:bg-slate-950 font-sans selection:bg-emerald-100 selection:text-emerald-900">
         <Navigation />
@@ -172,7 +172,7 @@ export default function Home() {
             <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 dark:text-white mb-6 tracking-tight">
               Geleceğin Yıldızlarını
               <span className="block text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-green-500 mt-2">
-                Sportex ile Yetiştirin
+                FootballLab ile Yetiştirin
               </span>
             </h1>
             

@@ -49,7 +49,7 @@ export default function SettingsPage() {
 
   // School settings
   const [schoolSettings, setSchoolSettings] = useState({
-    school_name: "Sportex Futbol Okulu",
+    school_name: "FootballLab Futbol Okulu",
     address: "",
     phone: "",
     email: "",
@@ -364,7 +364,7 @@ export default function SettingsPage() {
 
   return (
     <>
-      <SEO title="Ayarlar - Sportex Futbol Okulu" />
+      <SEO title="Ayarlar - FootballLab Futbol Okulu" />
       <Navigation />
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-3 sm:p-6">
         <div className="max-w-4xl mx-auto space-y-6">

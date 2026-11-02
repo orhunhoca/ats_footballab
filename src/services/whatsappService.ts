@@ -17,7 +17,24 @@ interface SendMessageParams {
   templateName: string;
   variables: Record<string, string>;
   studentId?: string;
-  messageType?: "payment_reminder" | "attendance" | "announcement" | "custom";
+  recipientName?: string;
+  /** Gönderilen metnin okunabilir hali (kayıt/denetim için) */
+  messagePreview?: string;
+  messageType?: "payment_reminder" | "attendance" | "announcement" | "performance_report" | "custom";
+}
+
+/** supabase.functions.invoke hata gövdesindeki gerçek mesajı çıkarır. */
+async function extractFunctionError(error: unknown): Promise<string> {
+  const ctx = (error as { context?: Response })?.context;
+  if (ctx && typeof ctx.json === "function") {
+    try {
+      const body = await ctx.json();
+      if (body?.error) return String(body.error);
+    } catch {
+      /* gövde okunamadı */
+    }
+  }
+  return error instanceof Error ? error.message : "Bilinmeyen hata";
 }
 
 export const whatsappService = {
@@ -120,6 +137,8 @@ export const whatsappService = {
       // Prepare message record
       const messageRecord: WhatsAppMessageInsert = {
         recipient_phone: params.phoneNumber,
+        recipient_name: params.recipientName,
+        message_content: params.messagePreview,
         template_name: params.templateName,
         template_variables: params.variables,
         student_id: params.studentId,
@@ -149,20 +168,23 @@ export const whatsappService = {
         }
       );
 
-      if (functionError) {
+      if (functionError || data?.success === false) {
+        const errorText = functionError
+          ? await extractFunctionError(functionError)
+          : String(data?.error ?? "Mesaj gönderilemedi");
         // Update message status to failed
         await supabase
           .from("whatsapp_messages")
           .update({
             status: "failed",
-            error_message: functionError.message,
+            error_message: errorText,
             updated_at: new Date().toISOString()
           })
           .eq("id", message.id);
 
         return {
           success: false,
-          error: functionError.message
+          error: errorText
         };
       }
 
@@ -235,6 +257,33 @@ export const whatsappService = {
       },
       studentId,
       messageType: "attendance"
+    });
+  },
+
+  // Veliye performans test raporu gönder (WhatsApp şablonu: performance_report)
+  async sendPerformanceReport(params: {
+    studentId: string;
+    studentName: string;
+    parentName: string;
+    phoneNumber: string;
+    testDate: string;
+    results: string;
+    evaluation: string;
+  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    return this.sendMessage({
+      phoneNumber: params.phoneNumber,
+      templateName: "performance_report",
+      variables: {
+        parent_name: params.parentName,
+        student_name: params.studentName,
+        test_date: params.testDate,
+        results: params.results,
+        evaluation: params.evaluation
+      },
+      studentId: params.studentId,
+      recipientName: params.parentName,
+      messagePreview: `Sayın ${params.parentName}, ${params.studentName} adlı öğrencimizin ${params.testDate} tarihli performans test sonuçları: ${params.results} Değerlendirme: ${params.evaluation} FootballLab Futbol Okulu`,
+      messageType: "performance_report"
     });
   },
 
