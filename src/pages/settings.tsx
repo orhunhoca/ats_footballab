@@ -366,7 +366,7 @@ export default function SettingsPage() {
     <>
       <SEO title="Ayarlar - Sportex Futbol Okulu" />
       <Navigation />
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 p-3 sm:p-6">
         <div className="max-w-4xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex items-center gap-3">
@@ -374,13 +374,13 @@ export default function SettingsPage() {
               <Settings className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Ayarlar</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white">Ayarlar</h1>
               <p className="text-slate-600 dark:text-slate-400">Profil ve sistem ayarlarınızı yönetin</p>
             </div>
           </div>
 
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="flex w-full justify-start">
               <TabsTrigger value="profile">
                 <User className="w-4 h-4 mr-2" />
                 Profil
@@ -586,7 +586,7 @@ export default function SettingsPage() {
                       placeholder="Okul adresi"
                     />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="school-phone">Telefon</Label>
                       <Input

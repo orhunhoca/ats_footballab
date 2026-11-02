@@ -73,11 +73,11 @@ export default function GroupsPage() {
       <div className="min-h-screen bg-gray-50">
         <Navigation />
 
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 py-4 sm:py-8">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Grup Yönetimi</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Grup Yönetimi</h1>
               <p className="text-gray-600 mt-1">Takımlar, program ve öğrenci atamaları</p>
             </div>
             <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsFormOpen(true)}>
@@ -144,9 +144,9 @@ export default function GroupsPage() {
                 return (
                   <Card key={group.id} className="hover:shadow-lg transition-all border-2">
                     <CardHeader className="pb-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-4">
-                          <div className={`w-16 h-16 bg-gradient-to-br ${colorClasses[colorKey] || colorClasses.emerald} rounded-2xl flex items-center justify-center`}>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                          <div className={`w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0 bg-gradient-to-br ${colorClasses[colorKey] || colorClasses.emerald} rounded-2xl flex items-center justify-center`}>
                             <Users className="w-8 h-8 text-white" />
                           </div>
                           <div>
@@ -167,7 +167,7 @@ export default function GroupsPage() {
                         </TabsList>
                         
                         <TabsContent value="info" className="space-y-4 mt-4">
-                          <div className="grid grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="flex items-center gap-3">
                               <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                                 <Users className="w-5 h-5 text-blue-600" />

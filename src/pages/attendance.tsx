@@ -418,9 +418,9 @@ export default function AttendancePage() {
                     {students.map((student) => (
                       <div
                         key={student.id}
-                        className="flex items-center justify-between p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                        className="flex items-center justify-between gap-2 p-3 sm:p-4 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white font-bold">
                             {student.name.charAt(0)}
                           </div>

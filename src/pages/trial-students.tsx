@@ -121,9 +121,9 @@ export default function TrialStudentsPage() {
       <div className="min-h-screen bg-gray-50">
         <Navigation />
         <div className="container mx-auto p-6 max-w-7xl">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
             <div>
-              <h1 className="text-3xl font-bold mb-2">Deneme Antrenmanları</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold mb-2">Deneme Antrenmanları</h1>
               <p className="text-muted-foreground">
                 Deneme antrenmanına gelen çocukları takip edin
               </p>

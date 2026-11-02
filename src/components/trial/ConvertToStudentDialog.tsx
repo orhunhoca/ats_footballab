@@ -109,7 +109,7 @@ export function ConvertToStudentDialog({ trialStudent, open, onOpenChange, onSuc
           {/* Student Info Section */}
           <div className="border-t pt-4">
             <h3 className="font-semibold text-lg mb-3">Öğrenci Bilgileri</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="height_cm">Boy (cm)</Label>
                 <Input
@@ -170,7 +170,7 @@ export function ConvertToStudentDialog({ trialStudent, open, onOpenChange, onSuc
           {/* Parent Information */}
           <div className="border-t pt-4">
             <h3 className="font-semibold text-lg mb-3">Veli Bilgileri</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="mother_name">Anne Adı</Label>
                 <Input
@@ -257,7 +257,7 @@ export function ConvertToStudentDialog({ trialStudent, open, onOpenChange, onSuc
           {/* Payment Information */}
           <div className="border-t pt-4">
             <h3 className="font-semibold text-lg mb-3">Ödeme Bilgileri</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="payment_plan">Ödeme Planı</Label>
                 <Select
@@ -287,7 +287,7 @@ export function ConvertToStudentDialog({ trialStudent, open, onOpenChange, onSuc
           </div>
 
           {/* Registration Dates */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="registration_start_date">Kayıt Başlangıç</Label>
               <Input
