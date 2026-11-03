@@ -1,6 +1,7 @@
 import { SEO } from "@/components/SEO";
 import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Navigation } from "@/components/Navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +37,8 @@ function TrialStudentsPageInner() {
   const { toast } = useToast();
 
   const { selectedBranchId, branches, getBranchName } = useBranch();
+  // Kayda dönüştürme (ödeme planı içerir) ve silme yalnızca yönetime aittir; antrenör deneme kaydı ekler
+  const { isManagement } = useUserRole();
 
   useEffect(() => {
     loadTrialStudents();
@@ -256,7 +259,7 @@ function TrialStudentsPageInner() {
                     </div>
 
                     <div className="flex gap-2 mt-4">
-                      {student.status === "Beklemede" && (
+                      {isManagement && student.status === "Beklemede" && (
                         <Button
                           onClick={() => handleConvert(student)}
                           className="flex-1 gap-2"
@@ -266,13 +269,15 @@ function TrialStudentsPageInner() {
                           Kayıt Ol
                         </Button>
                       )}
-                      <Button
-                        onClick={() => handleDelete(student.id)}
-                        variant="destructive"
-                        size="sm"
-                      >
-                        Sil
-                      </Button>
+                      {isManagement && (
+                        <Button
+                          onClick={() => handleDelete(student.id)}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          Sil
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -302,7 +307,7 @@ function TrialStudentsPageInner() {
 
 export default function TrialStudentsPage() {
   return (
-    <RoleGate level="management">
+    <RoleGate level="staff">
       <TrialStudentsPageInner />
     </RoleGate>
   );

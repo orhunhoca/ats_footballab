@@ -215,6 +215,9 @@ function CoachesPageInner() {
                               {branches.length > 1 && (
                                 <Badge variant="outline">{getBranchName(coach.branch_id)}</Badge>
                               )}
+                              {branches.length > 1 && coach.branch_access === "all" && (
+                                <Badge className="bg-blue-100 text-blue-800">Tüm şubeler</Badge>
+                              )}
                             </div>
                             {coach.specialty && (
                               <p className="text-base sm:text-lg text-gray-600 font-medium">{coach.specialty}</p>

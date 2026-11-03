@@ -92,6 +92,7 @@ export type Database = {
       }
       coaches: {
         Row: {
+          branch_access: string
           branch_id: string | null
           created_at: string | null
           email: string | null
@@ -111,6 +112,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          branch_access?: string
           branch_id?: string | null
           created_at?: string | null
           email?: string | null
@@ -130,6 +132,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          branch_access?: string
           branch_id?: string | null
           created_at?: string | null
           email?: string | null

@@ -16,8 +16,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Camera, Upload, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Tables } from "@/integrations/supabase/types";
-import { useBranch } from "@/contexts/BranchContext";
 import { BranchSelect } from "@/components/BranchSelect";
+import { useBranchPermission } from "@/hooks/useBranchPermission";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // Define extended student type with relations
 type StudentWithGroups = Tables<"students"> & {
@@ -33,7 +34,9 @@ interface StudentFormProps {
 
 export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentFormProps) {
   const { toast } = useToast();
-  const { defaultBranchId } = useBranch();
+  const { locked: branchLocked, formDefaultBranchId: defaultBranchId } = useBranchPermission();
+  // Ödeme/kıyafet ödemesi bölümleri yalnızca yönetim (admin + yönetici) içindir
+  const { isManagement: canManagePayments } = useUserRole();
   const [branchId, setBranchId] = useState("");
   const [loading, setLoading] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
@@ -683,7 +686,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                   </SelectContent>
                 </Select>
               </div>
-              <BranchSelect value={branchId} onChange={handleBranchChange} />
+              <BranchSelect value={branchId} onChange={handleBranchChange} disabled={branchLocked} />
               <div className="space-y-2">
                 <Label>Grup Seçimi *</Label>
                 <Select 
@@ -809,6 +812,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
               </div>
             </div>
             
+            {canManagePayments && (<>
             <h3 className="font-semibold text-lg mb-3 mt-6">Ödeme Bilgileri</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -901,10 +905,11 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 ℹ️ 2. Taksit ({selectedPlan.installment_price?.toLocaleString('tr-TR')} TL) 45 gün sonrası için planlanacak.
               </div>
             )}
+            </>)}
           </div>
 
           {/* Kıyafet Ödemeleri */}
-          <div className="border-t pt-4">
+          {canManagePayments && <div className="border-t pt-4">
             <h3 className="font-semibold text-lg mb-3">Kıyafet Ödemeleri</h3>
             
             <div className="space-y-4">
@@ -972,7 +977,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 )}
               </div>
             </div>
-          </div>
+          </div>}
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>

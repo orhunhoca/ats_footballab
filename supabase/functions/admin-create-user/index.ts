@@ -101,6 +101,8 @@ serve(async (req) => {
           status: coach.status || "Aktif",
           user_id: userId,
           branch_id: branchId,
+          // "all": tüm şubelerde çalışabilir/kayıt ekleyebilir; "own": yalnızca kendi şubesi
+          branch_access: coach.branch_access === "all" ? "all" : "own",
           invite_status: "accepted",
         })
         .select()

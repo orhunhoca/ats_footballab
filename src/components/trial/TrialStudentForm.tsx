@@ -9,8 +9,8 @@ import { groupService } from "@/services/groupService";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
-import { useBranch } from "@/contexts/BranchContext";
 import { BranchSelect } from "@/components/BranchSelect";
+import { useBranchPermission } from "@/hooks/useBranchPermission";
 
 type Group = Tables<"groups">;
 
@@ -32,7 +32,7 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { defaultBranchId } = useBranch();
+  const { locked: branchLocked, formDefaultBranchId: defaultBranchId } = useBranchPermission();
   const [branchId, setBranchId] = useState(defaultBranchId);
 
   // Şubeler yüklendikten sonra varsayılanı doldur
@@ -149,7 +149,7 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <BranchSelect value={branchId} onChange={handleBranchChange} />
+      <BranchSelect value={branchId} onChange={handleBranchChange} disabled={branchLocked} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Ad Soyad *</Label>

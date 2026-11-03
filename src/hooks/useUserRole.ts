@@ -19,6 +19,8 @@ export function roleFromProfile(dbRole: string | null | undefined): UserRole {
 
 export function useUserRole() {
   const [role, setRole] = useState<UserRole>(null);
+  const [coachBranchId, setCoachBranchId] = useState<string | null>(null);
+  const [coachBranchAccess, setCoachBranchAccess] = useState<"own" | "all" | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -37,7 +39,24 @@ export function useUserRole() {
           .eq("id", user.id)
           .single();
 
-        if (!cancelled) setRole(roleFromProfile(profile?.role));
+        const resolved = roleFromProfile(profile?.role);
+        if (!cancelled) setRole(resolved);
+
+        // Antrenörün şubesi ve şube yetkisi ("own" yalnızca kendi şubesi, "all" tüm şubeler)
+        if (resolved === "coach") {
+          const { data: coach } = await supabase
+            .from("coaches")
+            .select("branch_id, branch_access")
+            .eq("user_id", user.id)
+            .eq("status", "Aktif")
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (!cancelled) {
+            setCoachBranchId(coach?.branch_id ?? null);
+            setCoachBranchAccess(coach?.branch_access === "all" ? "all" : "own");
+          }
+        }
       } catch (error) {
         console.error("Error fetching role:", error);
         if (!cancelled) setRole(null);
@@ -57,5 +76,18 @@ export function useUserRole() {
   const isManagement = role === "admin" || role === "manager";
   const isCoach = role === "coach";
 
-  return { role, loading, isAdmin, isManager: role === "manager", isManagement, isCoach };
+  /** Admin/yönetici veya "tüm şubeler" yetkili antrenör: şube seçebilir */
+  const canSeeAllBranches = isManagement || (isCoach && coachBranchAccess === "all");
+
+  return {
+    role,
+    loading,
+    isAdmin,
+    isManager: role === "manager",
+    isManagement,
+    isCoach,
+    coachBranchId,
+    coachBranchAccess,
+    canSeeAllBranches,
+  };
 }

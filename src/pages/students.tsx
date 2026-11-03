@@ -71,8 +71,9 @@ function StudentsPageInner() {
   const [deleteReason, setDeleteReason] = useState<"Kayıt İptali" | "Ara Veriyor" | "Yönetim Sildi">("Kayıt İptali");
 
   const { selectedBranchId, branches, getBranchName } = useBranch();
-  // Antrenörler öğrenci bilgilerini salt okunur görür (kayıt/ödeme işlemi yönetime ait)
-  const { isManagement: canManage } = useUserRole();
+  // Antrenörler öğrenci kaydı ekleyip düzenleyebilir; silme ve ödeme bilgisi yalnızca yönetime aittir
+  const { isManagement: canManage, role: userRole } = useUserRole();
+  const canRegister = userRole !== null;
 
   useEffect(() => {
     loadStudents();
@@ -196,7 +197,7 @@ function StudentsPageInner() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Öğrenci Yönetimi</h1>
               <p className="text-gray-600 mt-1">Tüm öğrencileri görüntüle ve yönet</p>
             </div>
-            {canManage && (
+            {canRegister && (
               <Button 
                 className="bg-emerald-600 hover:bg-emerald-700"
                 onClick={() => setIsFormOpen(true)}
@@ -432,7 +433,7 @@ function StudentsPageInner() {
                            </>
                          )}
                          
-                         {canManage && <div className="flex gap-2 mt-2">
+                         {canRegister && <div className="flex gap-2 mt-2">
                            <Button variant="outline" size="sm" onClick={() => {
                              setEditingStudent(student);
                              setIsFormOpen(true);
@@ -441,7 +442,7 @@ function StudentsPageInner() {
                               Düzenle
                            </Button>
                            
-                           <DropdownMenu>
+                           {canManage && <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
                                   <span className="sr-only">Menü</span>
@@ -464,7 +465,7 @@ function StudentsPageInner() {
                                   <Trash2 className="mr-2 h-4 w-4" /> Kaydı Sil / İptal Et
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
-                           </DropdownMenu>
+                           </DropdownMenu>}
                          </div>}
                       </div>
                     </div>

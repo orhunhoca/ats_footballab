@@ -7,14 +7,14 @@ import { cn } from "@/lib/utils";
 const ALL = "__all__";
 
 /**
- * Üst menüde aktif şubeyi seçtirir. Tek şube varsa veya kullanıcı antrenörse gösterilmez
- * (antrenör yalnızca kendi şubesinin verisini görür).
+ * Üst menüde aktif şubeyi seçtirir. Tek şube varsa veya kullanıcı yalnızca kendi şubesini
+ * görebilen bir antrenörse gösterilmez.
  */
 export function BranchSwitcher({ className }: { className?: string }) {
   const { activeBranches, selectedBranchId, setSelectedBranchId } = useBranch();
-  const { isManagement } = useUserRole();
+  const { canSeeAllBranches } = useUserRole();
 
-  if (!isManagement || activeBranches.length < 2) return null;
+  if (!canSeeAllBranches || activeBranches.length < 2) return null;
 
   return (
     <Select

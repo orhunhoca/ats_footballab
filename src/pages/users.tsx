@@ -173,7 +173,7 @@ function UsersPageInner() {
             <AlertDescription className="text-blue-800 space-y-1 mt-1">
               <p><strong>Admin:</strong> Şube, antrenör, şablon ve ayarları girer; yönetici atar.</p>
               <p><strong>Yönetici:</strong> Tüm şubelerin öğrenci, yoklama, ödeme ve raporlarına ulaşır; kayıt girer.</p>
-              <p><strong>Antrenör:</strong> Kendi şubesinin öğrenci bilgilerini (salt okunur), yoklama, performans testleri ve raporlarını görür.</p>
+              <p><strong>Antrenör:</strong> Yoklama, öğrenci bilgileri, performans testleri ve raporları görür; öğrenci ve deneme öğrencisi kaydı ekler. Antrenör eklerken/düzenlerken "Şube Yetkisi" ile yalnızca kendi şubesi veya tüm şubeler seçilir.</p>
               <p><strong>Beklemede:</strong> Hiçbir veriye erişemez. Antrenör hesaplarını "Antrenörler" sayfasından açın.</p>
             </AlertDescription>
           </Alert>

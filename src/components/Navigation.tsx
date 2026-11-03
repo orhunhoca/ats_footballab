@@ -34,11 +34,11 @@ export function Navigation() {
   };
 
   // Rol bazlı menü: admin = her şey; yönetici = tüm operasyon (şube/ayar/kullanıcı hariç);
-  // antrenör = öğrenci bilgileri, yoklama, performans, raporlar
+  // antrenör = öğrenci ve deneme öğrencisi kaydı, yoklama, performans, raporlar
   type MenuItem = { href: string; label: string; icon: typeof Users; roles: ("admin" | "manager" | "coach")[] };
   const allItems: MenuItem[] = [
     { href: "/students", label: "Öğrenciler", icon: Users, roles: ["admin", "manager", "coach"] },
-    { href: "/trial-students", label: "Deneme Öğrencileri", icon: Users, roles: ["admin", "manager"] },
+    { href: "/trial-students", label: "Deneme Öğrencileri", icon: Users, roles: ["admin", "manager", "coach"] },
     { href: "/groups", label: "Gruplar", icon: Users, roles: ["admin", "manager"] },
     { href: "/coaches", label: "Antrenörler", icon: UserCircle2, roles: ["admin", "manager"] },
     { href: "/attendance", label: "Yoklama", icon: CalendarCheck, roles: ["admin", "manager", "coach"] },
