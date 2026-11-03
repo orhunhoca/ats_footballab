@@ -5,7 +5,11 @@
 - Havale/EFT ödemesinde paranın yattığı hesap seçimi (`payment_history.bank_account_id`)
 - KVKK Aydınlatma, Açık Rıza, Çerez Politikası sayfaları (şirket bilgisi otomatik) + alt bilgide "© ATS - All Time Sports"
 
-## 1. Veli erişim sayfası (`/portal`) — önerilen tasarım
+## 1. Veli erişim sayfası (`/portal`) — DURUM: kayıt ve KVKK onayı YAPILDI (davet kodu); veri ekranları sırada
+**Yapıldı**: davet kodu ile kayıt, sunucuda zorunlu KVKK onayı, onay kayıtları, veli ↔ çocuk bağlantısı, yönetim ekranı (kod üret/iptal, bağlı veliler), açma/kapama anahtarı, portal iskeleti (çocuk kartları, ikinci çocuk ekleme, sürüm değişince yeniden onay).
+**Sırada**: yoklama, performans raporları, galeri, bakiye/ödeme (aşağıdaki tasarım).
+
+### Tasarım (ayrıntı)
 **Rol ve bağlantı**: `profiles.role = 'parent'`; `parent_students(parent_user_id, student_id, relation)` ile veli ↔ çocuk(lar).
 Veli yalnızca kendi çocuklarının verisini görür (RLS ile veritabanında zorunlu; `requireStaff` varsayılanı parent'ı zaten dışarıda bırakır).
 **Kayıtta zorunlu KVKK onayı (KURAL — kullanıcı kararı)**: Veli, KVKK Aydınlatma Metni'ni onaylamadan kayıt olamaz/devam edemez.

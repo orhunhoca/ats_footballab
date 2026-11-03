@@ -220,6 +220,7 @@ export type Database = {
       }
       company_settings: {
         Row: {
+          parent_portal_enabled: boolean
           address: string | null
           email: string | null
           id: string
@@ -236,6 +237,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          parent_portal_enabled?: boolean
           address?: string | null
           email?: string | null
           id?: string
@@ -252,6 +254,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          parent_portal_enabled?: boolean
           address?: string | null
           email?: string | null
           id?: string
@@ -266,6 +269,45 @@ export type Database = {
           updated_at?: string
           verbis_number?: string | null
           website?: string | null
+        }
+        Relationships: []
+      }
+      consents: {
+        Row: {
+          accepted: boolean
+          accepted_at: string
+          document_type: string
+          document_version: string
+          id: string
+          ip: string | null
+          source: string
+          student_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted: boolean
+          accepted_at?: string
+          document_type: string
+          document_version: string
+          id?: string
+          ip?: string | null
+          source?: string
+          student_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted?: boolean
+          accepted_at?: string
+          document_type?: string
+          document_version?: string
+          id?: string
+          ip?: string | null
+          source?: string
+          student_id?: string | null
+          user_agent?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -633,6 +675,63 @@ export type Database = {
           },
         ]
       }
+      parent_invites: {
+        Row: {
+          code_hash: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          is_active: boolean
+          max_uses: number
+          student_id: string
+          used_count: number
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          student_id: string
+          used_count?: number
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          student_id?: string
+          used_count?: number
+        }
+        Relationships: []
+      }
+      parent_students: {
+        Row: {
+          created_at: string
+          parent_user_id: string
+          relation: string | null
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          parent_user_id: string
+          relation?: string | null
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          parent_user_id?: string
+          relation?: string | null
+          student_id?: string
+        }
+        Relationships: []
+      }
       payment_history: {
         Row: {
           bank_account_id: string | null
@@ -987,6 +1086,8 @@ export type Database = {
       }
       students: {
         Row: {
+          kvkk_consent_at: string | null
+          kvkk_consent_by: string | null
           branch_id: string | null
           address: string | null
           age: number
@@ -1025,6 +1126,8 @@ export type Database = {
           work_group_hour: string | null
         }
         Insert: {
+          kvkk_consent_at?: string | null
+          kvkk_consent_by?: string | null
           branch_id?: string | null
           address?: string | null
           age: number
@@ -1063,6 +1166,8 @@ export type Database = {
           work_group_hour?: string | null
         }
         Update: {
+          kvkk_consent_at?: string | null
+          kvkk_consent_by?: string | null
           branch_id?: string | null
           address?: string | null
           age?: number
@@ -1583,6 +1688,24 @@ export type Database = {
     Functions: {
       check_registration_renewals: { Args: never; Returns: undefined }
       get_public_company_info: { Args: never; Returns: Json }
+      is_parent_registration_open: { Args: never; Returns: boolean }
+      create_parent_invite: {
+        Args: { p_student_id: string; p_max_uses?: number; p_days?: number }
+        Returns: string
+      }
+      revoke_parent_invite: { Args: { p_invite_id: string }; Returns: undefined }
+      list_student_parents: {
+        Args: { p_student_id: string }
+        Returns: {
+          parent_user_id: string
+          full_name: string | null
+          email: string | null
+          relation: string | null
+          linked_at: string
+          is_active: boolean
+        }[]
+      }
+      get_my_children: { Args: never; Returns: Json }
     }
     Enums: {
       test_type:

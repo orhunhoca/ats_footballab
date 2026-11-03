@@ -66,6 +66,15 @@ export const companyService = {
     if (error) throw error;
   },
 
+  /** Veli kaydını aç/kapat (yalnızca admin) */
+  async setParentPortalEnabled(id: string, enabled: boolean): Promise<void> {
+    const { error } = await supabase
+      .from("company_settings")
+      .update({ parent_portal_enabled: enabled, updated_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) throw error;
+  },
+
   async getBankAccounts(): Promise<BankAccount[]> {
     const { data, error } = await supabase
       .from("bank_accounts")

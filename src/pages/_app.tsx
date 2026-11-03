@@ -12,7 +12,7 @@ export default function App({ Component, pageProps }: AppProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
   // Giriş gerektirmeyen sayfalar (hukuki metinler herkese açıktır)
-  const publicPaths = ["/login", "/kvkk", "/acik-riza", "/cerez-politikasi"];
+  const publicPaths = ["/login", "/veli-kayit", "/kvkk", "/acik-riza", "/cerez-politikasi"];
 
   useEffect(() => {
     // Check authentication on mount and route change

@@ -8,6 +8,11 @@ import type { PublicCompanyInfo } from "@/services/companyService";
  */
 export const LEGAL_DRAFT = true;
 export const LEGAL_LAST_UPDATED = "Kasım 2026";
+/**
+ * KVKK metni sürümü. Metin anlamlı şekilde değişince artırılır; veliler yeni sürümü onaylamadan portala giremez.
+ * supabase/functions/_shared/parent.ts içindeki CURRENT_KVKK_VERSION ile AYNI olmalıdır.
+ */
+export const LEGAL_VERSION = "2026-11-v1";
 
 /** Bir blok: string = paragraf, string[] = madde işaretli liste */
 export type LegalBlock = string | string[];

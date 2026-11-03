@@ -26,7 +26,7 @@ import { authService } from "@/services/authService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-type DbRole = "admin" | "manager" | "user" | "pending";
+type DbRole = "admin" | "manager" | "user" | "parent" | "pending";
 
 interface ProfileRow {
   id: string;
@@ -40,6 +40,7 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "Admin",
   manager: "Yönetici",
   user: "Antrenör",
+  parent: "Veli",
   pending: "Beklemede",
 };
 
@@ -47,6 +48,7 @@ const ROLE_BADGE: Record<string, string> = {
   admin: "bg-purple-100 text-purple-800",
   manager: "bg-blue-100 text-blue-800",
   user: "bg-emerald-100 text-emerald-800",
+  parent: "bg-purple-100 text-purple-800",
   pending: "bg-amber-100 text-amber-800",
 };
 
@@ -174,6 +176,7 @@ function UsersPageInner() {
               <p><strong>Admin:</strong> Şube, antrenör, şablon ve ayarları girer; yönetici atar.</p>
               <p><strong>Yönetici:</strong> Tüm şubelerin öğrenci, yoklama, ödeme ve raporlarına ulaşır; kayıt girer.</p>
               <p><strong>Antrenör:</strong> Yoklama, öğrenci bilgileri, performans testleri ve raporları görür; öğrenci ve deneme öğrencisi kaydı ekler. Antrenör eklerken/düzenlerken "Şube Yetkisi" ile yalnızca kendi şubesi veya tüm şubeler seçilir.</p>
+              <p><strong>Veli:</strong> Davet koduyla kendisi kayıt olur; yalnızca kendi çocuğuna ait portalı görür. Öğrenci kartındaki "Veli Davet Kodu" ile yönetilir.</p>
               <p><strong>Beklemede:</strong> Hiçbir veriye erişemez. Antrenör hesaplarını "Antrenörler" sayfasından açın.</p>
             </AlertDescription>
           </Alert>
@@ -211,6 +214,16 @@ function UsersPageInner() {
                           <span className="text-xs text-gray-500 w-[150px] text-right">
                             {isAdminRow ? "Admin yetkisi değiştirilemez" : ""}
                           </span>
+                        ) : u.role === "parent" ? (
+                          // Veli hesabı yanlışlıkla personele yükseltilemez; yalnızca pasife alınabilir
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-[150px] text-red-600"
+                            onClick={() => setPendingChange({ user: u, role: "pending" })}
+                          >
+                            Hesabı Pasife Al
+                          </Button>
                         ) : (
                           <Select
                             value={(u.role as string) || "pending"}

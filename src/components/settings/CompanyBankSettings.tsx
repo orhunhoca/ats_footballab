@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -52,6 +53,7 @@ export function CompanyBankSettings() {
   const [form, setForm] = useState<CompanyFormValues>(emptyCompany);
   const [loading, setLoading] = useState(true);
   const [savingCompany, setSavingCompany] = useState(false);
+  const [savingPortal, setSavingPortal] = useState(false);
 
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [bankOpen, setBankOpen] = useState(false);
@@ -112,6 +114,25 @@ export function CompanyBankSettings() {
       });
     } finally {
       setSavingCompany(false);
+    }
+  };
+
+  const togglePortal = async (enabled: boolean) => {
+    if (!company) return;
+    setSavingPortal(true);
+    try {
+      await companyService.setParentPortalEnabled(company.id, enabled);
+      setCompany({ ...company, parent_portal_enabled: enabled });
+      toast({
+        title: enabled ? "Veli kaydı açıldı" : "Veli kaydı kapatıldı",
+        description: enabled
+          ? "Davet kodu olan veliler kayıt olabilir. Giriş sayfasında 'Veli misiniz?' bağlantısı görünür."
+          : "Yeni veli kaydı alınmıyor. Mevcut veli hesapları etkilenmez.",
+      });
+    } catch (error) {
+      toast({ title: "Hata", description: error instanceof Error ? error.message : "Ayar kaydedilemedi.", variant: "destructive" });
+    } finally {
+      setSavingPortal(false);
     }
   };
 
@@ -196,6 +217,32 @@ export function CompanyBankSettings() {
 
   return (
     <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Veli Erişimi</CardTitle>
+          <CardDescription>
+            Veliler açık olduğunda, öğrenci kartından ürettiğiniz davet koduyla ve KVKK Aydınlatma Metni'ni onaylayarak kayıt olur.
+            KVKK onayı olmadan kayıt tamamlanmaz (sunucuda zorunludur).
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4 rounded-md border p-4">
+            <div>
+              <p className="font-medium">Veli kaydı</p>
+              <p className="text-sm text-gray-600">
+                {company?.parent_portal_enabled ? "Açık — davet kodu olan veliler kayıt olabilir." : "Kapalı — şu an hiçbir veli kayıt olamaz."}
+              </p>
+            </div>
+            <Switch
+              checked={company?.parent_portal_enabled ?? false}
+              onCheckedChange={togglePortal}
+              disabled={savingPortal || !company}
+              aria-label="Veli kaydını aç/kapat"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Şirket Bilgileri</CardTitle>
