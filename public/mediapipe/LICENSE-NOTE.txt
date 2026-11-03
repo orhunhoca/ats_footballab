@@ -1,0 +1,3 @@
+MediaPipe Tasks Vision (wasm) ve Pose Landmarker (lite) modeli Google tarafindan Apache License 2.0 ile sunulur.
+https://github.com/google-ai-edge/mediapipe
+Kendi sunucumuzdan servis edilir (CDN bagimliligi yok).

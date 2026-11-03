@@ -47,6 +47,7 @@ import {
   Activity,
   Brain,
   MessageCircle,
+  Video,
   Loader2,
   Search,
   Users,
@@ -69,6 +70,7 @@ import { performanceReportService } from "@/services/performanceReportService";
 import { PerformanceTestForm } from "@/components/students/PerformanceTestForm";
 import { SendPerformanceReportDialog } from "@/components/students/SendPerformanceReportDialog";
 import { MarkdownLite } from "@/components/MarkdownLite";
+import { CameraMeasureDialog } from "@/components/performance/CameraMeasureDialog";
 import { NormComparisonCard } from "@/components/performance/NormComparisonCard";
 import { useStudentAnalysis } from "@/hooks/useStudentAnalysis";
 import { useToast } from "@/hooks/use-toast";
@@ -89,6 +91,7 @@ function PerformancePageInner() {
   const [selectedProtocolFilter, setSelectedProtocolFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isLoadingTests, setIsLoadingTests] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
@@ -493,6 +496,10 @@ function PerformancePageInner() {
                             <MessageCircle className="mr-2 h-4 w-4" />
                             Veliye Gönder
                           </Button>}
+                          <Button variant="outline" onClick={() => setIsCameraOpen(true)} className="text-emerald-700 border-emerald-200 hover:bg-emerald-50">
+                            <Video className="mr-2 h-4 w-4" />
+                            Kamerayla Ölç
+                          </Button>
                           <Button onClick={() => setIsFormOpen(true)}>
                             <Plus className="mr-2 h-4 w-4" />
                             Test Ekle
@@ -798,6 +805,20 @@ function PerformancePageInner() {
             />
           </DialogContent>
         </Dialog>
+      )}
+
+      {selectedStudent && (
+        <CameraMeasureDialog
+          open={isCameraOpen}
+          onOpenChange={setIsCameraOpen}
+          student={selectedStudent}
+          testProtocols={testProtocols}
+          onSaved={() => {
+            loadTests();
+            loadPerformanceStats();
+            resetAnalysis();
+          }}
+        />
       )}
 
       {selectedStudent && (
