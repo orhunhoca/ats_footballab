@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { performanceService } from "@/services/performanceService";
-import { Save, X, FlaskConical } from "lucide-react";
+import { Save, X, FlaskConical, Plus } from "lucide-react";
+import { TestProtocolDialog } from "@/components/performance/TestProtocolDialog";
+import { skillColor } from "@/lib/testCatalog";
 import type { Student } from "@/services/studentService";
 import type { TestProtocol } from "@/services/settingsService";
 
@@ -17,9 +19,12 @@ interface PerformanceTestFormProps {
   testProtocols: TestProtocol[];
   onSuccess: () => void;
   onCancel: () => void;
+  /** Yeni test tanımlanınca test listesini yenilemek için */
+  onProtocolsChanged?: () => void;
 }
 
-export function PerformanceTestForm({ student, testProtocols, onSuccess, onCancel }: PerformanceTestFormProps) {
+export function PerformanceTestForm({ student, testProtocols, onSuccess, onCancel, onProtocolsChanged }: PerformanceTestFormProps) {
+  const [protocolDialogOpen, setProtocolDialogOpen] = useState(false);
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [selectedProtocol, setSelectedProtocol] = useState<TestProtocol | null>(null);
@@ -84,16 +89,7 @@ export function PerformanceTestForm({ student, testProtocols, onSuccess, onCance
     }
   };
 
-  const getCategoryColor = (category: string) => {
-    const colors: Record<string, string> = {
-      "Hız": "bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300",
-      "Dayanıklılık": "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300",
-      "Kuvvet": "bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300",
-      "Koordinasyon": "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300",
-      "Esneklik": "bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300",
-    };
-    return colors[category] || "bg-gray-100 text-gray-700";
-  };
+  const getCategoryColor = skillColor;
 
   return (
     <Card>
@@ -113,7 +109,7 @@ export function PerformanceTestForm({ student, testProtocols, onSuccess, onCance
           {/* Test Protocol Selection */}
           <div className="space-y-2">
             <Label htmlFor="test-protocol">Test Protokolü *</Label>
-            <Select onValueChange={handleProtocolChange}>
+            <Select value={selectedProtocol?.id ?? ""} onValueChange={(v) => v && handleProtocolChange(v)}>
               <SelectTrigger id="test-protocol">
                 <SelectValue placeholder="Test seçin..." />
               </SelectTrigger>
@@ -130,6 +126,9 @@ export function PerformanceTestForm({ student, testProtocols, onSuccess, onCance
                 ))}
               </SelectContent>
             </Select>
+            <Button type="button" variant="link" size="sm" className="h-auto p-0 text-emerald-700" onClick={() => setProtocolDialogOpen(true)}>
+              <Plus className="mr-1 h-3.5 w-3.5" /> Listede yok mu? Yeni test tanımla
+            </Button>
             {selectedProtocol && (
               <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
                 <div className="flex items-center gap-2 text-sm">
@@ -203,6 +202,14 @@ export function PerformanceTestForm({ student, testProtocols, onSuccess, onCance
           </div>
         </form>
       </CardContent>
+      <TestProtocolDialog
+        open={protocolDialogOpen}
+        onOpenChange={setProtocolDialogOpen}
+        onSaved={(p) => {
+          setSelectedProtocol(p);
+          onProtocolsChanged?.();
+        }}
+      />
     </Card>
   );
 }

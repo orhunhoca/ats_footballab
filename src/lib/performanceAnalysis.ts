@@ -13,7 +13,7 @@ export interface AnalysisTestRecord {
   unit?: string | null;
   test_type?: string | null;
   test_protocol_id?: string | null;
-  test_protocols?: { name: string; category: string; unit: string } | null;
+  test_protocols?: { name: string; category: string; unit: string; direction?: string | null } | null;
 }
 
 export type Trend = "improving" | "declining" | "stable" | "single";
@@ -117,7 +117,9 @@ export function analyzeStudentTests(tests: AnalysisTestRecord[], options: Analyz
     const name = sample.test_protocols?.name || legacy?.name || sample.test_type || "Test";
     const category = sample.test_protocols?.category || legacy?.category || "Diğer";
     const unit = sample.test_protocols?.unit || sample.unit || "";
-    const direction = inferDirection(name, category, unit, sample.test_type);
+    const explicit = sample.test_protocols?.direction;
+    const direction: "lower" | "higher" =
+      explicit === "lower" || explicit === "higher" ? explicit : inferDirection(name, category, unit, sample.test_type);
 
     const values = sorted.map((r) => Number(r.value));
     const first = values[0];
