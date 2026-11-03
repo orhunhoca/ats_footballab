@@ -5,8 +5,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, MessageCircle, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { Loader2, MessageCircle, CheckCircle2, XCircle, AlertTriangle, FileText } from "lucide-react";
 import { whatsappService } from "@/services/whatsappService";
+import { performanceReportService } from "@/services/performanceReportService";
+import { useBranch } from "@/contexts/BranchContext";
 import type { PerformanceTest } from "@/services/performanceService";
 import type { Student } from "@/services/studentService";
 import { analyzeStudentTests, buildParentSummary, buildResultsLine } from "@/lib/performanceAnalysis";
@@ -22,14 +24,19 @@ interface Props {
   tests: PerformanceTest[];
   /** Yapay zekâ/otomatik analizden gelen veli özeti (varsa) */
   suggestedEvaluation?: string;
+  /** PDF'e girecek ayrıntılı analiz (varsa); yoksa kayıtlı verilerden üretilir */
+  analysisMarkdown?: string;
+  aiGenerated?: boolean;
 }
 
 type SendState = Record<string, { status: "sending" | "ok" | "error"; error?: string }>;
 
 const EVALUATION_MAX = 280;
 
-export function SendPerformanceReportDialog({ open, onOpenChange, student, tests, suggestedEvaluation }: Props) {
+export function SendPerformanceReportDialog({ open, onOpenChange, student, tests, suggestedEvaluation, analysisMarkdown, aiGenerated }: Props) {
   const { toast } = useToast();
+  const { getBranchName } = useBranch();
+  const [asPdf, setAsPdf] = useState(false);
   const stats = useMemo(() => analyzeStudentTests(tests), [tests]);
   const [evaluation, setEvaluation] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -67,17 +74,53 @@ export function SendPerformanceReportDialog({ open, onOpenChange, student, tests
     setSending(true);
     setResults({});
     let ok = 0;
+    let pdfUrl = "";
+    let pdfName = "";
+    if (asPdf) {
+      try {
+        // PDF bir kez üretilip yüklenir; tüm alıcılara aynı bağlantı gider
+        const report = await performanceReportService.build({
+          student,
+          tests,
+          analysisMarkdown,
+          parentSummary: evaluation.trim(),
+          aiGenerated,
+          branchName: student.branch_id ? getBranchName(student.branch_id) : null,
+        });
+        pdfName = report.filename;
+        pdfUrl = await performanceReportService.uploadAndSign(student.id, report);
+      } catch (e) {
+        setSending(false);
+        toast({
+          title: "PDF hazırlanamadı",
+          description: e instanceof Error ? e.message : "PDF oluşturulamadı",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     for (const r of chosen) {
       setResults((prev) => ({ ...prev, [r.id]: { status: "sending" } }));
-      const res = await whatsappService.sendPerformanceReport({
-        studentId: student.id,
-        studentName: student.name,
-        parentName: r.name,
-        phoneNumber: r.normalized,
-        testDate,
-        results: resultsLine,
-        evaluation: evaluation.trim(),
-      });
+      const res = asPdf
+        ? await whatsappService.sendPerformanceReportPdf({
+            studentId: student.id,
+            studentName: student.name,
+            parentName: r.name,
+            phoneNumber: r.normalized,
+            testDate,
+            evaluation: evaluation.trim(),
+            pdfUrl,
+            filename: pdfName,
+          })
+        : await whatsappService.sendPerformanceReport({
+            studentId: student.id,
+            studentName: student.name,
+            parentName: r.name,
+            phoneNumber: r.normalized,
+            testDate,
+            results: resultsLine,
+            evaluation: evaluation.trim(),
+          });
       if (res.success) ok++;
       setResults((prev) => ({ ...prev, [r.id]: res.success ? { status: "ok" } : { status: "error", error: res.error } }));
     }
@@ -159,11 +202,25 @@ export function SendPerformanceReportDialog({ open, onOpenChange, student, tests
             <p className="text-xs text-muted-foreground text-right">{evaluation.length}/{EVALUATION_MAX}</p>
           </div>
 
+          <div className="flex items-start gap-3 rounded-md border p-3">
+            <Checkbox id="as-pdf" checked={asPdf} disabled={sending} onCheckedChange={(v) => setAsPdf(v === true)} />
+            <Label htmlFor="as-pdf" className="flex-1 cursor-pointer">
+              <span className="flex items-center gap-1.5 font-medium">
+                <FileText className="h-4 w-4 text-emerald-600" /> Raporu PDF olarak gönder
+              </span>
+              <span className="block text-xs text-muted-foreground font-normal">
+                Tasarımlı PDF rapor mesajın başlığında ekli gider (Meta'da “performance_report_pdf” şablonu onaylı olmalı).
+              </span>
+            </Label>
+          </div>
+
           {chosen[0] && (
             <div className="space-y-1">
               <Label>Mesaj önizleme</Label>
               <div className="rounded-md bg-emerald-50 border border-emerald-100 p-3 text-sm text-slate-800 whitespace-pre-wrap break-words">
-                {previewFor(chosen[0])}
+                {asPdf
+                  ? `[📄 ${student.name} Performans Raporu.pdf]\n\nMerhaba ${chosen[0].name} 👋\n\n${student.name} için ${testDate} tarihli performans raporu ekte PDF olarak paylaşılmıştır.\n\n💬 Antrenör değerlendirmesi: ${evaluation.trim()}\n\nGelişimi birlikte takip etmeye devam ediyoruz.\nFootbalLab Futbol Okulu`
+                  : previewFor(chosen[0])}
               </div>
             </div>
           )}

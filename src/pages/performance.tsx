@@ -65,7 +65,7 @@ import {
 } from "@/services/performanceService";
 import { settingsService, type TestProtocol } from "@/services/settingsService";
 import { groupService } from "@/services/groupService";
-import { pdfService } from "@/services/pdfService";
+import { performanceReportService } from "@/services/performanceReportService";
 import { PerformanceTestForm } from "@/components/students/PerformanceTestForm";
 import { SendPerformanceReportDialog } from "@/components/students/SendPerformanceReportDialog";
 import { MarkdownLite } from "@/components/MarkdownLite";
@@ -76,7 +76,7 @@ type Group = Tables<"groups">;
 
 function PerformancePageInner() {
   const { toast } = useToast();
-  const { selectedBranchId } = useBranch();
+  const { selectedBranchId, getBranchName } = useBranch();
   const { isManagement } = useUserRole();
   const [students, setStudents] = useState<Student[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -230,41 +230,19 @@ function PerformancePageInner() {
   };
 
   const handleExportPDF = async () => {
-    if (!selectedStudent || !performanceStats) return;
+    if (!selectedStudent) return;
 
     try {
-      // Prepare test data for PDF
-      const testData = filteredTests.map((test) => {
-        const improvement = getImprovement(test.test_protocol_id || null, test.test_type || null);
-        return {
-          test_date: test.test_date,
-          test_type: test.test_protocols?.name || test.test_type || "Bilinmeyen",
-          value: test.value,
-          unit: test.test_protocols?.unit || test.unit || "",
-          notes: test.notes || "",
-          improvement: improvement 
-            ? `${improvement.isImprovement ? '+' : '-'}${improvement.percentage}%`
-            : "-",
-        };
+      // Yapay zekâ analizi yapıldıysa o, yoksa kayıtlı verilerden kural tabanlı rapor kullanılır
+      const report = await performanceReportService.build({
+        student: selectedStudent,
+        tests,
+        analysisMarkdown: aiAnalysis || undefined,
+        parentSummary: aiParentSummary || undefined,
+        aiGenerated: aiSource === "ai" && !!aiAnalysis,
+        branchName: selectedStudent.branch_id ? getBranchName(selectedStudent.branch_id) : null,
       });
-
-      // Generate PDF
-      const pdfBlob = await pdfService.generatePerformanceAnalysisReport(
-        selectedStudent.name,
-        testData,
-        performanceStats,
-        aiAnalysis || undefined
-      );
-
-      // Download PDF
-      const url = window.URL.createObjectURL(pdfBlob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${selectedStudent.name}_Performans_Raporu_${new Date().toLocaleDateString("tr-TR").replace(/\./g, "-")}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      performanceReportService.download(report);
 
       toast({
         title: "PDF İndirildi",
@@ -823,6 +801,8 @@ function PerformancePageInner() {
           student={selectedStudent}
           tests={tests}
           suggestedEvaluation={aiParentSummary || undefined}
+          analysisMarkdown={aiAnalysis || undefined}
+          aiGenerated={aiSource === "ai" && !!aiAnalysis}
         />
       )}
     </>

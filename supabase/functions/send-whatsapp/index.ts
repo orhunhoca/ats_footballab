@@ -43,7 +43,7 @@ serve(async (req) => {
     await requireStaff(req, supabaseClient, { managementOnly: true });
 
     const body = await req.json();
-    const { phoneNumber, templateName, variables, messageType, messageContent } = body ?? {};
+    const { phoneNumber, templateName, variables, messageType, messageContent, headerDocument } = body ?? {};
 
     if (typeof phoneNumber !== "string" || !phoneNumber.trim()) {
       throw new HttpError(400, "Telefon numarası gerekli");
@@ -84,12 +84,36 @@ serve(async (req) => {
       }
 
       const varNames: string[] = Array.isArray(template.variables) ? template.variables : [];
-      const components = varNames.length > 0
-        ? [{
+      const componentList: Record<string, unknown>[] = [];
+      // Başlığında belge (PDF) olan şablonlar: Meta, başlık parametresini zorunlu tutar
+      if (headerDocument?.url) {
+        let docUrl: URL;
+        try {
+          docUrl = new URL(String(headerDocument.url));
+        } catch {
+          throw new HttpError(400, "Geçersiz belge bağlantısı");
+        }
+        if (docUrl.protocol !== "https:" || docUrl.host !== new URL(Deno.env.get("SUPABASE_URL")!).host) {
+          throw new HttpError(400, "Belge bağlantısı bu projenin depolamasından olmalı");
+        }
+        componentList.push({
+          type: "header",
+          parameters: [{
+            type: "document",
+            document: {
+              link: docUrl.toString(),
+              filename: String(headerDocument.filename || "rapor.pdf").replace(/[^\w.\- ]+/g, "_").slice(0, 100),
+            },
+          }],
+        });
+      }
+      if (varNames.length > 0) {
+        componentList.push({
           type: "body",
           parameters: varNames.map((name) => ({ type: "text", text: cleanParam(variables?.[name]) })),
-        }]
-        : undefined;
+        });
+      }
+      const components = componentList.length > 0 ? componentList : undefined;
 
       payload = {
         messaging_product: "whatsapp",

@@ -22,6 +22,8 @@ interface SendMessageParams {
   /** Gönderilen metnin okunabilir hali (kayıt/denetim için) */
   messagePreview?: string;
   messageType?: "payment_reminder" | "attendance" | "announcement" | "performance_report" | "custom";
+  /** Başlığında belge olan şablonlar için PDF bağlantısı (https) */
+  headerDocument?: { url: string; filename: string };
 }
 
 /** WhatsApp bağlı/aktif değilken fırlatılır (mesaj kuyruğa/kayda alınmaz, "gönderildi" denmez). */
@@ -172,6 +174,7 @@ export const whatsappService = {
             phoneNumber: params.phoneNumber,
             templateName: params.templateName,
             variables: params.variables,
+            headerDocument: params.headerDocument,
             messageId: message.id
           }
         }
@@ -306,6 +309,34 @@ export const whatsappService = {
         results: params.results,
         evaluation: params.evaluation
       }),
+      messageType: "performance_report"
+    });
+  },
+
+  // Veliye PDF performans raporu gönder (WhatsApp şablonu: performance_report_pdf, başlıkta PDF)
+  async sendPerformanceReportPdf(params: {
+    studentId: string;
+    studentName: string;
+    parentName: string;
+    phoneNumber: string;
+    testDate: string;
+    evaluation: string;
+    pdfUrl: string;
+    filename: string;
+  }): Promise<{ success: boolean; messageId?: string; error?: string }> {
+    return this.sendMessage({
+      phoneNumber: params.phoneNumber,
+      templateName: "performance_report_pdf",
+      variables: {
+        parent_name: params.parentName,
+        student_name: params.studentName,
+        test_date: params.testDate,
+        evaluation: params.evaluation
+      },
+      headerDocument: { url: params.pdfUrl, filename: params.filename },
+      studentId: params.studentId,
+      recipientName: params.parentName,
+      messagePreview: `[PDF: ${params.filename}] ${params.studentName} için ${params.testDate} tarihli performans raporu. Değerlendirme: ${params.evaluation}`,
       messageType: "performance_report"
     });
   },
