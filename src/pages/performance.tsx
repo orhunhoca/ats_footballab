@@ -47,6 +47,7 @@ import {
   Activity,
   Brain,
   MessageCircle,
+  FlaskConical,
   Loader2,
   Search,
   Users,
@@ -69,6 +70,7 @@ import { performanceReportService } from "@/services/performanceReportService";
 import { PerformanceTestForm } from "@/components/students/PerformanceTestForm";
 import { SendPerformanceReportDialog } from "@/components/students/SendPerformanceReportDialog";
 import { MarkdownLite } from "@/components/MarkdownLite";
+import { TestProtocolManager } from "@/components/performance/TestProtocolManager";
 import { NormComparisonCard } from "@/components/performance/NormComparisonCard";
 import { useStudentAnalysis } from "@/hooks/useStudentAnalysis";
 import { useToast } from "@/hooks/use-toast";
@@ -89,6 +91,7 @@ function PerformancePageInner() {
   const [selectedProtocolFilter, setSelectedProtocolFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
   const [isLoadingTests, setIsLoadingTests] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiAnalysis, setAiAnalysis] = useState<string>("");
@@ -493,6 +496,10 @@ function PerformancePageInner() {
                             <MessageCircle className="mr-2 h-4 w-4" />
                             Veliye Gönder
                           </Button>}
+                          <Button variant="outline" onClick={() => setIsManagerOpen(true)}>
+                            <FlaskConical className="mr-2 h-4 w-4" />
+                            Testleri Yönet
+                          </Button>
                           <Button onClick={() => setIsFormOpen(true)}>
                             <Plus className="mr-2 h-4 w-4" />
                             Test Ekle
@@ -795,10 +802,13 @@ function PerformancePageInner() {
                 setIsFormOpen(false);
               }}
               onCancel={() => setIsFormOpen(false)}
+              onProtocolsChanged={loadTestProtocols}
             />
           </DialogContent>
         </Dialog>
       )}
+
+      <TestProtocolManager open={isManagerOpen} onOpenChange={setIsManagerOpen} onChanged={loadTestProtocols} />
 
       {selectedStudent && (
         <SendPerformanceReportDialog
