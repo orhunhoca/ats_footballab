@@ -8,7 +8,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Users, Plus, TrendingUp, UserCircle, Clock, Loader2, Phone, Mail } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
+import { Users, Plus, TrendingUp, UserCircle, Clock, Loader2, Phone, Mail, Pencil, Trash2 } from "lucide-react";
 import { groupService } from "@/services/groupService";
 import { GroupForm } from "@/components/groups/GroupForm";
 import type { Tables } from "@/integrations/supabase/types";
@@ -25,6 +36,13 @@ function GroupsPageInner() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isStudentListOpen, setIsStudentListOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<Group | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{
+    group: Group;
+    blockers: { students: number; attendance: number; trialStudents: number };
+  } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const { toast } = useToast();
 
   const { selectedBranchId, branches, getBranchName } = useBranch();
 
@@ -42,6 +60,56 @@ function GroupsPageInner() {
       console.error("Error loading groups:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openNewGroup = () => {
+    setEditingGroup(null);
+    setIsFormOpen(true);
+  };
+
+  const openEditGroup = (group: Group) => {
+    setEditingGroup(group);
+    setIsFormOpen(true);
+  };
+
+  // Silmeden önce bağlı kayıtlara bakılır; öğrenci/yoklama/deneme öğrencisi varsa silinemez
+  const askDelete = async (group: Group) => {
+    try {
+      const blockers = await groupService.getDeleteBlockers(group.id);
+      setDeleteTarget({ group, blockers });
+    } catch (error) {
+      toast({ title: "Hata", description: error instanceof Error ? error.message : "Grup bilgileri kontrol edilemedi.", variant: "destructive" });
+    }
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await groupService.deleteGroup(deleteTarget.group.id);
+      toast({ title: "Grup silindi", description: `${deleteTarget.group.name} silindi.` });
+      setDeleteTarget(null);
+      await loadGroups();
+    } catch (error) {
+      toast({ title: "Silinemedi", description: error instanceof Error ? error.message : "Grup silinemedi.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const deactivate = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await groupService.updateGroup(deleteTarget.group.id, { status: "Pasif" });
+      toast({ title: "Grup pasif yapıldı", description: `${deleteTarget.group.name} artık aktif grup sayılmaz; geçmiş kayıtlar korunur.` });
+      setDeleteTarget(null);
+      await loadGroups();
+    } catch (error) {
+      toast({ title: "Hata", description: error instanceof Error ? error.message : "Grup güncellenemedi.", variant: "destructive" });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -86,7 +154,7 @@ function GroupsPageInner() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Grup Yönetimi</h1>
               <p className="text-gray-600 mt-1">Takımlar, program ve öğrenci atamaları</p>
             </div>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsFormOpen(true)}>
+            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openNewGroup}>
               <Plus className="w-4 h-4 mr-2" />
               Yeni Grup
             </Button>
@@ -165,9 +233,21 @@ function GroupsPageInner() {
                             </p>
                           </div>
                         </div>
-                        <Button variant="outline" size="sm">
-                          Düzenle
-                        </Button>
+                        <div className="flex shrink-0 gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openEditGroup(group)}>
+                            <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                            Düzenle
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => askDelete(group)}
+                            aria-label={`${group.name} grubunu sil`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -259,7 +339,7 @@ function GroupsPageInner() {
                 <UserCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Grup bulunamadı</h3>
                 <p className="text-gray-600 mb-4">Henüz kayıtlı grup bulunmuyor. Yeni grup oluşturun.</p>
-                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsFormOpen(true)}>
+                <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={openNewGroup}>
                   <Plus className="w-4 h-4 mr-2" />
                   İlk Grubu Oluştur
                 </Button>
@@ -271,11 +351,64 @@ function GroupsPageInner() {
         {/* Group Form Dialog */}
         <GroupForm 
           open={isFormOpen} 
-          onOpenChange={setIsFormOpen} 
+          group={editingGroup}
+          onOpenChange={(o) => {
+            setIsFormOpen(o);
+            if (!o) setEditingGroup(null);
+          }} 
           onSuccess={() => {
             loadGroups();
           }} 
         />
+
+        {/* Silme / pasif yapma onayı */}
+        <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && !deleting && setDeleteTarget(null)}>
+          <AlertDialogContent>
+            {deleteTarget && (deleteTarget.blockers.students > 0 || deleteTarget.blockers.attendance > 0 || deleteTarget.blockers.trialStudents > 0) ? (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{deleteTarget.group.name} silinemez</AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-2 text-sm">
+                      <p>Bu gruba bağlı kayıtlar var; silinirse yoklama geçmişi de kaybolur:</p>
+                      <ul className="list-disc pl-5">
+                        {deleteTarget.blockers.students > 0 && <li>{deleteTarget.blockers.students} öğrenci</li>}
+                        {deleteTarget.blockers.attendance > 0 && <li>{deleteTarget.blockers.attendance} yoklama kaydı</li>}
+                        {deleteTarget.blockers.trialStudents > 0 && <li>{deleteTarget.blockers.trialStudents} deneme öğrencisi</li>}
+                      </ul>
+                      <p>Önce öğrencileri başka bir gruba taşıyın. Grubu kullanmayacaksanız silmek yerine <strong>Pasif</strong> yapabilirsiniz; geçmiş kayıtlar korunur.</p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleting}>Vazgeç</AlertDialogCancel>
+                  {deleteTarget.group.status !== "Pasif" && (
+                    <AlertDialogAction onClick={(e) => { e.preventDefault(); deactivate(); }} disabled={deleting}>
+                      {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Grubu Pasif Yap
+                    </AlertDialogAction>
+                  )}
+                </AlertDialogFooter>
+              </>
+            ) : (
+              <>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Grubu sil</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {deleteTarget?.group.name} grubu ve haftalık programı kalıcı olarak silinecek. Bu işlem geri alınamaz.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={deleting}>Vazgeç</AlertDialogCancel>
+                  <AlertDialogAction onClick={(e) => { e.preventDefault(); confirmDelete(); }} disabled={deleting} className="bg-red-600 hover:bg-red-700">
+                    {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sil
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </>
+            )}
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Student List Dialog */}
         <Dialog open={isStudentListOpen} onOpenChange={setIsStudentListOpen}>

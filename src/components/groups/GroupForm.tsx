@@ -14,38 +14,70 @@ import { BranchSelect } from "@/components/BranchSelect";
 
 type Coach = Tables<"coaches">;
 
+type Group = Tables<"groups">;
+
 interface GroupFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  /** Verilirse form düzenleme modunda açılır ve grubun kayıtlı bilgileriyle dolar */
+  group?: Group | null;
 }
 
-export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
+const EMPTY_FORM = {
+  name: "",
+  age_group: "",
+  target_years: "",
+  work_hour: "",
+  description: "",
+  coach_id: "",
+  schedule: "",
+  color: "emerald",
+  status: "Aktif",
+};
+
+/** schedule alanı JSON dizi olarak saklanır; formda satır satır gösterilir */
+function scheduleToText(schedule: string | null): string {
+  if (!schedule) return "";
+  try {
+    const parsed = JSON.parse(schedule);
+    return Array.isArray(parsed) ? parsed.join("\n") : "";
+  } catch {
+    return schedule;
+  }
+}
+
+export function GroupForm({ open, onOpenChange, onSuccess, group }: GroupFormProps) {
   const { toast } = useToast();
   const { defaultBranchId } = useBranch();
   const [branchId, setBranchId] = useState("");
   const [loading, setLoading] = useState(false);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   
-  const [formData, setFormData] = useState({
-    name: "",
-    age_group: "",
-    target_years: "", // Comma separated years: "2014, 2015"
-    work_hour: "", // "09:00"
-    description: "",
-    coach_id: "",
-    schedule: "",
-    color: "emerald",
-    status: "Aktif"
-  });
+  const [formData, setFormData] = useState(EMPTY_FORM);
 
   useEffect(() => {
-    if (open) {
-      loadCoaches();
+    if (!open) return;
+    loadCoaches();
+    if (group) {
+      setFormData({
+        name: group.name || "",
+        age_group: group.age_group || "",
+        target_years: group.target_years || "",
+        work_hour: group.work_hour || "",
+        description: group.description || "",
+        coach_id: group.coach_id || "",
+        schedule: scheduleToText(group.schedule),
+        color: group.color || "emerald",
+        status: group.status || "Aktif",
+      });
+      setBranchId(group.branch_id || defaultBranchId);
+    } else {
+      setFormData(EMPTY_FORM);
       setBranchId(defaultBranchId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, group]);
 
   // Şubeler form açıldıktan sonra yüklenirse varsayılanı doldur
   useEffect(() => {
@@ -56,10 +88,12 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
   const branchCoaches = coaches.filter((c) => !branchId || c.branch_id === branchId);
 
   const handleBranchChange = (id: string) => {
+    if (!id) return; // seçenekler yüklenmeden gelen boş değer kayıtlı şubeyi silmesin
     setBranchId(id);
-    if (formData.coach_id && !coaches.some((c) => c.id === formData.coach_id && c.branch_id === id)) {
-      setFormData((prev) => ({ ...prev, coach_id: "" }));
-    }
+    if (!id || id === branchId || coaches.length === 0) return;
+    setFormData((prev) =>
+      prev.coach_id && !coaches.some((c) => c.id === prev.coach_id && c.branch_id === id) ? { ...prev, coach_id: "" } : prev,
+    );
   };
 
   const loadCoaches = async () => {
@@ -100,10 +134,10 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
         .map(s => s.trim())
         .filter(s => s.length > 0);
 
-      await groupService.createGroup({
+      const payload = {
         branch_id: branchId,
-        name: formData.name,
-        age_group: formData.age_group,
+        name: formData.name.trim(),
+        age_group: formData.age_group.trim(),
         target_years: formData.target_years,
         work_hour: formData.work_hour,
         description: formData.description || null,
@@ -111,29 +145,22 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
         schedule: JSON.stringify(scheduleArray),
         color: formData.color,
         status: formData.status
-      });
+      };
+      if (group) {
+        await groupService.updateGroup(group.id, payload);
+      } else {
+        await groupService.createGroup(payload);
+      }
 
       toast({
         title: "Başarılı",
-        description: "Grup kaydı oluşturuldu.",
-      });
-      
-      setFormData({
-        name: "",
-        age_group: "",
-        target_years: "",
-        work_hour: "",
-        description: "",
-        coach_id: "",
-        schedule: "",
-        color: "emerald",
-        status: "Aktif"
+        description: group ? "Grup bilgileri güncellendi." : "Grup kaydı oluşturuldu.",
       });
       
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("Group creation error:", error);
+      console.error("Group save error:", error);
       toast({
         title: "Hata",
         description: error?.message || "Kayıt oluşturulurken bir hata oluştu.",
@@ -148,7 +175,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Yeni Grup Oluştur</DialogTitle>
+          <DialogTitle>{group ? "Grubu Düzenle" : "Yeni Grup Oluştur"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <BranchSelect value={branchId} onChange={handleBranchChange} />
@@ -159,7 +186,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
               required
               placeholder="Örn: U12 Takımı"
               value={formData.name}
-              onChange={e => setFormData({...formData, name: e.target.value})}
+              onChange={e => setFormData(prev => ({...prev, name: e.target.value}))}
             />
           </div>
 
@@ -169,7 +196,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
               required
               placeholder="Örn: U12 (2014-2015)"
               value={formData.age_group}
-              onChange={e => setFormData({...formData, age_group: e.target.value})}
+              onChange={e => setFormData(prev => ({...prev, age_group: e.target.value}))}
             />
           </div>
 
@@ -179,7 +206,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
               <Input 
                 placeholder="Örn: 2014, 2015"
                 value={formData.target_years}
-                onChange={e => setFormData({...formData, target_years: e.target.value})}
+                onChange={e => setFormData(prev => ({...prev, target_years: e.target.value}))}
               />
               <p className="text-xs text-muted-foreground">Virgülle ayırarak yazın.</p>
             </div>
@@ -189,7 +216,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
               <Input 
                 type="time"
                 value={formData.work_hour}
-                onChange={e => setFormData({...formData, work_hour: e.target.value})}
+                onChange={e => setFormData(prev => ({...prev, work_hour: e.target.value}))}
               />
             </div>
           </div>
@@ -199,7 +226,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
             <Textarea 
               placeholder="Grup hakkında açıklama..."
               value={formData.description}
-              onChange={e => setFormData({...formData, description: e.target.value})}
+              onChange={e => setFormData(prev => ({...prev, description: e.target.value}))}
               rows={3}
             />
           </div>
@@ -207,7 +234,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
           <div className="space-y-2">
             <Label>Antrenör</Label>
             <Select 
-              onValueChange={v => setFormData({...formData, coach_id: v})}
+              onValueChange={v => v && setFormData(prev => ({...prev, coach_id: v}))}
               value={formData.coach_id}
             >
               <SelectTrigger>
@@ -228,7 +255,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
             <Textarea 
               placeholder="Her satıra bir antrenman saati yazın&#10;Örn:&#10;Pazartesi 17:00-18:30&#10;Çarşamba 17:00-18:30"
               value={formData.schedule}
-              onChange={e => setFormData({...formData, schedule: e.target.value})}
+              onChange={e => setFormData(prev => ({...prev, schedule: e.target.value}))}
               rows={4}
             />
           </div>
@@ -237,7 +264,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
             <div className="space-y-2">
               <Label>Renk Teması</Label>
               <Select 
-                onValueChange={v => setFormData({...formData, color: v})}
+                onValueChange={v => v && setFormData(prev => ({...prev, color: v}))}
                 value={formData.color}
               >
                 <SelectTrigger>
@@ -257,7 +284,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
             <div className="space-y-2">
               <Label>Durum</Label>
               <Select 
-                onValueChange={v => setFormData({...formData, status: v})}
+                onValueChange={v => v && setFormData(prev => ({...prev, status: v}))}
                 value={formData.status}
               >
                 <SelectTrigger>
@@ -274,7 +301,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>
             <Button type="submit" disabled={loading} className="bg-emerald-600 hover:bg-emerald-700">
-              {loading ? "Kaydediliyor..." : "Grubu Oluştur"}
+              {loading ? "Kaydediliyor..." : group ? "Kaydet" : "Grubu Oluştur"}
             </Button>
           </DialogFooter>
         </form>
