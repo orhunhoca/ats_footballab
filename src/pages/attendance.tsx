@@ -4,7 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CheckCircle2, XCircle, Users, FileSpreadsheet } from "lucide-react";
+import { CheckCircle2, XCircle, Users, FileSpreadsheet, MessageCircle } from "lucide-react";
+import { SendAttendanceNotificationDialog } from "@/components/attendance/SendAttendanceNotificationDialog";
 import { useState, useEffect } from "react";
 import { attendanceService } from "@/services/attendanceService";
 import { groupService } from "@/services/groupService";
@@ -25,6 +26,7 @@ export default function AttendancePage() {
   const [attendance, setAttendance] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [isNotifyOpen, setIsNotifyOpen] = useState(false);
 
   // Load groups
   useEffect(() => {
@@ -66,6 +68,10 @@ export default function AttendancePage() {
             name,
             age,
             phone,
+            mother_name,
+            mother_phone,
+            father_name,
+            father_phone,
             created_at,
             updated_at
           )
@@ -450,7 +456,15 @@ export default function AttendancePage() {
                       </div>
                     ))}
 
-                    <div className="pt-4 flex justify-end">
+                    <div className="pt-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsNotifyOpen(true)}
+                        className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Velilere Bildir
+                      </Button>
                       <Button 
                         onClick={handleSave} 
                         disabled={saving}
@@ -466,6 +480,15 @@ export default function AttendancePage() {
           </div>
         </div>
       </div>
+
+      <SendAttendanceNotificationDialog
+        open={isNotifyOpen}
+        onOpenChange={setIsNotifyOpen}
+        date={date}
+        groupName={groups.find((g) => g.id === selectedGroup)?.name || ""}
+        students={students}
+        attendance={attendance}
+      />
     </>
   );
 }

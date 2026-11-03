@@ -302,6 +302,33 @@ export const whatsappService = {
     });
   },
 
+  // Belirli türde ve belirli süre içinde başarısız olmamış mesaj gönderilen öğrenciler
+  // (aynı mesajı yanlışlıkla ikinci kez göndermemek için)
+  async getRecentlySentStudentIds(
+    messageType: string,
+    studentIds: string[],
+    sinceIso: string,
+    contentContains?: string
+  ): Promise<Set<string>> {
+    if (studentIds.length === 0) return new Set();
+    let query = supabase
+      .from("whatsapp_messages")
+      .select("student_id")
+      .eq("message_type", messageType)
+      .in("student_id", studentIds)
+      .neq("status", "failed")
+      .gte("created_at", sinceIso);
+    if (contentContains) {
+      query = query.ilike("message_content", `%${contentContains}%`);
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.error("Error checking recent messages:", error);
+      return new Set();
+    }
+    return new Set((data || []).map((r) => r.student_id).filter((id): id is string => !!id));
+  },
+
   // Send general announcement
   async sendAnnouncement(
     phoneNumbers: string[],

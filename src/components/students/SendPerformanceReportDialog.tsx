@@ -10,7 +10,8 @@ import { whatsappService } from "@/services/whatsappService";
 import type { PerformanceTest } from "@/services/performanceService";
 import type { Student } from "@/services/studentService";
 import { analyzeStudentTests, buildParentSummary, buildResultsLine } from "@/lib/performanceAnalysis";
-import { formatTrPhone, normalizeTrPhone } from "@/lib/phone";
+import { formatTrPhone } from "@/lib/phone";
+import { getParentRecipients, type ParentRecipient } from "@/lib/parentContacts";
 import { buildPerformanceReportText } from "@/lib/whatsappTemplates";
 import { useToast } from "@/hooks/use-toast";
 
@@ -21,14 +22,6 @@ interface Props {
   tests: PerformanceTest[];
   /** Yapay zekâ/otomatik analizden gelen veli özeti (varsa) */
   suggestedEvaluation?: string;
-}
-
-interface Recipient {
-  id: "mother" | "father";
-  label: string;
-  name: string;
-  phone: string;
-  normalized: string;
 }
 
 type SendState = Record<string, { status: "sending" | "ok" | "error"; error?: string }>;
@@ -44,21 +37,7 @@ export function SendPerformanceReportDialog({ open, onOpenChange, student, tests
   const [sending, setSending] = useState(false);
   const [results, setResults] = useState<SendState>({});
 
-  const recipients = useMemo<Recipient[]>(() => {
-    const list: Recipient[] = [];
-    const seen = new Set<string>();
-    const candidates = [
-      { id: "mother" as const, label: "Anne", name: student.mother_name, phone: student.mother_phone },
-      { id: "father" as const, label: "Baba", name: student.father_name, phone: student.father_phone },
-    ];
-    for (const c of candidates) {
-      const normalized = normalizeTrPhone(c.phone);
-      if (!normalized || seen.has(normalized)) continue; // aynı numaraya iki kez gönderme
-      seen.add(normalized);
-      list.push({ id: c.id, label: c.label, name: c.name?.trim() || `${c.label} (veli)`, phone: c.phone ?? "", normalized });
-    }
-    return list;
-  }, [student]);
+  const recipients = useMemo<ParentRecipient[]>(() => getParentRecipients(student), [student]);
 
   useEffect(() => {
     if (!open) return;
@@ -75,7 +54,7 @@ export function SendPerformanceReportDialog({ open, onOpenChange, student, tests
   const chosen = recipients.filter((r) => selected[r.id]);
   const canSend = isConfigured === true && chosen.length > 0 && evaluation.trim().length > 0 && stats.metrics.length > 0 && !sending;
 
-  const previewFor = (r: Recipient) =>
+  const previewFor = (r: ParentRecipient) =>
     buildPerformanceReportText({
       parentName: r.name,
       studentName: student.name,
