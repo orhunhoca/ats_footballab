@@ -83,7 +83,8 @@ export const iyzicoService = {
     }
   },
 
-  // Create payment link via Edge Function
+  // Ödeme bağlantısı oluşturur. iyzico çağrısı ve online_payments kaydı sunucuda (Edge Function) yapılır;
+  // ödeme bitince iyzico, sunucudaki iyzico-callback fonksiyonuna döner ve ödeme kaydı orada (tek sefer) yazılır.
   async createPaymentLink(params: CreatePaymentLinkParams): Promise<{
     success: boolean;
     paymentLink?: string;
@@ -91,87 +92,34 @@ export const iyzicoService = {
     error?: string;
   }> {
     try {
-      // Get active settings
       const settings = await this.getSettings();
       if (!settings || !settings.is_active) {
-        return {
-          success: false,
-          error: "iyzico entegrasyonu yapılandırılmamış veya aktif değil"
-        };
+        return { success: false, error: "iyzico entegrasyonu yapılandırılmamış veya aktif değil" };
       }
 
-      // Generate unique conversation ID
-      const conversationId = `${params.studentId}-${Date.now()}`;
+      const { data, error: functionError } = await supabase.functions.invoke("create-iyzico-payment", {
+        body: {
+          studentId: params.studentId,
+          amount: params.amount,
+          paymentType: params.paymentType,
+          description: params.description,
+        },
+      });
 
-      // Call Edge Function to create payment with iyzico
-      const { data, error: functionError } = await supabase.functions.invoke(
-        "create-iyzico-payment",
-        {
-          body: {
-            conversationId,
-            amount: params.amount,
-            basketId: `BASKET-${Date.now()}`,
-            buyer: {
-              id: params.studentId,
-              name: params.studentName.split(" ")[0] || "Veli",
-              surname: params.studentName.split(" ").slice(1).join(" ") || "Kullanıcı",
-              email: params.parentEmail || "veli@example.com",
-              identityNumber: "11111111111", // TC Kimlik - gerçek sistemde alınmalı
-              registrationAddress: "Adres bilgisi", // gerçek sistemde alınmalı
-              city: "Istanbul",
-              country: "Turkey",
-              ip: "85.34.78.112" // Client IP - gerçek sistemde alınmalı
-            },
-            billingAddress: {
-              contactName: params.studentName,
-              city: "Istanbul",
-              country: "Turkey",
-              address: "Adres bilgisi"
-            },
-            basketItems: [
-              {
-                id: `ITEM-${Date.now()}`,
-                name: params.description || params.paymentType,
-                category1: "Spor",
-                category2: "Futbol",
-                itemType: "VIRTUAL",
-                price: params.amount
-              }
-            ],
-            callbackUrl: `${window.location.origin}/api/iyzico-callback`
+      if (functionError || data?.success !== true) {
+        const ctx = (functionError as { context?: Response } | null)?.context;
+        let message = data?.error as string | undefined;
+        if (!message && ctx && typeof ctx.json === "function") {
+          try {
+            message = (await ctx.json())?.error;
+          } catch {
+            /* gövde okunamadı */
           }
         }
-      );
-
-      if (functionError) {
-        throw functionError;
+        throw new Error(message || functionError?.message || "Ödeme linki oluşturulamadı");
       }
 
-      // Create online_payment record
-      const paymentRecord: OnlinePaymentInsert = {
-        student_id: params.studentId,
-        amount: params.amount,
-        payment_type: params.paymentType,
-        conversation_id: conversationId,
-        payment_link: data.paymentPageUrl,
-        token: data.token,
-        status: "pending",
-        expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 saat
-      };
-
-      const { data: payment, error: insertError } = await supabase
-        .from("online_payments")
-        .insert(paymentRecord)
-        .select()
-        .single();
-
-      if (insertError) throw insertError;
-
-      return {
-        success: true,
-        paymentLink: data.paymentPageUrl,
-        conversationId: conversationId
-      };
+      return { success: true, paymentLink: data.paymentPageUrl, conversationId: data.conversationId };
     } catch (error) {
       console.error("Error creating payment link:", error);
       return {
@@ -230,72 +178,29 @@ export const iyzicoService = {
     return data || [];
   },
 
-  // Update payment status (called by webhook)
-  async updatePaymentStatus(
-    conversationId: string,
-    status: "success" | "failed" | "pending",
-    iyzicoPaymentId?: string,
-    errorMessage?: string
-  ): Promise<void> {
-    const updateData: any = {
-      status,
-      updated_at: new Date().toISOString()
-    };
-
-    if (iyzicoPaymentId) {
-      updateData.iyzico_payment_id = iyzicoPaymentId;
-    }
-
-    if (status === "success") {
-      updateData.paid_at = new Date().toISOString();
-    }
-
-    if (errorMessage) {
-      updateData.error_message = errorMessage;
-    }
-
-    const { error } = await supabase
-      .from("online_payments")
-      .update(updateData)
-      .eq("conversation_id", conversationId);
-
-    if (error) {
-      console.error("Error updating payment status:", error);
-      throw error;
-    }
-  },
-
-  // Test iyzico connection
+  // Kayıtlı anahtarları sunucuda dener (para hareketi yok). mode: "test" | "canlı"
   async testConnection(): Promise<{
     success: boolean;
+    mode?: string;
     error?: string;
   }> {
     try {
-      const settings = await this.getSettings();
-      
-      if (!settings || !settings.is_active) {
-        return {
-          success: false,
-          error: "iyzico ayarları yapılandırılmamış"
-        };
+      const { data, error } = await supabase.functions.invoke("test-iyzico-connection");
+      if (error || data?.success !== true) {
+        const ctx = (error as { context?: Response } | null)?.context;
+        let message = data?.error as string | undefined;
+        if (!message && ctx && typeof ctx.json === "function") {
+          try {
+            message = (await ctx.json())?.error;
+          } catch {
+            /* gövde okunamadı */
+          }
+        }
+        return { success: false, error: message || error?.message || "Bağlantı testi başarısız" };
       }
-
-      // Simple test to verify API credentials
-      const { error } = await supabase.functions.invoke("test-iyzico-connection");
-
-      if (error) {
-        return {
-          success: false,
-          error: error.message
-        };
-      }
-
-      return { success: true };
+      return { success: true, mode: data.mode };
     } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Bağlantı testi başarısız"
-      };
+      return { success: false, error: error instanceof Error ? error.message : "Bağlantı testi başarısız" };
     }
   }
 };
