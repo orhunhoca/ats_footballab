@@ -13,6 +13,7 @@ import { scheduledMessageService } from "@/services/scheduledMessageService";
 import { iyzicoService } from "@/services/iyzicoService";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { BranchManager } from "@/components/settings/BranchManager";
 import { Settings, Shield, Bell, Building2, User, Loader2, MessageSquare, CheckCircle2, AlertCircle, CalendarClock, CreditCard } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { Tables } from "@/integrations/supabase/types";
@@ -556,7 +557,9 @@ export default function SettingsPage() {
             </TabsContent>
 
             {/* School Settings Tab */}
-            <TabsContent value="school">
+            <TabsContent value="school" className="space-y-6">
+              <BranchManager />
+
               <Card>
                 <CardHeader>
                   <CardTitle>Okul Bilgileri</CardTitle>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera, UserCircle2, CalendarCheck, Building2, ShieldCheck } from "lucide-react";
+import { Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera, UserCircle2, CalendarCheck, ShieldCheck } from "lucide-react";
 import { type User } from "@/services/userService";
 import { useUserRole } from "@/hooks/useUserRole";
 import { authService } from "@/services/authService";
@@ -48,7 +48,6 @@ export function Navigation() {
     { href: "/gallery", label: "Galeri", icon: Camera, roles: ["admin", "manager"] },
     { href: "/notifications", label: "Bildirimler", icon: Bell, roles: ["admin", "manager"] },
     { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "manager", "coach"] },
-    { href: "/branches", label: "Şubeler", icon: Building2, roles: ["admin"] },
     { href: "/users", label: "Kullanıcılar", icon: ShieldCheck, roles: ["admin"] },
     { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
   ];

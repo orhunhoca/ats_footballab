@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { BranchFilterBar } from "@/components/BranchFilterBar";
 import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
@@ -90,6 +91,8 @@ function GroupsPageInner() {
               Yeni Grup
             </Button>
           </div>
+
+          <BranchFilterBar />
 
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
