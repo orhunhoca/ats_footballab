@@ -4,10 +4,12 @@ import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { authService } from "@/services/authService";
+import { BranchProvider } from "@/contexts/BranchContext";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthed, setIsAuthed] = useState(false);
   const publicPaths = ["/login"];
 
   useEffect(() => {
@@ -20,6 +22,7 @@ export default function App({ Component, pageProps }: AppProps) {
         // tarayıcıda kalan oturumu temizlenir, yönlendirme döngüsü oluşmaz.
         const session = await authService.getValidSession();
         const isLoggedIn = !!session;
+        setIsAuthed(isLoggedIn);
 
         if (!isPublicPath && !isLoggedIn) {
           router.push("/login");
@@ -48,9 +51,9 @@ export default function App({ Component, pageProps }: AppProps) {
   }
 
   return (
-    <>
+    <BranchProvider enabled={isAuthed && !publicPaths.includes(router.pathname)}>
       <Component {...pageProps} />
       <Toaster />
-    </>
+    </BranchProvider>
   );
 }

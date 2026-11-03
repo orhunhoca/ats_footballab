@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera, UserCircle2, CalendarCheck } from "lucide-react";
+import { Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera, UserCircle2, CalendarCheck, Building2 } from "lucide-react";
 import { userService, type User } from "@/services/userService";
 import { authService } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Brand } from "@/components/Brand";
+import { BranchSwitcher } from "@/components/BranchSwitcher";
 
 export function Navigation() {
   const router = useRouter();
@@ -63,6 +64,7 @@ export function Navigation() {
   ];
 
   if (isAdmin) {
+    menuItems.push({ href: "/branches", label: "Şubeler", icon: Building2 });
     menuItems.push({ href: "/settings", label: "Ayarlar", icon: Settings });
   }
 
@@ -75,7 +77,7 @@ export function Navigation() {
               <Brand size={40} />
             </Link>
 
-            <nav className="hidden lg:flex items-center gap-1">
+            <nav className="hidden xl:flex items-center gap-1">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -91,6 +93,7 @@ export function Navigation() {
           </div>
 
           <div className="flex items-center gap-3">
+            <BranchSwitcher className="hidden sm:flex" />
             {currentUser && (
               <span className="text-sm text-slate-600 dark:text-slate-400 hidden md:block">
                 {currentUser.full_name}
@@ -109,7 +112,7 @@ export function Navigation() {
             <Button
               variant="ghost"
               size="icon"
-              className="lg:hidden"
+              className="xl:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -119,7 +122,8 @@ export function Navigation() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden border-t border-slate-200 dark:border-slate-800 py-4">
+          <div className="xl:hidden border-t border-slate-200 dark:border-slate-800 py-4">
+            <BranchSwitcher className="mb-3 w-full sm:hidden" />
             <nav className="flex flex-col gap-2">
               {menuItems.map((item) => {
                 const Icon = item.icon;

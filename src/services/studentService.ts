@@ -5,10 +5,69 @@ export type Student = Tables<"students">;
 export type StudentInsert = Database["public"]["Tables"]["students"]["Insert"];
 export type StudentUpdate = Database["public"]["Tables"]["students"]["Update"];
 
+type FinancialRow = {
+  branch_id: string | null;
+  payment_amount: number | string | null;
+  registration_type: string | null;
+  created_at: string | null;
+  summer_clothing_paid: boolean | null;
+  winter_clothing_paid: boolean | null;
+  summer_clothing_price: number | string | null;
+  winter_clothing_price: number | string | null;
+};
+
+export interface FinancialSummary {
+  totalRevenue: number;
+  newRegistrationRevenue: number;
+  renewalRevenue: number;
+  clothingRevenue: number;
+  newRegistrationsCount: number;
+  renewalsCount: number;
+}
+
+function summarizeFinancialRows(rows: FinancialRow[]): FinancialSummary {
+  const report: FinancialSummary = {
+    totalRevenue: 0,
+    newRegistrationRevenue: 0,
+    renewalRevenue: 0,
+    clothingRevenue: 0,
+    newRegistrationsCount: 0,
+    renewalsCount: 0,
+  };
+
+  rows.forEach((student) => {
+    const amount = Number(student.payment_amount) || 0;
+    report.totalRevenue += amount;
+
+    if (student.registration_type === "Yeni Kayıt") {
+      report.newRegistrationRevenue += amount;
+      report.newRegistrationsCount++;
+    } else {
+      report.renewalRevenue += amount;
+      report.renewalsCount++;
+    }
+
+    // Kıyafet gelirini ayrıca hesapla
+    if (student.summer_clothing_paid) {
+      const summerPrice = Number(student.summer_clothing_price) || 3000;
+      report.clothingRevenue += summerPrice;
+      report.totalRevenue += summerPrice;
+    }
+
+    if (student.winter_clothing_paid) {
+      const winterPrice = Number(student.winter_clothing_price) || 3000;
+      report.clothingRevenue += winterPrice;
+      report.totalRevenue += winterPrice;
+    }
+  });
+
+  return report;
+}
+
 export const studentService = {
   // Get all students with their groups
-  async getAllStudents(): Promise<Student[]> {
-    const { data, error } = await supabase
+  async getAllStudents(branchId?: string | null): Promise<Student[]> {
+    let query = supabase
       .from("students")
       .select(`
         *,
@@ -21,6 +80,8 @@ export const studentService = {
         )
       `)
       .order("created_at", { ascending: false });
+    if (branchId) query = query.eq("branch_id", branchId);
+    const { data, error } = await query;
 
     if (error) throw error;
     return data || [];
@@ -173,8 +234,24 @@ export const studentService = {
     return data || [];
   },
 
-  // Get financial report (Admin only)
-  async getFinancialReport(period: "weekly" | "monthly") {
+  // Get financial report (Admin only). branchId verilirse yalnızca o şube.
+  async getFinancialReport(period: "weekly" | "monthly", branchId?: string | null) {
+    const rows = await this.fetchFinancialRows(period, branchId);
+    return summarizeFinancialRows(rows);
+  },
+
+  // Şube bazında mali rapor (anahtar: branch_id, şubesiz kayıtlar "none")
+  async getFinancialReportByBranch(period: "weekly" | "monthly") {
+    const rows = await this.fetchFinancialRows(period);
+    const grouped: Record<string, FinancialRow[]> = {};
+    for (const r of rows) {
+      const key = r.branch_id || "none";
+      (grouped[key] = grouped[key] || []).push(r);
+    }
+    return Object.fromEntries(Object.entries(grouped).map(([k, v]) => [k, summarizeFinancialRows(v)]));
+  },
+
+  async fetchFinancialRows(period: "weekly" | "monthly", branchId?: string | null): Promise<FinancialRow[]> {
     const today = new Date();
     const startDate = new Date();
 
@@ -184,65 +261,34 @@ export const studentService = {
       startDate.setMonth(today.getMonth() - 1);
     }
 
-    const { data, error } = await supabase
+    let query = supabase
       .from("students")
-      .select("payment_amount, registration_type, created_at, summer_clothing_paid, winter_clothing_paid, summer_clothing_price, winter_clothing_price")
+      .select("branch_id, payment_amount, registration_type, created_at, summer_clothing_paid, winter_clothing_paid, summer_clothing_price, winter_clothing_price")
       .gte("created_at", startDate.toISOString());
+    if (branchId) query = query.eq("branch_id", branchId);
+
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching financial report:", error);
       throw error;
     }
-
-    // Process data
-    const report = {
-      totalRevenue: 0,
-      newRegistrationRevenue: 0,
-      renewalRevenue: 0,
-      clothingRevenue: 0,
-      newRegistrationsCount: 0,
-      renewalsCount: 0
-    };
-
-    data?.forEach(student => {
-      const amount = Number(student.payment_amount) || 0;
-      report.totalRevenue += amount;
-      
-      if (student.registration_type === "Yeni Kayıt") {
-        report.newRegistrationRevenue += amount;
-        report.newRegistrationsCount++;
-      } else {
-        report.renewalRevenue += amount;
-        report.renewalsCount++;
-      }
-
-      // Calculate clothing revenue separately
-      if (student.summer_clothing_paid) {
-        const summerPrice = Number(student.summer_clothing_price) || 3000;
-        report.clothingRevenue += summerPrice;
-        report.totalRevenue += summerPrice;
-      }
-      
-      if (student.winter_clothing_paid) {
-        const winterPrice = Number(student.winter_clothing_price) || 3000;
-        report.clothingRevenue += winterPrice;
-        report.totalRevenue += winterPrice;
-      }
-    });
-
-    return report;
+    return (data || []) as FinancialRow[];
   },
 
   // Get student statistics
-  async getStudentStats() {
-    const { count: totalCount, error: totalError } = await supabase
-      .from("students")
-      .select("*", { count: "exact", head: true });
-
-    const { count: activeCount, error: activeError } = await supabase
+  async getStudentStats(branchId?: string | null) {
+    let totalQuery = supabase.from("students").select("*", { count: "exact", head: true });
+    let activeQuery = supabase
       .from("students")
       .select("*", { count: "exact", head: true })
       .eq("status", "Aktif");
+    if (branchId) {
+      totalQuery = totalQuery.eq("branch_id", branchId);
+      activeQuery = activeQuery.eq("branch_id", branchId);
+    }
+    const { count: totalCount, error: totalError } = await totalQuery;
+    const { count: activeCount, error: activeError } = await activeQuery;
 
     if (totalError || activeError) {
       console.error("Error fetching stats:", totalError || activeError);

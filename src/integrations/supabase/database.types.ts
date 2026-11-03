@@ -60,8 +60,39 @@ export type Database = {
           },
         ]
       }
+      branches: {
+        Row: {
+          address: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       coaches: {
         Row: {
+          branch_id: string | null
           created_at: string | null
           email: string | null
           experience: string | null
@@ -80,6 +111,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          branch_id?: string | null
           created_at?: string | null
           email?: string | null
           experience?: string | null
@@ -98,6 +130,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          branch_id?: string | null
           created_at?: string | null
           email?: string | null
           experience?: string | null
@@ -116,6 +149,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "coaches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "coaches_user_id_fkey"
             columns: ["user_id"]
@@ -246,6 +286,7 @@ export type Database = {
       }
       groups: {
         Row: {
+          branch_id: string | null
           age_group: string
           coach_id: string | null
           color: string | null
@@ -260,6 +301,7 @@ export type Database = {
           work_hour: string | null
         }
         Insert: {
+          branch_id?: string | null
           age_group: string
           coach_id?: string | null
           color?: string | null
@@ -274,6 +316,7 @@ export type Database = {
           work_hour?: string | null
         }
         Update: {
+          branch_id?: string | null
           age_group?: string
           coach_id?: string | null
           color?: string | null
@@ -288,6 +331,13 @@ export type Database = {
           work_hour?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "groups_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "groups_coach_id_fkey"
             columns: ["coach_id"]
@@ -481,6 +531,7 @@ export type Database = {
       }
       payment_history: {
         Row: {
+          branch_id: string | null
           amount: number
           created_at: string | null
           created_by: string | null
@@ -494,6 +545,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          branch_id?: string | null
           amount: number
           created_at?: string | null
           created_by?: string | null
@@ -507,6 +559,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          branch_id?: string | null
           amount?: number
           created_at?: string | null
           created_by?: string | null
@@ -520,6 +573,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_history_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_history_created_by_fkey"
             columns: ["created_by"]
@@ -813,6 +873,7 @@ export type Database = {
       }
       students: {
         Row: {
+          branch_id: string | null
           address: string | null
           age: number
           birth_date: string | null
@@ -850,6 +911,7 @@ export type Database = {
           work_group_hour: string | null
         }
         Insert: {
+          branch_id?: string | null
           address?: string | null
           age: number
           birth_date?: string | null
@@ -887,6 +949,7 @@ export type Database = {
           work_group_hour?: string | null
         }
         Update: {
+          branch_id?: string | null
           address?: string | null
           age?: number
           birth_date?: string | null
@@ -923,7 +986,15 @@ export type Database = {
           winter_clothing_price?: number | null
           work_group_hour?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "students_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       test_protocols: {
         Row: {
@@ -1049,6 +1120,7 @@ export type Database = {
       }
       trial_students: {
         Row: {
+          branch_id: string | null
           age_group: string | null
           assigned_group_id: string | null
           birth_date: string
@@ -1063,6 +1135,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          branch_id?: string | null
           age_group?: string | null
           assigned_group_id?: string | null
           birth_date: string
@@ -1077,6 +1150,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          branch_id?: string | null
           age_group?: string | null
           assigned_group_id?: string | null
           birth_date?: string
@@ -1091,6 +1165,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "trial_students_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "trial_students_assigned_group_id_fkey"
             columns: ["assigned_group_id"]

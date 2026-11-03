@@ -5,8 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useUserRole } from "@/hooks/useUserRole";
 import { studentService } from "@/services/studentService";
+import { useBranch } from "@/contexts/BranchContext";
 import { Loader2, TrendingUp, Users, DollarSign, Wallet, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Building2 } from "lucide-react";
 
 interface FinancialStats {
   totalRevenue: number;
@@ -19,6 +21,11 @@ interface FinancialStats {
 
 export default function ReportsPage() {
   const { isAdmin, loading: roleLoading } = useUserRole();
+  const { selectedBranchId, branches, getBranchName } = useBranch();
+  const [byBranch, setByBranch] = useState<{
+    weekly: Record<string, FinancialStats>;
+    monthly: Record<string, FinancialStats>;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [financials, setFinancials] = useState<{
     weekly: FinancialStats;
@@ -34,16 +41,28 @@ export default function ReportsPage() {
     } else {
       setLoading(false);
     }
-  }, [isAdmin]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin, selectedBranchId, branches.length]);
 
   const loadFinancials = async () => {
     try {
       setLoading(true);
       const [weekly, monthly] = await Promise.all([
-        studentService.getFinancialReport("weekly"),
-        studentService.getFinancialReport("monthly")
+        studentService.getFinancialReport("weekly", selectedBranchId),
+        studentService.getFinancialReport("monthly", selectedBranchId)
       ]);
       setFinancials({ weekly, monthly });
+
+      // Tüm şubeler seçiliyken şube bazında karşılaştırma
+      if (!selectedBranchId && branches.length > 1) {
+        const [w, m] = await Promise.all([
+          studentService.getFinancialReportByBranch("weekly"),
+          studentService.getFinancialReportByBranch("monthly")
+        ]);
+        setByBranch({ weekly: w, monthly: m });
+      } else {
+        setByBranch(null);
+      }
     } catch (error) {
       console.error("Error loading financials:", error);
     } finally {
@@ -98,6 +117,62 @@ export default function ReportsPage() {
                         Bu raporları sadece yönetici yetkisine sahip kullanıcılar görebilir.
                       </AlertDescription>
                     </Alert>
+
+                    {/* Kapsam: seçili şube */}
+                    <p className="text-sm text-gray-600 flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      Kapsam: <strong>{selectedBranchId ? getBranchName(selectedBranchId) : "Tüm Şubeler"}</strong>
+                    </p>
+
+                    {/* Şube bazında karşılaştırma */}
+                    {byBranch && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Building2 className="w-5 h-5 text-emerald-600" />
+                            Şube Bazında Ciro
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="overflow-x-auto">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="text-left text-gray-600 border-b">
+                                <th className="py-2 pr-4 font-medium">Şube</th>
+                                <th className="py-2 pr-4 font-medium text-right">Son 7 Gün</th>
+                                <th className="py-2 pr-4 font-medium text-right">Son 30 Gün</th>
+                                <th className="py-2 pr-4 font-medium text-right">Yeni Kayıt (30g)</th>
+                                <th className="py-2 pr-4 font-medium text-right">Yenileme (30g)</th>
+                                <th className="py-2 font-medium text-right">Kıyafet (30g)</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {[...branches.map((b) => b.id), ...(byBranch.monthly.none || byBranch.weekly.none ? ["none"] : [])].map((id) => {
+                                const w = byBranch.weekly[id];
+                                const m = byBranch.monthly[id];
+                                return (
+                                  <tr key={id} className="border-b last:border-0">
+                                    <td className="py-2 pr-4 font-medium">{id === "none" ? "Şubesiz" : getBranchName(id)}</td>
+                                    <td className="py-2 pr-4 text-right">{formatCurrency(w?.totalRevenue || 0)}</td>
+                                    <td className="py-2 pr-4 text-right">{formatCurrency(m?.totalRevenue || 0)}</td>
+                                    <td className="py-2 pr-4 text-right">{formatCurrency(m?.newRegistrationRevenue || 0)}</td>
+                                    <td className="py-2 pr-4 text-right">{formatCurrency(m?.renewalRevenue || 0)}</td>
+                                    <td className="py-2 text-right">{formatCurrency(m?.clothingRevenue || 0)}</td>
+                                  </tr>
+                                );
+                              })}
+                              <tr className="font-semibold">
+                                <td className="py-2 pr-4">Toplam</td>
+                                <td className="py-2 pr-4 text-right">{formatCurrency(financials.weekly.totalRevenue)}</td>
+                                <td className="py-2 pr-4 text-right">{formatCurrency(financials.monthly.totalRevenue)}</td>
+                                <td className="py-2 pr-4 text-right">{formatCurrency(financials.monthly.newRegistrationRevenue)}</td>
+                                <td className="py-2 pr-4 text-right">{formatCurrency(financials.monthly.renewalRevenue)}</td>
+                                <td className="py-2 text-right">{formatCurrency(financials.monthly.clothingRevenue)}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Weekly Report */}
                     <Card>

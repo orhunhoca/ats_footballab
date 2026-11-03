@@ -12,6 +12,13 @@ Bu dosya yeni oturumlarda otomatik okunur. Projenin güncel durumunu, altyapıs�
 ## Ürün
 Futbol okulu yönetim paneli: öğrenciler, gruplar, antrenörler, deneme öğrencileri, yoklama, antrenman, performans testleri, ödemeler (iyzico), WhatsApp bildirim/bot, zamanlanmış mesajlar, galeri, PDF/Excel rapor, dashboard. Arayüz Türkçe.
 
+## Şubeler (çok şubeli okul)
+- `branches` tablosu (ad, adres, telefon, `is_active`): personel okur, yalnız admin yazar. Varsayılan şube "Merkez Şube"; mevcut tüm kayıtlar ona bağlandı.
+- `branch_id` kolonları: `students`, `coaches`, `groups`, `trial_students`, `payment_history` (nullable; formlar şube seçtirir, `on delete restrict` → kaydı olan şube silinemez, pasife alınır). `payment_history.branch_id` ekleme anında öğrencinin şubesinden trigger ile atanır (`set_payment_branch`).
+- Arayüz: `/branches` (admin) şube yönetimi; üst menüde `BranchSwitcher` (2+ aktif şube varsa) → `BranchContext` (`useBranch`, seçim localStorage'da, `null` = Tüm Şubeler). Liste servisleri `branchId` parametresi alır (öğrenci, grup, antrenör, deneme öğrencisi, ödeme, mali rapor); Raporlar'da "Tüm Şubeler" seçiliyken şube bazında ciro tablosu çıkar.
+- Formlarda şube zorunlu (`BranchSelect`); öğrenci formunda grup, antrenör ve grup formunda antrenör seçimi seçilen şubeye göre filtrelenir. `admin-create-user` antrenör kaydına `branch_id` yazar.
+- **Yetki henüz şubeye göre kısıtlı değil**: tüm personel tüm şubeleri görebilir (yalnız filtre var). Şubeye özel yetki için `profiles.branch_id` + RLS gerekir (ürün kararı).
+
 ## Teknoloji
 - Next.js 15 (Pages Router) + React 18 + TypeScript + Tailwind + shadcn/ui.
 - Supabase: Postgres + Auth + Edge Functions (Deno). İstemci `src/integrations/supabase/client.ts` (anon key, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`; örnek `.env.example`).
@@ -56,6 +63,7 @@ MCP ile deploy ederken dosya adları `<fonksiyon>/index.ts` ve `_shared/security
 - `20261102120000_security_hardening.sql`: roller, trigger'lar, RLS, sır kolonları
 - `20261102120100_security_hardening_function_grants.sql`
 - `20261102193000_coaches_specialty_optional.sql`
+- `20261103090000_branches.sql`: şubeler (canlıya `apply_migration` ile `branches_feature` adıyla uygulandı)
 
 Eski seed migration (`20260226203219_…`) artık admin şifresini sıfırlamıyor.
 

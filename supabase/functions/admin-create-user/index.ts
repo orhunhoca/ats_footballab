@@ -72,6 +72,20 @@ serve(async (req) => {
     // İsteğe bağlı: antrenör kaydını aynı işlemde oluştur
     let coachRecord: Record<string, unknown> | null = null;
     if (coach && typeof coach === "object") {
+      // Şube verilmişse var olan, aktif bir şube olmalı
+      let branchId: string | null = null;
+      if (coach.branch_id) {
+        const { data: branch } = await supabase
+          .from("branches")
+          .select("id, is_active")
+          .eq("id", String(coach.branch_id))
+          .maybeSingle();
+        if (!branch || !branch.is_active) {
+          await rollback("Seçilen şube bulunamadı veya aktif değil");
+        }
+        branchId = branch!.id;
+      }
+
       const { data: created, error: coachError } = await supabase
         .from("coaches")
         .insert({
@@ -83,6 +97,7 @@ serve(async (req) => {
           license: coach.license || null,
           status: coach.status || "Aktif",
           user_id: userId,
+          branch_id: branchId,
           invite_status: "accepted",
         })
         .select()

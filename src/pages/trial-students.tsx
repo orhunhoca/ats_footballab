@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,10 +34,13 @@ export default function TrialStudentsPage() {
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  const { selectedBranchId, branches, getBranchName } = useBranch();
+
   useEffect(() => {
     loadTrialStudents();
     loadStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -54,7 +58,7 @@ export default function TrialStudentsPage() {
   const loadTrialStudents = async () => {
     try {
       setLoading(true);
-      const data = await trialStudentService.getAllTrialStudents();
+      const data = await trialStudentService.getAllTrialStudents(selectedBranchId);
       setTrialStudents(data);
       setFilteredStudents(data);
     } catch (error) {
@@ -219,6 +223,9 @@ export default function TrialStudentsPage() {
                         <CardTitle className="text-lg">{student.name}</CardTitle>
                         <CardDescription className="mt-1">
                           {getStatusBadge(student.status || "Beklemede")}
+                          {branches.length > 1 && (
+                            <span className="ml-2 text-xs text-muted-foreground">{getBranchName(student.branch_id)}</span>
+                          )}
                         </CardDescription>
                       </div>
                     </div>

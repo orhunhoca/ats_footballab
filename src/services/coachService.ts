@@ -7,8 +7,8 @@ type CoachUpdate = Database["public"]["Tables"]["coaches"]["Update"];
 
 export const coachService = {
   // Get all coaches with their groups
-  async getAllCoaches() {
-    const { data, error } = await supabase
+  async getAllCoaches(branchId?: string | null) {
+    let query = supabase
       .from("coaches")
       .select(`
         *,
@@ -16,6 +16,8 @@ export const coachService = {
       `)
       .eq("status", "Aktif")
       .order("created_at", { ascending: false });
+    if (branchId) query = query.eq("branch_id", branchId);
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching coaches:", error);
@@ -111,15 +113,18 @@ export const coachService = {
   },
 
   // Get coach statistics
-  async getCoachStats() {
-    const { count: totalCount, error: totalError } = await supabase
-      .from("coaches")
-      .select("*", { count: "exact", head: true });
-
-    const { count: activeCount, error: activeError } = await supabase
+  async getCoachStats(branchId?: string | null) {
+    let totalQuery = supabase.from("coaches").select("*", { count: "exact", head: true });
+    let activeQuery = supabase
       .from("coaches")
       .select("*", { count: "exact", head: true })
       .eq("status", "Aktif");
+    if (branchId) {
+      totalQuery = totalQuery.eq("branch_id", branchId);
+      activeQuery = activeQuery.eq("branch_id", branchId);
+    }
+    const { count: totalCount, error: totalError } = await totalQuery;
+    const { count: activeCount, error: activeError } = await activeQuery;
 
     if (totalError || activeError) {
       console.error("Error fetching stats:", totalError || activeError);

@@ -69,8 +69,8 @@ export const paymentService = {
   /**
    * Get all payments with student details
    */
-  async getAllPayments() {
-    const { data, error } = await supabase
+  async getAllPayments(branchId?: string | null) {
+    let query = supabase
       .from("payment_history")
       .select(`
         *,
@@ -79,6 +79,8 @@ export const paymentService = {
         )
       `)
       .order("payment_date", { ascending: false });
+    if (branchId) query = query.eq("branch_id", branchId);
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching payments:", error);
@@ -157,15 +159,15 @@ export const paymentService = {
   /**
    * Get payment statistics
    */
-  async getPaymentStats(): Promise<{
+  async getPaymentStats(branchId?: string | null): Promise<{
     totalRevenue: number;
     pendingPayments: number;
     monthlyRevenue: number;
   }> {
     try {
-      const { data: all } = await supabase
-        .from("payment_history")
-        .select("amount");
+      let allQuery = supabase.from("payment_history").select("amount");
+      if (branchId) allQuery = allQuery.eq("branch_id", branchId);
+      const { data: all } = await allQuery;
 
       const totalRevenue = all?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
@@ -173,10 +175,12 @@ export const paymentService = {
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
 
-      const { data: monthly } = await supabase
+      let monthlyQuery = supabase
         .from("payment_history")
         .select("amount")
         .gte("payment_date", monthStart.toISOString());
+      if (branchId) monthlyQuery = monthlyQuery.eq("branch_id", branchId);
+      const { data: monthly } = await monthlyQuery;
 
       const monthlyRevenue = monthly?.reduce((sum, p) => sum + p.amount, 0) || 0;
 

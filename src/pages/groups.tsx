@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -23,14 +24,17 @@ export default function GroupsPage() {
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isStudentListOpen, setIsStudentListOpen] = useState(false);
 
+  const { selectedBranchId, branches, getBranchName } = useBranch();
+
   useEffect(() => {
     loadGroups();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   const loadGroups = async () => {
     try {
       setLoading(true);
-      const data = await groupService.getAllGroups();
+      const data = await groupService.getAllGroups(selectedBranchId);
       setGroups(data);
     } catch (error) {
       console.error("Error loading groups:", error);
@@ -151,7 +155,10 @@ export default function GroupsPage() {
                           </div>
                           <div>
                             <CardTitle className="text-xl mb-1">{group.name}</CardTitle>
-                            <p className="text-sm text-gray-600">{group.age_group}</p>
+                            <p className="text-sm text-gray-600">
+                              {group.age_group}
+                              {branches.length > 1 && ` · ${getBranchName(group.branch_id)}`}
+                            </p>
                           </div>
                         </div>
                         <Button variant="outline" size="sm">

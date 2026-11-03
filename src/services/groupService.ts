@@ -7,8 +7,8 @@ type GroupUpdate = Database["public"]["Tables"]["groups"]["Update"];
 
 export const groupService = {
   // Get all groups with coach and students count
-  async getAllGroups() {
-    const { data, error } = await supabase
+  async getAllGroups(branchId?: string | null) {
+    let query = supabase
       .from("groups")
       .select(`
         *,
@@ -18,6 +18,8 @@ export const groupService = {
         )
       `)
       .order("name", { ascending: true });
+    if (branchId) query = query.eq("branch_id", branchId);
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching groups:", error);

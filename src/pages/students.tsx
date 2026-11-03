@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -67,15 +68,18 @@ export default function StudentsPage() {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [deleteReason, setDeleteReason] = useState<"Kayıt İptali" | "Ara Veriyor" | "Yönetim Sildi">("Kayıt İptali");
 
+  const { selectedBranchId, branches, getBranchName } = useBranch();
+
   useEffect(() => {
     loadStudents();
     loadStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   const loadStudents = async () => {
     try {
       setLoading(true);
-      const data = await studentService.getAllStudents();
+      const data = await studentService.getAllStudents(selectedBranchId);
       setStudents(data as any);
     } catch (error) {
       console.error("Error loading students:", error);
@@ -91,7 +95,7 @@ export default function StudentsPage() {
 
   const loadStats = async () => {
     try {
-      const data = await studentService.getStudentStats();
+      const data = await studentService.getStudentStats(selectedBranchId);
       setStats(data);
     } catch (error) {
       console.error("Error loading stats:", error);
@@ -283,6 +287,9 @@ export default function StudentsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <h3 className="text-lg font-semibold text-gray-900">{student.name}</h3>
+                            {branches.length > 1 && (
+                              <Badge variant="outline" className="text-xs">{getBranchName((student as any).branch_id)}</Badge>
+                            )}
                             <Badge variant={student.status === "Aktif" ? "default" : "secondary"}>
                               {student.status}
                             </Badge>

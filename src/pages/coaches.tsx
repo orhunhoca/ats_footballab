@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -25,15 +26,18 @@ export default function CoachesPage() {
   const [coachToDelete, setCoachToDelete] = useState<Coach | null>(null);
   const { toast } = useToast();
 
+  const { selectedBranchId, branches, getBranchName } = useBranch();
+
   useEffect(() => {
     loadCoaches();
     loadStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   const loadCoaches = async () => {
     try {
       setLoading(true);
-      const data = await coachService.getAllCoaches();
+      const data = await coachService.getAllCoaches(selectedBranchId);
       setCoaches(data);
     } catch (error) {
       console.error("Error loading coaches:", error);
@@ -44,7 +48,7 @@ export default function CoachesPage() {
 
   const loadStats = async () => {
     try {
-      const data = await coachService.getCoachStats();
+      const data = await coachService.getCoachStats(selectedBranchId);
       setStats(data);
     } catch (error) {
       console.error("Error loading stats:", error);
@@ -202,6 +206,9 @@ export default function CoachesPage() {
                               <Badge className="bg-emerald-100 text-emerald-800">
                                 {coach.status}
                               </Badge>
+                              {branches.length > 1 && (
+                                <Badge variant="outline">{getBranchName(coach.branch_id)}</Badge>
+                              )}
                             </div>
                             {coach.specialty && (
                               <p className="text-base sm:text-lg text-gray-600 font-medium">{coach.specialty}</p>

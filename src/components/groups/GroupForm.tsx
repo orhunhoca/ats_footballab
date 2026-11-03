@@ -9,6 +9,8 @@ import { groupService } from "@/services/groupService";
 import { coachService } from "@/services/coachService";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
+import { useBranch } from "@/contexts/BranchContext";
+import { BranchSelect } from "@/components/BranchSelect";
 
 type Coach = Tables<"coaches">;
 
@@ -20,6 +22,8 @@ interface GroupFormProps {
 
 export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
   const { toast } = useToast();
+  const { defaultBranchId } = useBranch();
+  const [branchId, setBranchId] = useState("");
   const [loading, setLoading] = useState(false);
   const [coaches, setCoaches] = useState<Coach[]>([]);
   
@@ -38,8 +42,25 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
   useEffect(() => {
     if (open) {
       loadCoaches();
+      setBranchId(defaultBranchId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  // Şubeler form açıldıktan sonra yüklenirse varsayılanı doldur
+  useEffect(() => {
+    if (open && !branchId && defaultBranchId) setBranchId(defaultBranchId);
+  }, [open, branchId, defaultBranchId]);
+
+  // Antrenör yalnızca seçilen şubenin antrenörlerinden seçilir
+  const branchCoaches = coaches.filter((c) => !branchId || c.branch_id === branchId);
+
+  const handleBranchChange = (id: string) => {
+    setBranchId(id);
+    if (formData.coach_id && !coaches.some((c) => c.id === formData.coach_id && c.branch_id === id)) {
+      setFormData((prev) => ({ ...prev, coach_id: "" }));
+    }
+  };
 
   const loadCoaches = async () => {
     try {
@@ -53,6 +74,15 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!branchId) {
+      toast({
+        title: "Eksik Bilgi",
+        description: "Lütfen grubun şubesini seçin.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!formData.name || !formData.age_group) {
       toast({
         title: "Eksik Bilgi",
@@ -71,6 +101,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
         .filter(s => s.length > 0);
 
       await groupService.createGroup({
+        branch_id: branchId,
         name: formData.name,
         age_group: formData.age_group,
         target_years: formData.target_years,
@@ -120,6 +151,8 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
           <DialogTitle>Yeni Grup Oluştur</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <BranchSelect value={branchId} onChange={handleBranchChange} />
+
           <div className="space-y-2">
             <Label>Grup Adı *</Label>
             <Input 
@@ -181,7 +214,7 @@ export function GroupForm({ open, onOpenChange, onSuccess }: GroupFormProps) {
                 <SelectValue placeholder="Antrenör Seçin" />
               </SelectTrigger>
               <SelectContent>
-                {coaches.map(coach => (
+                {branchCoaches.map(coach => (
                   <SelectItem key={coach.id} value={coach.id}>
                     {coach.name}
                   </SelectItem>

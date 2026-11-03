@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ type Student = Tables<"students">;
 
 export default function AttendancePage() {
   const { toast } = useToast();
+  const { selectedBranchId } = useBranch();
   const [date, setDate] = useState<Date>(new Date());
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const [groups, setGroups] = useState<Group[]>([]);
@@ -28,10 +30,14 @@ export default function AttendancePage() {
   const [saving, setSaving] = useState(false);
   const [isNotifyOpen, setIsNotifyOpen] = useState(false);
 
-  // Load groups
+  // Şube değişince grupları yenile ve seçili grubu sıfırla
   useEffect(() => {
+    setSelectedGroup("");
+    setStudents([]);
+    setAttendance({});
     loadGroups();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   // Load students when group changes
   useEffect(() => {
@@ -43,7 +49,7 @@ export default function AttendancePage() {
 
   const loadGroups = async () => {
     try {
-      const data = await groupService.getAllGroups();
+      const data = await groupService.getAllGroups(selectedBranchId);
       setGroups(data);
     } catch (error) {
       toast({
