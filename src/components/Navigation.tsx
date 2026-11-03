@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera, UserCircle2, CalendarCheck, Building2 } from "lucide-react";
-import { userService, type User } from "@/services/userService";
+import { Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera, UserCircle2, CalendarCheck, Building2, ShieldCheck } from "lucide-react";
+import { type User } from "@/services/userService";
+import { useUserRole } from "@/hooks/useUserRole";
 import { authService } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Brand } from "@/components/Brand";
 import { BranchSwitcher } from "@/components/BranchSwitcher";
@@ -14,25 +15,8 @@ export function Navigation() {
   const router = useRouter();
   const { toast } = useToast();
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const { role } = useUserRole();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const checkAdmin = async () => {
-      try {
-        const adminStatus = await userService.isAdmin();
-        setIsAdmin(adminStatus);
-      } catch (error) {
-        console.error("Error checking admin status:", error);
-        setIsAdmin(false);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    checkAdmin();
-  }, []);
 
   const handleLogout = async () => {
     try {
@@ -49,24 +33,26 @@ export function Navigation() {
     }
   };
 
-  const menuItems = [
-    { href: "/students", label: "Öğrenciler", icon: Users },
-    { href: "/trial-students", label: "Deneme Öğrencileri", icon: Users },
-    { href: "/groups", label: "Gruplar", icon: Users },
-    { href: "/coaches", label: "Antrenörler", icon: UserCircle2 },
-    { href: "/attendance", label: "Yoklama", icon: CalendarCheck },
-    { href: "/performance", label: "Performans", icon: TrendingUp },
-    { href: "/payments", label: "Ödemeler", icon: CreditCard },
-    { href: "/training", label: "Antrenman Programları", icon: Dumbbell },
-    { href: "/gallery", label: "Galeri", icon: Camera },
-    { href: "/notifications", label: "Bildirimler", icon: Bell },
-    { href: "/reports", label: "Raporlar", icon: BarChart3 },
+  // Rol bazlı menü: admin = her şey; yönetici = tüm operasyon (şube/ayar/kullanıcı hariç);
+  // antrenör = öğrenci bilgileri, yoklama, performans, raporlar
+  type MenuItem = { href: string; label: string; icon: typeof Users; roles: ("admin" | "manager" | "coach")[] };
+  const allItems: MenuItem[] = [
+    { href: "/students", label: "Öğrenciler", icon: Users, roles: ["admin", "manager", "coach"] },
+    { href: "/trial-students", label: "Deneme Öğrencileri", icon: Users, roles: ["admin", "manager"] },
+    { href: "/groups", label: "Gruplar", icon: Users, roles: ["admin", "manager"] },
+    { href: "/coaches", label: "Antrenörler", icon: UserCircle2, roles: ["admin", "manager"] },
+    { href: "/attendance", label: "Yoklama", icon: CalendarCheck, roles: ["admin", "manager", "coach"] },
+    { href: "/performance", label: "Performans", icon: TrendingUp, roles: ["admin", "manager", "coach"] },
+    { href: "/payments", label: "Ödemeler", icon: CreditCard, roles: ["admin", "manager"] },
+    { href: "/training", label: "Antrenman Programları", icon: Dumbbell, roles: ["admin", "manager"] },
+    { href: "/gallery", label: "Galeri", icon: Camera, roles: ["admin", "manager"] },
+    { href: "/notifications", label: "Bildirimler", icon: Bell, roles: ["admin", "manager"] },
+    { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "manager", "coach"] },
+    { href: "/branches", label: "Şubeler", icon: Building2, roles: ["admin"] },
+    { href: "/users", label: "Kullanıcılar", icon: ShieldCheck, roles: ["admin"] },
+    { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
   ];
-
-  if (isAdmin) {
-    menuItems.push({ href: "/branches", label: "Şubeler", icon: Building2 });
-    menuItems.push({ href: "/settings", label: "Ayarlar", icon: Settings });
-  }
+  const menuItems = allItems.filter((item) => role !== null && item.roles.includes(role));
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">

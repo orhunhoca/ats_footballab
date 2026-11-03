@@ -1,5 +1,7 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -54,7 +56,7 @@ type Student = Tables<"students"> & {
   winter_clothing_price?: number;
 };
 
-export default function StudentsPage() {
+function StudentsPageInner() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
@@ -69,6 +71,8 @@ export default function StudentsPage() {
   const [deleteReason, setDeleteReason] = useState<"Kayıt İptali" | "Ara Veriyor" | "Yönetim Sildi">("Kayıt İptali");
 
   const { selectedBranchId, branches, getBranchName } = useBranch();
+  // Antrenörler öğrenci bilgilerini salt okunur görür (kayıt/ödeme işlemi yönetime ait)
+  const { isManagement: canManage } = useUserRole();
 
   useEffect(() => {
     loadStudents();
@@ -192,13 +196,15 @@ export default function StudentsPage() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Öğrenci Yönetimi</h1>
               <p className="text-gray-600 mt-1">Tüm öğrencileri görüntüle ve yönet</p>
             </div>
-            <Button 
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => setIsFormOpen(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Yeni Öğrenci
-            </Button>
+            {canManage && (
+              <Button 
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => setIsFormOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Yeni Öğrenci
+              </Button>
+            )}
           </div>
 
           {/* Stats */}
@@ -412,17 +418,21 @@ export default function StudentsPage() {
                       </div>
                       
                       <div className="flex flex-col items-end gap-2 text-right">
-                         <div className="text-sm">
-                            <span className="text-gray-500">Ödeme:</span>
-                            <span className={`ml-2 font-medium ${student.payment_status === "Ödendi" ? "text-green-600" : "text-amber-600"}`}>
-                              {student.payment_status}
-                            </span>
-                         </div>
-                         <div className="text-xs text-gray-500">
-                           {student.payment_plan}
-                         </div>
+                         {canManage && (
+                           <>
+                             <div className="text-sm">
+                               <span className="text-gray-500">Ödeme:</span>
+                               <span className={`ml-2 font-medium ${student.payment_status === "Ödendi" ? "text-green-600" : "text-amber-600"}`}>
+                                 {student.payment_status}
+                               </span>
+                             </div>
+                             <div className="text-xs text-gray-500">
+                               {student.payment_plan}
+                             </div>
+                           </>
+                         )}
                          
-                         <div className="flex gap-2 mt-2">
+                         {canManage && <div className="flex gap-2 mt-2">
                            <Button variant="outline" size="sm" onClick={() => {
                              setEditingStudent(student);
                              setIsFormOpen(true);
@@ -455,7 +465,7 @@ export default function StudentsPage() {
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                            </DropdownMenu>
-                         </div>
+                         </div>}
                       </div>
                     </div>
                   </CardContent>
@@ -531,5 +541,13 @@ export default function StudentsPage() {
         />
       </div>
     </>
+  );
+}
+
+export default function StudentsPage() {
+  return (
+    <RoleGate level="staff">
+      <StudentsPageInner />
+    </RoleGate>
   );
 }

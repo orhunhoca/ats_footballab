@@ -41,11 +41,17 @@ export function serviceClient(): SupabaseClient {
 /**
  * İsteği yapan kullanıcının JWT'sini doğrular ve rolünü kontrol eder.
  * Anon anahtar geçerli bir kullanıcı JWT'si olmadığı için reddedilir.
+ *
+ * Roller: admin (her şey), manager (yönetici: tüm şubeler, operasyonel işlemler),
+ * user (antrenör: yalnızca kendi alanı), pending (hiçbir şey).
+ *  - adminOnly:      yalnızca admin
+ *  - managementOnly: admin + yönetici
+ *  - varsayılan:     admin + yönetici + antrenör
  */
 export async function requireStaff(
   req: Request,
   supabase: SupabaseClient,
-  options: { adminOnly?: boolean } = {},
+  options: { adminOnly?: boolean; managementOnly?: boolean } = {},
 ): Promise<{ userId: string; role: string }> {
   const jwt = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (!jwt) throw new HttpError(401, "Yetkisiz istek");
@@ -60,7 +66,11 @@ export async function requireStaff(
     .single();
 
   const role = profile?.role ?? "pending";
-  const allowed = options.adminOnly ? role === "admin" : role === "admin" || role === "user";
+  const allowed = options.adminOnly
+    ? role === "admin"
+    : options.managementOnly
+    ? role === "admin" || role === "manager"
+    : role === "admin" || role === "manager" || role === "user";
   if (!allowed) throw new HttpError(403, "Bu işlem için yetkiniz yok");
 
   return { userId: data.user.id, role };

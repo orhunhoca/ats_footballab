@@ -22,7 +22,10 @@ serve(async (req) => {
     const supabase = serviceClient();
     await requireStaff(req, supabase, { adminOnly: true });
 
-    const { email, password, fullName, coach } = await req.json();
+    const { email, password, fullName, coach, role: requestedRole } = await req.json();
+
+    // Yalnızca yönetici (manager) veya antrenör (user) hesabı açılabilir; admin buradan verilmez
+    const newRole = requestedRole === "manager" ? "manager" : "user";
 
     if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new HttpError(400, "Geçersiz email");
@@ -62,7 +65,7 @@ serve(async (req) => {
         id: userId,
         email,
         full_name: fullName || email,
-        role: "user",
+        role: newRole,
       });
 
     if (profileError) {
@@ -71,7 +74,7 @@ serve(async (req) => {
 
     // İsteğe bağlı: antrenör kaydını aynı işlemde oluştur
     let coachRecord: Record<string, unknown> | null = null;
-    if (coach && typeof coach === "object") {
+    if (newRole === "user" && coach && typeof coach === "object") {
       // Şube verilmişse var olan, aktif bir şube olmalı
       let branchId: string | null = null;
       if (coach.branch_id) {

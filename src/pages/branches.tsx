@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
 import { Navigation } from "@/components/Navigation";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
@@ -26,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const emptyForm = { name: "", address: "", phone: "" };
 
-export default function BranchesPage() {
+function BranchesPageInner() {
   const router = useRouter();
   const { toast } = useToast();
   const { isAdmin, loading: roleLoading } = useUserRole();
@@ -314,5 +315,13 @@ export default function BranchesPage() {
         </AlertDialog>
       </div>
     </>
+  );
+}
+
+export default function BranchesPage() {
+  return (
+    <RoleGate level="admin">
+      <BranchesPageInner />
+    </RoleGate>
   );
 }

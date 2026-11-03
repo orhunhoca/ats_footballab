@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,7 @@ import { CreditCard, Wallet, Building2, Loader2, TrendingUp, AlertCircle, CheckC
 import { SendPaymentReminderDialog } from "@/components/payments/SendPaymentReminderDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function PaymentsPage() {
+function PaymentsPageInner() {
   const router = useRouter();
   const { toast } = useToast();
   const { selectedBranchId, branches, getBranchName } = useBranch();
@@ -589,5 +590,13 @@ export default function PaymentsPage() {
         payments={payments}
       />
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <RoleGate level="management">
+      <PaymentsPageInner />
+    </RoleGate>
   );
 }

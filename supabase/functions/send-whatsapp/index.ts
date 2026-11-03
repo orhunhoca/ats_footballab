@@ -39,8 +39,8 @@ serve(async (req) => {
 
   try {
     const supabaseClient = serviceClient();
-    // Yalnızca giriş yapmış personel/admin mesaj gönderebilir
-    await requireStaff(req, supabaseClient);
+    // Yalnızca yönetim (admin + yönetici) mesaj gönderebilir; antrenörler gönderemez
+    await requireStaff(req, supabaseClient, { managementOnly: true });
 
     const body = await req.json();
     const { phoneNumber, templateName, variables, messageType, messageContent } = body ?? {};

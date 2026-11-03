@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,8 +20,8 @@ interface FinancialStats {
   renewalsCount: number;
 }
 
-export default function ReportsPage() {
-  const { isAdmin, loading: roleLoading } = useUserRole();
+function ReportsPageInner() {
+  const { isManagement: isAdmin, loading: roleLoading } = useUserRole();
   const { selectedBranchId, branches, getBranchName } = useBranch();
   const [byBranch, setByBranch] = useState<{
     weekly: Record<string, FinancialStats>;
@@ -112,9 +113,9 @@ export default function ReportsPage() {
                   <div className="grid gap-6">
                     <Alert className="bg-blue-50 border-blue-200">
                       <AlertCircle className="h-4 w-4 text-blue-600" />
-                      <AlertTitle>Admin Yetkisi</AlertTitle>
+                      <AlertTitle>Yönetim Yetkisi</AlertTitle>
                       <AlertDescription className="text-blue-700">
-                        Bu raporları sadece yönetici yetkisine sahip kullanıcılar görebilir.
+                        Bu raporları yalnızca yönetim yetkisine sahip kullanıcılar (admin ve yöneticiler) görebilir.
                       </AlertDescription>
                     </Alert>
 
@@ -269,5 +270,13 @@ export default function ReportsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <RoleGate level="staff">
+      <ReportsPageInner />
+    </RoleGate>
   );
 }

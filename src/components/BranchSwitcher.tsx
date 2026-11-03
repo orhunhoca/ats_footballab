@@ -1,15 +1,20 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building2 } from "lucide-react";
 import { useBranch } from "@/contexts/BranchContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { cn } from "@/lib/utils";
 
 const ALL = "__all__";
 
-/** Üst menüde aktif şubeyi seçtirir. Tek şube varsa gösterilmez. */
+/**
+ * Üst menüde aktif şubeyi seçtirir. Tek şube varsa veya kullanıcı antrenörse gösterilmez
+ * (antrenör yalnızca kendi şubesinin verisini görür).
+ */
 export function BranchSwitcher({ className }: { className?: string }) {
   const { activeBranches, selectedBranchId, setSelectedBranchId } = useBranch();
+  const { isManagement } = useUserRole();
 
-  if (activeBranches.length < 2) return null;
+  if (!isManagement || activeBranches.length < 2) return null;
 
   return (
     <Select

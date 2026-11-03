@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ type WhatsAppMedia = Database["public"]["Tables"]["whatsapp_media"]["Row"] & {
   students?: { name: string; father_phone: string | null; mother_phone: string | null };
 };
 
-export default function Gallery() {
+function GalleryInner() {
   const { toast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const [media, setMedia] = useState<WhatsAppMedia[]>([]);
@@ -418,5 +419,13 @@ export default function Gallery() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function Gallery() {
+  return (
+    <RoleGate level="management">
+      <GalleryInner />
+    </RoleGate>
   );
 }

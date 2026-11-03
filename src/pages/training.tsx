@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +17,7 @@ import { Dumbbell, Plus, Clock, Users, Target, Loader2, ChevronRight } from "luc
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
-export default function TrainingPage() {
+function TrainingPageInner() {
   const router = useRouter();
   const { toast } = useToast();
   const [programs, setPrograms] = useState<any[]>([]);
@@ -447,5 +448,13 @@ export default function TrainingPage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function TrainingPage() {
+  return (
+    <RoleGate level="management">
+      <TrainingPageInner />
+    </RoleGate>
   );
 }

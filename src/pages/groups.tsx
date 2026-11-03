@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
@@ -17,7 +18,7 @@ type Group = Tables<"groups"> & {
   coaches?: Tables<"coaches"> | null;
 };
 
-export default function GroupsPage() {
+function GroupsPageInner() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -326,5 +327,13 @@ export default function GroupsPage() {
         </Dialog>
       </div>
     </>
+  );
+}
+
+export default function GroupsPage() {
+  return (
+    <RoleGate level="management">
+      <GroupsPageInner />
+    </RoleGate>
   );
 }

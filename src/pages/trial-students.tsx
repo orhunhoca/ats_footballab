@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { useEffect, useState } from "react";
@@ -18,7 +19,7 @@ type TrialStudent = Tables<"trial_students"> & {
   groups?: Tables<"groups"> | null;
 };
 
-export default function TrialStudentsPage() {
+function TrialStudentsPageInner() {
   const [trialStudents, setTrialStudents] = useState<TrialStudent[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<TrialStudent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -296,5 +297,13 @@ export default function TrialStudentsPage() {
         />
       )}
     </>
+  );
+}
+
+export default function TrialStudentsPage() {
+  return (
+    <RoleGate level="management">
+      <TrialStudentsPageInner />
+    </RoleGate>
   );
 }
