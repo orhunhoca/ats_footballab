@@ -44,7 +44,7 @@ export function Navigation() {
     { href: "/attendance", label: "Yoklama", icon: CalendarCheck, roles: ["admin", "manager", "coach"] },
     { href: "/performance", label: "Performans", icon: TrendingUp, roles: ["admin", "manager", "coach"] },
     { href: "/payments", label: "Ödemeler", icon: CreditCard, roles: ["admin", "manager"] },
-    { href: "/training", label: "Antrenman Programları", icon: Dumbbell, roles: ["admin", "manager"] },
+    { href: "/training", label: "Antrenman Programları", icon: Dumbbell, roles: ["admin", "manager", "coach"] },
     { href: "/gallery", label: "Galeri", icon: Camera, roles: ["admin", "manager"] },
     { href: "/notifications", label: "Bildirimler", icon: Bell, roles: ["admin", "manager"] },
     { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "manager", "coach"] },

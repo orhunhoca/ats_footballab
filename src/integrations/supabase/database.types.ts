@@ -857,6 +857,69 @@ export type Database = {
         }
         Relationships: []
       }
+      training_custom_drills: {
+        Row: {
+          id: string
+          name: string
+          kind: string
+          min_age: number
+          max_age: number
+          suggested_minutes: number | null
+          players: string | null
+          goal: string | null
+          setup: string | null
+          how: string[]
+          points: string[]
+          easier: string | null
+          harder: string | null
+          materials: string[]
+          created_by: string | null
+          created_by_name: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          kind?: string
+          min_age?: number
+          max_age?: number
+          suggested_minutes?: number | null
+          players?: string | null
+          goal?: string | null
+          setup?: string | null
+          how?: string[]
+          points?: string[]
+          easier?: string | null
+          harder?: string | null
+          materials?: string[]
+          created_by?: string | null
+          created_by_name?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          kind?: string
+          min_age?: number
+          max_age?: number
+          suggested_minutes?: number | null
+          players?: string | null
+          goal?: string | null
+          setup?: string | null
+          how?: string[]
+          points?: string[]
+          easier?: string | null
+          harder?: string | null
+          materials?: string[]
+          created_by?: string | null
+          created_by_name?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payment_plans: {
         Row: {
           created_at: string | null
