@@ -72,7 +72,7 @@ serve(async (req) => {
     };
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 40_000);
+    const timer = setTimeout(() => controller.abort(), 100_000);
     let res: Response;
     try {
       res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -85,12 +85,15 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: Deno.env.get("ANTHROPIC_MODEL") ?? "claude-sonnet-5-5",
-          max_tokens: 4096,
+          // Bu modelde düşünme (varsayılan açık) da max_tokens'tan harcanır; yazıya yer kalsın diye geniş tutulur
+          max_tokens: 8192,
+          output_config: { effort: "medium" },
           system: SYSTEM_PROMPT,
           tools: [
             {
               name: "rapor_yaz",
               description: "Öğrenci performans raporunu ve veli özetini kaydeder.",
+              strict: true,
               input_schema: {
                 type: "object",
                 properties: {
@@ -98,10 +101,12 @@ serve(async (req) => {
                   parent_summary: { type: "string", description: "Veliye tek satırlık özet (en fazla 260 karakter)" },
                 },
                 required: ["analysis", "parent_summary"],
+                additionalProperties: false,
               },
             },
           ],
-          tool_choice: { type: "tool", name: "rapor_yaz" },
+          // Bu model zorunlu araç seçimini (type: "tool"/"any") reddeder (400); "auto" + prompttaki talimat kullanılır
+          tool_choice: { type: "auto" },
           messages: [
             {
               role: "user",
