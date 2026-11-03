@@ -2,13 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Play, Square, Camera } from "lucide-react";
 import { beep, useCamera } from "@/hooks/useCamera";
+import { usePoseLandmarker } from "@/hooks/usePoseLandmarker";
 import { checkPlankPose, PlankTracker, LM, type Landmark, type PlankCheck } from "@/lib/measure/plankPose";
 import type { MeasureResult } from "./measureTypes";
-
-type Landmarker = {
-  detectForVideo: (v: HTMLVideoElement, ts: number) => { landmarks?: Landmark[][] };
-  close: () => void;
-};
 
 const HINT: Record<NonNullable<PlankCheck["reason"]>, string> = {
   gorunmuyor: "Çocuk tam görünmüyor: yandan, baştan ayağa görüntüye alın.",
@@ -29,14 +25,12 @@ function snap(video: HTMLVideoElement): string {
 export function PlankMeter({ onResult }: { onResult: (r: MeasureResult) => void }) {
   const { videoRef, status, error, aspect, start } = useCamera();
   const overlay = useRef<HTMLCanvasElement | null>(null);
-  const landmarker = useRef<Landmarker | null>(null);
+  const { landmarker, state: modelState, error: modelError } = usePoseLandmarker();
   const tracker = useRef(new PlankTracker());
   const snaps = useRef<{ label: string; src: string }[]>([]);
   const onResultRef = useRef(onResult);
   onResultRef.current = onResult;
 
-  const [modelState, setModelState] = useState<"loading" | "ready" | "error">("loading");
-  const [modelError, setModelError] = useState("");
   const [running, setRunning] = useState(false);
   const [state, setState] = useState<"waiting" | "running" | "done">("waiting");
   const [elapsed, setElapsed] = useState(0);
@@ -46,46 +40,6 @@ export function PlankMeter({ onResult }: { onResult: (r: MeasureResult) => void 
   useEffect(() => {
     start(facing);
   }, [facing, start]);
-
-  // Poz modeli (kendi sunucumuzdan; yalnızca bu bileşen açılınca yüklenir)
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { FilesetResolver, PoseLandmarker } = await import("@mediapipe/tasks-vision");
-        const fileset = await FilesetResolver.forVisionTasks("/mediapipe/wasm");
-        const make = (delegate: "GPU" | "CPU") =>
-          PoseLandmarker.createFromOptions(fileset, {
-            baseOptions: { modelAssetPath: "/mediapipe/pose_landmarker_lite.task", delegate },
-            runningMode: "VIDEO",
-            numPoses: 1,
-          });
-        let lm;
-        try {
-          lm = await make("GPU");
-        } catch {
-          lm = await make("CPU");
-        }
-        if (cancelled) {
-          lm.close();
-          return;
-        }
-        landmarker.current = lm as unknown as Landmarker;
-        setModelState("ready");
-      } catch (e) {
-        console.error("Pose model load error:", e);
-        if (!cancelled) {
-          setModelState("error");
-          setModelError("Yapay zekâ modeli yüklenemedi. Sayfayı yenileyip tekrar deneyin.");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-      landmarker.current?.close();
-      landmarker.current = null;
-    };
-  }, []);
 
   // Algılama döngüsü (~10 kare/sn)
   useEffect(() => {

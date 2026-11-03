@@ -64,17 +64,17 @@ export function useCamera() {
 }
 
 /** Her video karesinde çağırır (destekleniyorsa requestVideoFrameCallback; zaman damgası kamera yakalama anı). */
-export function onVideoFrame(video: HTMLVideoElement, cb: (tMs: number) => void): () => void {
+export function onVideoFrame(video: HTMLVideoElement, cb: (tMs: number, mediaMs: number) => void): () => void {
   let cancelled = false;
   let handle = 0;
   const v = video as HTMLVideoElement & {
-    requestVideoFrameCallback?: (cb: (now: number, meta: { captureTime?: number }) => void) => number;
+    requestVideoFrameCallback?: (cb: (now: number, meta: { captureTime?: number; mediaTime?: number }) => void) => number;
     cancelVideoFrameCallback?: (h: number) => void;
   };
   if (typeof v.requestVideoFrameCallback === "function") {
-    const loop = (now: number, meta: { captureTime?: number }) => {
+    const loop = (now: number, meta: { captureTime?: number; mediaTime?: number }) => {
       if (cancelled) return;
-      cb(meta?.captureTime ?? now);
+      cb(meta?.captureTime ?? now, (meta?.mediaTime ?? video.currentTime) * 1000);
       handle = v.requestVideoFrameCallback!(loop);
     };
     handle = v.requestVideoFrameCallback(loop);
@@ -85,7 +85,7 @@ export function onVideoFrame(video: HTMLVideoElement, cb: (tMs: number) => void)
   }
   const loop = () => {
     if (cancelled) return;
-    cb(performance.now());
+    cb(performance.now(), video.currentTime * 1000);
     handle = requestAnimationFrame(loop);
   };
   handle = requestAnimationFrame(loop);

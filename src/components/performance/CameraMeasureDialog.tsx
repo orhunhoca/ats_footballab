@@ -12,10 +12,11 @@ import type { Student } from "@/services/studentService";
 import type { TestProtocol } from "@/services/settingsService";
 import { useToast } from "@/hooks/use-toast";
 import { PlankMeter } from "./PlankMeter";
+import { JumpMeter } from "./JumpMeter";
 import { SprintMeter } from "./SprintMeter";
 import type { MeasureResult } from "./measureTypes";
 
-type Kind = "plank" | "sprint";
+type Kind = "plank" | "sprint" | "jump";
 const SPRINT_DISTANCES = [10, 20, 30] as const;
 
 interface Props {
@@ -38,6 +39,7 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
 
   const protocol = useMemo(() => {
     if (kind === "plank") return testProtocols.find((p) => /plank/i.test(p.name));
+    if (kind === "jump") return testProtocols.find((p) => /dikey.*s[ıi]çrama/i.test(p.name));
     return testProtocols.find((p) => new RegExp(`^${distance}\\s?m.*sprint`, "i").test(p.name.trim()));
   }, [kind, distance, testProtocols]);
 
@@ -97,16 +99,17 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
             Kamerayla Ölç — {student.name}
           </DialogTitle>
           <DialogDescription>
-            Telefon/tablet kamerası ile sprint ve plank süresi otomatik ölçülür. Sonuç, siz onaylamadan kaydedilmez.
+            Telefon/tablet kamerası ile sprint, plank ve dikey sıçrama otomatik ölçülür. Sonuç, siz onaylamadan kaydedilmez.
           </DialogDescription>
         </DialogHeader>
 
         {!result && (
           <div className="space-y-4">
             <Tabs value={kind} onValueChange={(v) => v && setKind(v as Kind)}>
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="sprint">Sprint</TabsTrigger>
                 <TabsTrigger value="plank">Plank</TabsTrigger>
+                <TabsTrigger value="jump">Sıçrama</TabsTrigger>
               </TabsList>
             </Tabs>
 
@@ -124,7 +127,7 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
             {!protocol && (
               <Alert variant="destructive">
                 <AlertDescription>
-                  {kind === "plank" ? "“Plank”" : `“${distance}m Sprint”`} test protokolü bulunamadı. Ayarlar → Test Protokolleri bölümünden ekleyin.
+                  {kind === "plank" ? "“Plank”" : kind === "jump" ? "“Dikey Sıçrama”" : `“${distance}m Sprint”`} test protokolü bulunamadı. Ayarlar → Test Protokolleri bölümünden ekleyin.
                 </AlertDescription>
               </Alert>
             )}
@@ -132,6 +135,8 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
             {protocol &&
               (kind === "sprint" ? (
                 <SprintMeter key={`s-${distance}-${session}`} distance={distance} onResult={handleResult} />
+              ) : kind === "jump" ? (
+                <JumpMeter key={`j-${session}`} heightCm={(student as { height_cm?: number | null }).height_cm} onResult={handleResult} />
               ) : (
                 <PlankMeter key={`p-${session}`} onResult={handleResult} />
               ))}
@@ -151,9 +156,10 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
 
             <div className="space-y-1.5">
               <Label htmlFor="measured">
-                {protocol.name} — ölçülen süre ({protocol.unit})
+                {protocol.name} — {result.label ?? "ölçülen süre"} ({protocol.unit})
               </Label>
               <Input id="measured" inputMode="decimal" value={value} onChange={(e) => setValue(e.target.value)} className="max-w-[180px] text-lg font-semibold" />
+              {result.detail && <p className="text-sm">{result.detail}</p>}
               <p className="text-xs text-muted-foreground">{result.method}. Gerekirse değeri düzeltebilirsiniz.</p>
             </div>
 

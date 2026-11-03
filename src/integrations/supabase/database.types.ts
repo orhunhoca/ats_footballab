@@ -1368,6 +1368,42 @@ export type Database = {
         }
         Relationships: []
       }
+      technique_analyses: {
+        Row: {
+          analysis: string
+          ai_generated: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: string
+          metrics: Json
+          quality: Json
+          student_id: string
+        }
+        Insert: {
+          analysis: string
+          ai_generated?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind: string
+          metrics?: Json
+          quality?: Json
+          student_id: string
+        }
+        Update: {
+          analysis?: string
+          ai_generated?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          kind?: string
+          metrics?: Json
+          quality?: Json
+          student_id?: string
+        }
+        Relationships: []
+      }
       training_exercises: {
         Row: {
           coaching_points: string[] | null
