@@ -5,6 +5,7 @@ import { Loader2, Play, RotateCcw, Camera, Hand } from "lucide-react";
 import { beep, onVideoFrame, useCamera } from "@/hooks/useCamera";
 import { gateActivity, SprintSession, toGray, type SprintState } from "@/lib/measure/gateMotion";
 import type { MeasureResult } from "./measureTypes";
+import { BIG_BTN, stageStyle } from "./cameraStyle";
 
 const W = 192;
 const H = 108;
@@ -130,7 +131,7 @@ export function SprintMeter({ distance, onResult }: { distance: number; onResult
 
   return (
     <div className="space-y-3">
-      <div className="relative w-full overflow-hidden rounded-lg bg-black" style={{ aspectRatio: String(aspect) }}>
+      <div className="relative mx-auto overflow-hidden rounded-lg bg-black" style={stageStyle(aspect)}>
         <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 h-full w-full object-contain" />
         {status === "ready" && (
           <>
@@ -153,15 +154,15 @@ export function SprintMeter({ distance, onResult }: { distance: number; onResult
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-xs text-emerald-700">Çıkış çizgisi konumu</Label>
-          <input type="range" min={3} max={97} value={startPos} disabled={active} onChange={(e) => setStartPos(Number(e.target.value))} className="w-full" />
+          <input type="range" min={3} max={97} value={startPos} disabled={active} onChange={(e) => setStartPos(Number(e.target.value))} className="h-8 w-full" />
         </div>
         <div>
           <Label className="text-xs text-red-700">Bitiş çizgisi konumu</Label>
-          <input type="range" min={3} max={97} value={finishPos} disabled={active} onChange={(e) => setFinishPos(Number(e.target.value))} className="w-full" />
+          <input type="range" min={3} max={97} value={finishPos} disabled={active} onChange={(e) => setFinishPos(Number(e.target.value))} className="h-8 w-full" />
         </div>
       </div>
 
-      <label className="flex items-center gap-2 text-sm">
+      <label className="flex items-center gap-3 py-1 text-base sm:text-sm">
         <input type="checkbox" checked={manual} disabled={active} onChange={(e) => setManual(e.target.checked)} />
         Çıkışı elle başlat (düğmeyle; otomatik çıkış tespiti yerine)
       </label>
@@ -170,16 +171,16 @@ export function SprintMeter({ distance, onResult }: { distance: number; onResult
 
       <div className="flex flex-wrap gap-2">
         {state === "idle" || state === "timeout" || state === "done" ? (
-          <Button onClick={arm} disabled={status !== "ready"}>
+          <Button size="lg" className={BIG_BTN} onClick={arm} disabled={status !== "ready"}>
             <Play className="mr-2 h-4 w-4" /> Hazırla ve Başlat
           </Button>
         ) : (
-          <Button variant="outline" onClick={reset}>
+          <Button size="lg" className={BIG_BTN} variant="outline" onClick={reset}>
             <RotateCcw className="mr-2 h-4 w-4" /> İptal
           </Button>
         )}
         {state === "armed" && manual && (
-          <Button onClick={manualGo} className="bg-emerald-600 hover:bg-emerald-700">
+          <Button size="lg" onClick={manualGo} className={`${BIG_BTN} bg-emerald-600 hover:bg-emerald-700`}>
             <Hand className="mr-2 h-4 w-4" /> ÇIK
           </Button>
         )}

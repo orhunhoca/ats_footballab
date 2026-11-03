@@ -6,6 +6,7 @@ import { usePoseLandmarker } from "@/hooks/usePoseLandmarker";
 import { JumpTracker, type JumpState } from "@/lib/measure/jumpFlight";
 import type { Landmark } from "@/lib/measure/plankPose";
 import type { MeasureResult } from "./measureTypes";
+import { BIG_BTN, stageStyle } from "./cameraStyle";
 
 function snap(video: HTMLVideoElement): string {
   const c = document.createElement("canvas");
@@ -117,7 +118,7 @@ export function JumpMeter({ heightCm, onResult }: { heightCm?: number | null; on
 
   return (
     <div className="space-y-3">
-      <div className="relative w-full overflow-hidden rounded-lg bg-black" style={{ aspectRatio: String(aspect) }}>
+      <div className="relative mx-auto overflow-hidden rounded-lg bg-black" style={stageStyle(aspect)}>
         <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 h-full w-full object-contain" />
         {status === "ready" && running && state === "ready" && (
           <div className="absolute inset-x-0 top-3 text-center">
@@ -141,11 +142,11 @@ export function JumpMeter({ heightCm, onResult }: { heightCm?: number | null; on
 
       <div className="flex flex-wrap gap-2">
         {!running ? (
-          <Button onClick={begin} disabled={status !== "ready" || modelState !== "ready"}>
+          <Button size="lg" className={BIG_BTN} onClick={begin} disabled={status !== "ready" || modelState !== "ready"}>
             <Play className="mr-2 h-4 w-4" /> Başlat
           </Button>
         ) : (
-          <Button variant="destructive" onClick={() => setRunning(false)}>
+          <Button size="lg" className={BIG_BTN} variant="destructive" onClick={() => setRunning(false)}>
             <Square className="mr-2 h-4 w-4" /> İptal
           </Button>
         )}

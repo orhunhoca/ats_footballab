@@ -5,6 +5,7 @@ import { beep, useCamera } from "@/hooks/useCamera";
 import { usePoseLandmarker } from "@/hooks/usePoseLandmarker";
 import { checkPlankPose, PlankTracker, LM, type Landmark, type PlankCheck } from "@/lib/measure/plankPose";
 import type { MeasureResult } from "./measureTypes";
+import { BIG_BTN, stageStyle } from "./cameraStyle";
 
 const HINT: Record<NonNullable<PlankCheck["reason"]>, string> = {
   gorunmuyor: "Çocuk tam görünmüyor: yandan, baştan ayağa görüntüye alın.",
@@ -123,7 +124,7 @@ export function PlankMeter({ onResult }: { onResult: (r: MeasureResult) => void 
 
   return (
     <div className="space-y-3">
-      <div className="relative w-full overflow-hidden rounded-lg bg-black" style={{ aspectRatio: String(aspect) }}>
+      <div className="relative mx-auto overflow-hidden rounded-lg bg-black" style={stageStyle(aspect)}>
         <video ref={videoRef} playsInline muted autoPlay className="absolute inset-0 h-full w-full object-contain" />
         <canvas ref={overlay} className="pointer-events-none absolute inset-0 h-full w-full" width={640} height={Math.round(640 / aspect)} />
         {status === "ready" && running && state === "running" && (
@@ -148,11 +149,11 @@ export function PlankMeter({ onResult }: { onResult: (r: MeasureResult) => void 
 
       <div className="flex flex-wrap gap-2">
         {!running ? (
-          <Button onClick={begin} disabled={status !== "ready" || modelState !== "ready"}>
+          <Button size="lg" className={BIG_BTN} onClick={begin} disabled={status !== "ready" || modelState !== "ready"}>
             <Play className="mr-2 h-4 w-4" /> Başlat
           </Button>
         ) : (
-          <Button variant="destructive" onClick={stopManually}>
+          <Button size="lg" className={BIG_BTN} variant="destructive" onClick={stopManually}>
             <Square className="mr-2 h-4 w-4" /> {state === "running" ? "Bitir" : "İptal"}
           </Button>
         )}

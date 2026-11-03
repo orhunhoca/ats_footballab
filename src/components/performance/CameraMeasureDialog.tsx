@@ -15,6 +15,10 @@ import { PlankMeter } from "./PlankMeter";
 import { JumpMeter } from "./JumpMeter";
 import { SprintMeter } from "./SprintMeter";
 import type { MeasureResult } from "./measureTypes";
+import { BIG_BTN, CAMERA_DIALOG_CLASS } from "./cameraStyle";
+import { useWakeLock } from "@/hooks/useWakeLock";
+import { useFullscreen } from "@/hooks/useFullscreen";
+import { Maximize2, Minimize2, Sun } from "lucide-react";
 
 type Kind = "plank" | "sprint" | "jump";
 const SPRINT_DISTANCES = [10, 20, 30] as const;
@@ -36,6 +40,8 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
   const [confirmed, setConfirmed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [session, setSession] = useState(0); // yeniden ölç → bileşenleri sıfırla
+  const wake = useWakeLock(open);
+  const fs = useFullscreen();
 
   const protocol = useMemo(() => {
     if (kind === "plank") return testProtocols.find((p) => /plank/i.test(p.name));
@@ -52,7 +58,10 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
 
   const close = (o: boolean) => {
     if (saving) return;
-    if (!o) reset();
+    if (!o) {
+      reset();
+      fs.exit();
+    }
     onOpenChange(o);
   };
 
@@ -92,7 +101,7 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className={`max-w-2xl max-h-[92vh] overflow-y-auto ${CAMERA_DIALOG_CLASS}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 pr-6">
             <Video className="h-5 w-5 text-emerald-600" />
@@ -102,6 +111,20 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
             Telefon/tablet kamerası ile sprint, plank ve dikey sıçrama otomatik ölçülür. Sonuç, siz onaylamadan kaydedilmez.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {fs.supported && (
+            <Button type="button" size="sm" variant="outline" onClick={fs.toggle}>
+              {fs.full ? <Minimize2 className="mr-1.5 h-4 w-4" /> : <Maximize2 className="mr-1.5 h-4 w-4" />}
+              {fs.full ? "Tam ekrandan çık" : "Tam ekran"}
+            </Button>
+          )}
+          {wake.supported && wake.held && (
+            <span className="inline-flex items-center gap-1">
+              <Sun className="h-3.5 w-3.5" /> Ekran açık kalıyor
+            </span>
+          )}
+        </div>
 
         {!result && (
           <div className="space-y-4">
@@ -117,7 +140,7 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
               <div className="flex items-center gap-2">
                 <Label className="text-sm">Mesafe:</Label>
                 {SPRINT_DISTANCES.map((d) => (
-                  <Button key={d} size="sm" variant={distance === d ? "default" : "outline"} onClick={() => setDistance(d)}>
+                  <Button key={d} variant={distance === d ? "default" : "outline"} className="h-11 min-w-[72px]" onClick={() => setDistance(d)}>
                     {d} m
                   </Button>
                 ))}
@@ -169,11 +192,11 @@ export function CameraMeasureDialog({ open, onOpenChange, student, testProtocols
             </label>
 
             <div className="flex flex-wrap gap-2">
-              <Button onClick={save} disabled={!confirmed || !valid || saving} className="bg-emerald-600 hover:bg-emerald-700">
+              <Button size="lg" onClick={save} disabled={!confirmed || !valid || saving} className={`${BIG_BTN} bg-emerald-600 hover:bg-emerald-700`}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                 Onayla ve Kaydet
               </Button>
-              <Button variant="outline" onClick={reset} disabled={saving}>
+              <Button size="lg" className={BIG_BTN} variant="outline" onClick={reset} disabled={saving}>
                 <RotateCcw className="mr-2 h-4 w-4" /> Tekrar Ölç
               </Button>
             </div>

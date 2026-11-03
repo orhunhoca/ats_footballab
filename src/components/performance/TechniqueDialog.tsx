@@ -14,6 +14,10 @@ import { techniqueService, type TechniqueAnalysisRow, type TechniqueFeedback } f
 import type { Student } from "@/services/studentService";
 import { useToast } from "@/hooks/use-toast";
 import { drawPoseOverlay } from "./poseOverlay";
+import { BIG_BTN, CAMERA_DIALOG_CLASS, stageStyle } from "./cameraStyle";
+import { useWakeLock } from "@/hooks/useWakeLock";
+import { useFullscreen } from "@/hooks/useFullscreen";
+import { Maximize2, Minimize2, Sun } from "lucide-react";
 
 const MAX_LIVE_SECONDS = 20;
 type Source = "camera" | "file";
@@ -52,6 +56,8 @@ export function TechniqueDialog({ open, onOpenChange, student }: Props) {
   const [saved, setSaved] = useState(false);
   const [history, setHistory] = useState<TechniqueAnalysisRow[]>([]);
   const [tab, setTab] = useState("new");
+  const wake = useWakeLock(open);
+  const fs = useFullscreen();
 
   // Kamera kaynağı
   useEffect(() => {
@@ -97,6 +103,7 @@ export function TechniqueDialog({ open, onOpenChange, student }: Props) {
     if (!o) {
       reset();
       setTab("new");
+      fs.exit();
     }
     onOpenChange(o);
   };
@@ -183,7 +190,7 @@ export function TechniqueDialog({ open, onOpenChange, student }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className={`max-w-3xl max-h-[92vh] overflow-y-auto ${CAMERA_DIALOG_CLASS}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 pr-6">
             <Activity className="h-5 w-5 text-emerald-600" />
@@ -193,6 +200,20 @@ export function TechniqueDialog({ open, onOpenChange, student }: Props) {
             Koşu ve şut tekniği, yapay zekâ ile vücut iskeletinden analiz edilir. Video telefondan çıkmaz; yalnızca hesaplanan sayılar yorumlanır.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {fs.supported && (
+            <Button type="button" size="sm" variant="outline" onClick={fs.toggle}>
+              {fs.full ? <Minimize2 className="mr-1.5 h-4 w-4" /> : <Maximize2 className="mr-1.5 h-4 w-4" />}
+              {fs.full ? "Tam ekrandan çık" : "Tam ekran"}
+            </Button>
+          )}
+          {wake.supported && wake.held && (
+            <span className="inline-flex items-center gap-1">
+              <Sun className="h-3.5 w-3.5" /> Ekran açık kalıyor
+            </span>
+          )}
+        </div>
 
         <Tabs value={tab} onValueChange={(v) => v && setTab(v)}>
           <TabsList className="grid w-full grid-cols-2">
@@ -212,7 +233,7 @@ export function TechniqueDialog({ open, onOpenChange, student }: Props) {
                 </div>
                 <p className="text-sm text-muted-foreground">{GUIDE[kind]}</p>
 
-                <div className="relative w-full overflow-hidden rounded-lg bg-black" style={{ aspectRatio: String(aspect) }}>
+                <div className="relative mx-auto overflow-hidden rounded-lg bg-black" style={stageStyle(aspect)}>
                   <video ref={videoRef} playsInline muted className="absolute inset-0 h-full w-full object-contain" />
                   <canvas ref={overlay} className="pointer-events-none absolute inset-0 h-full w-full" width={640} height={Math.round(640 / aspect)} />
                   {recording && (
@@ -244,15 +265,15 @@ export function TechniqueDialog({ open, onOpenChange, student }: Props) {
 
                 <div className="flex flex-wrap gap-2">
                   {!recording ? (
-                    <Button onClick={beginCapture} disabled={!ready}>
+                    <Button size="lg" className={BIG_BTN} onClick={beginCapture} disabled={!ready}>
                       <Play className="mr-2 h-4 w-4" /> {source === "file" ? "Videoyu analiz et" : "Kaydı başlat"}
                     </Button>
                   ) : (
-                    <Button variant="destructive" onClick={finish}>
+                    <Button size="lg" className={BIG_BTN} variant="destructive" onClick={finish}>
                       <Square className="mr-2 h-4 w-4" /> Bitir ve analiz et
                     </Button>
                   )}
-                  <label className={`inline-flex cursor-pointer items-center rounded-md border px-3 py-2 text-sm font-medium hover:bg-accent ${recording ? "pointer-events-none opacity-50" : ""}`}>
+                  <label className={`inline-flex h-14 min-w-[140px] flex-1 cursor-pointer items-center justify-center rounded-md border px-3 text-base font-medium hover:bg-accent sm:h-11 sm:flex-none sm:text-sm ${recording ? "pointer-events-none opacity-50" : ""}`}>
                     <FileVideo className="mr-2 h-4 w-4" /> Videodan analiz (dosya seç)
                     <input type="file" accept="video/*" className="hidden" disabled={recording} onChange={(e) => pickFile(e.target.files?.[0])} />
                   </label>
@@ -322,11 +343,11 @@ export function TechniqueDialog({ open, onOpenChange, student }: Props) {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button onClick={save} disabled={saving || saved || result.metrics.length === 0} className="bg-emerald-600 hover:bg-emerald-700">
+                  <Button size="lg" onClick={save} disabled={saving || saved || result.metrics.length === 0} className={`${BIG_BTN} bg-emerald-600 hover:bg-emerald-700`}>
                     {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                     {saved ? "Kaydedildi" : "Analizi Kaydet"}
                   </Button>
-                  <Button variant="outline" onClick={reset} disabled={saving}>
+                  <Button size="lg" className={BIG_BTN} variant="outline" onClick={reset} disabled={saving}>
                     <RotateCcw className="mr-2 h-4 w-4" /> Yeni analiz
                   </Button>
                 </div>
