@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { normService } from "@/services/normService";
 import { companyService } from "@/services/companyService";
 import {
   analyzeStudentTests,
@@ -41,7 +42,9 @@ function safeName(name: string): string {
 export const performanceReportService = {
   async build(opts: BuildReportOptions): Promise<BuiltReport> {
     const { student, tests } = opts;
-    const stats = analyzeStudentTests(tests);
+    const base = analyzeStudentTests(tests, { age: student.age });
+    const schoolNorms = await normService.getSchoolNorms(student.age, normService.directionsOf(base));
+    const stats = Object.keys(schoolNorms).length > 0 ? analyzeStudentTests(tests, { age: student.age, schoolNorms }) : base;
     const school = await companyService.getPublicInfo();
     const groups = ((student as unknown as { student_groups?: { groups?: { name?: string } | null }[] }).student_groups ?? [])
       .map((sg) => sg.groups?.name)

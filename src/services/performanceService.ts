@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Tables } from "@/integrations/supabase/types";
+import { normService } from "@/services/normService";
 import {
   analyzeStudentTests,
   buildParentSummary,
@@ -66,7 +67,10 @@ export const performanceService = {
     student: { name: string; age?: number | null },
     tests: PerformanceTest[]
   ): Promise<StudentAnalysisResult> {
-    const stats = analyzeStudentTests(tests);
+    // Önce normsuz analizle yönleri çıkar, okul normlarını çek, sonra normlu analizi kur
+    const base = analyzeStudentTests(tests, { age: student.age });
+    const schoolNorms = await normService.getSchoolNorms(student.age, normService.directionsOf(base));
+    const stats = Object.keys(schoolNorms).length > 0 ? analyzeStudentTests(tests, { age: student.age, schoolNorms }) : base;
     const ruleBased: StudentAnalysisResult = {
       analysis: buildRuleBasedAnalysis(student.name, student.age, stats),
       parentSummary: buildParentSummary(stats),

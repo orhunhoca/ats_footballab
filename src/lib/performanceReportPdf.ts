@@ -1,5 +1,6 @@
 import type { StudentAnalysis, MetricSummary } from "@/lib/performanceAnalysis";
 import { formatNumber, formatUnit } from "@/lib/performanceAnalysis";
+import { NORM_LEVEL_LABEL, NORM_SOURCE_LABEL } from "@/lib/testNorms";
 
 /**
  * Veliye verilecek performans gelişim raporu (PDF). Türkçe karakterler için Liberation Sans (public/fonts)
@@ -282,6 +283,7 @@ export async function buildPerformanceReportPdf(input: PdfReportInput, assets?: 
 
   if (stats.metrics.length > 0) {
     sectionTitle("Test sonuçları");
+    const hasNorm = stats.metrics.some((m) => m.norm);
     const rows = stats.metrics.map((m: MetricSummary) => {
       const unit = formatUnit(m.unit);
       const change = m.changePct === null ? "-" : `${m.changePct > 0 ? "+" : m.changePct < 0 ? "−" : ""}%${formatNumber(Math.abs(m.changePct))}`;
@@ -293,18 +295,19 @@ export async function buildPerformanceReportPdf(input: PdfReportInput, assets?: 
         `${formatNumber(m.best)} ${unit}`.trim(),
         change,
         TREND_LABEL[m.trend] ?? "",
+        ...(hasNorm ? [m.norm ? NORM_LEVEL_LABEL[m.norm.level] : "-"] : []),
       ];
     });
     autoTable(doc, {
       startY: y,
-      head: [["Test", "Kategori", "İlk", "Son", "En iyi", "Değişim", "Durum"]],
+      head: [["Test", "Kategori", "İlk", "Son", "En iyi", "Değişim", "Durum", ...(hasNorm ? ["Yaş grubu"] : [])]],
       body: rows,
       margin: { left: M, right: M, bottom: FOOTER_H + 6 },
       theme: "grid",
       styles: { font: FONT, fontSize: 9, cellPadding: 2.2, textColor: [INK.r, INK.g, INK.b], lineColor: [229, 231, 235], lineWidth: 0.2 },
       headStyles: { fillColor: [BRAND.r, BRAND.g, BRAND.b], textColor: 255, fontStyle: "bold" },
       alternateRowStyles: { fillColor: [249, 250, 251] },
-      columnStyles: { 0: { fontStyle: "bold" }, 5: { halign: "right" }, 6: { halign: "center", fontStyle: "bold" } },
+      columnStyles: { 0: { fontStyle: "bold" }, 5: { halign: "right" }, 6: { halign: "center", fontStyle: "bold" }, 7: { halign: "center", fontStyle: "bold" } },
       didParseCell: (data) => {
         if (data.section !== "body") return;
         const m = stats.metrics[data.row.index];
@@ -313,9 +316,27 @@ export async function buildPerformanceReportPdf(input: PdfReportInput, assets?: 
           const c = m.trend === "improving" ? GOOD : m.trend === "declining" ? BAD : MUTED;
           data.cell.styles.textColor = [c.r, c.g, c.b];
         }
+        if (data.column.index === 7 && m.norm) {
+          const lv = m.norm.level;
+          const c = lv === "excellent" || lv === "good" ? GOOD : lv === "developing" ? WARN : MUTED;
+          data.cell.styles.textColor = [c.r, c.g, c.b];
+        }
       },
     });
-    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 9;
+    y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
+    if (hasNorm) {
+      const sources = Array.from(new Set(stats.metrics.filter((m) => m.norm).map((m) => NORM_SOURCE_LABEL[m.norm!.ref.source])));
+      font("normal", 7.5);
+      color(MUTED);
+      ensure(6);
+      doc.text(
+        `Yaş grubu: son ölçümün aynı yaştaki çocuklara göre konumu (${sources.join(" / ")}). Gelişmeli < Orta < İyi < Çok iyi. Bilimsel norm tablosu değildir.`,
+        M,
+        y + 1.5,
+      );
+      y += 4;
+    }
+    y += 5;
 
     // ---------------------------------------------------------- Değişim çubukları
     const withChange = stats.metrics.filter((m) => m.changePct !== null);
@@ -413,7 +434,7 @@ export async function buildPerformanceReportPdf(input: PdfReportInput, assets?: 
     if (contact) doc.text(sanitizePdfText(contact), M, fy + 5.5);
     doc.text(`Sayfa ${p} / ${pages}`, PAGE_W - M, fy + 1, { align: "right" });
     font("normal", 7);
-    doc.text("Bu rapor okulda kaydedilen ölçümlere dayanır; yaş grubu normu içermez ve tıbbi değerlendirme yerine geçmez.  © ATS - All Time Sports", M, fy + 10);
+    doc.text(`${stats.metrics.some((m) => m.norm) ? "Bu rapor okulda kaydedilen ölçümlere ve yaklaşık yaş referanslarına dayanır; bilimsel norm değildir," : "Bu rapor okulda kaydedilen ölçümlere dayanır; yaş grubu normu içermez,"} tıbbi değerlendirme yerine geçmez.  © ATS - All Time Sports`, M, fy + 10);
   }
 
   return doc.output("blob");

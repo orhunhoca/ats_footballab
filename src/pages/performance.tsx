@@ -69,6 +69,8 @@ import { performanceReportService } from "@/services/performanceReportService";
 import { PerformanceTestForm } from "@/components/students/PerformanceTestForm";
 import { SendPerformanceReportDialog } from "@/components/students/SendPerformanceReportDialog";
 import { MarkdownLite } from "@/components/MarkdownLite";
+import { NormComparisonCard } from "@/components/performance/NormComparisonCard";
+import { useStudentAnalysis } from "@/hooks/useStudentAnalysis";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -266,6 +268,8 @@ function PerformancePageInner() {
     const studentGroups = (student as any).student_groups || [];
     return matchesSearch && studentGroups.some((sg: any) => sg.group_id === selectedGroup);
   });
+
+  const studentAnalysis = useStudentAnalysis(selectedStudent?.age, tests);
 
   const filteredTests =
     selectedProtocolFilter === "all"
@@ -592,6 +596,8 @@ function PerformancePageInner() {
                       </CardContent>
                     </Card>
                   )}
+
+                  <NormComparisonCard analysis={studentAnalysis} age={selectedStudent?.age} />
 
                   {/* Performance Charts */}
                   {chartData.length > 0 && (

@@ -19,6 +19,7 @@ import { extractReport } from "./parse.ts";
 const SYSTEM_PROMPT = `Sen deneyimli bir çocuk/genç futbol gelişim analistisin. Bir futbol okulunun performans test verilerini yorumluyorsun.
 KESİN KURALLAR:
 - Yalnızca sana verilen verilere dayan. Veride olmayan sayı, norm, yaş grubu ortalaması veya tarih UYDURMA.
+- Bir testte "norm" alanı varsa çocuğun son ölçümünün yaş grubundaki konumunu (level: Gelişmeli/Orta/İyi/Çok iyi) verir. Bunu yorumlarken norm.source değerini (ör. "Başlangıç referansı" ya da "Okul ortalaması") belirt; "Başlangıç referansı" yaklaşıktır, kesin bilimsel norm gibi sunma. Norm alanı yoksa yaş grubu karşılaştırması yapma. Seviyeyi çocuğu etiketlemek için değil, gelişim hedefi belirlemek için kullan.
 - "direction": "lower" ise küçük değer daha iyidir (süre); "higher" ise büyük değer daha iyidir. change_pct pozitifse gelişim, negatifse gerilemedir.
 - Tek ölçümü olan testlerde eğilim yorumu yapma; "referans ölçüm" de.
 - Tıbbi teşhis, sakatlık tahmini veya yetenek etiketi (ör. "yetenekli değil") kullanma. Çocuğu kıyaslayıcı/olumsuz değil, gelişim odaklı anlat.
@@ -65,6 +66,18 @@ serve(async (req) => {
         trend: clampStr(m.trend, 20),
         first_date: clampStr(m.first_date, 10),
         latest_date: clampStr(m.latest_date, 10),
+        norm: (() => {
+          const n = m.norm as Record<string, unknown> | null | undefined;
+          if (!n || typeof n !== "object") return null;
+          return {
+            level: clampStr(n.level, 20),
+            source: clampStr(n.source, 30),
+            median: clampNum(n.median),
+            weak: clampNum(n.weak),
+            strong: clampNum(n.strong),
+            sample_size: clampNum(n.sample_size),
+          };
+        })(),
       })),
       missing_categories: Array.isArray(body?.missing_categories)
         ? body.missing_categories.slice(0, 10).map((c: unknown) => clampStr(c, 40))
