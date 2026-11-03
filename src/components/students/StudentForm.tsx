@@ -11,6 +11,7 @@ import { groupService } from "@/services/groupService";
 import { storageService } from "@/services/storageService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
 import { paymentService, type PaymentMethod } from "@/services/paymentService";
+import { chargeService } from "@/services/chargeService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Camera, Upload, X } from "lucide-react";
@@ -18,6 +19,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Tables } from "@/integrations/supabase/types";
 import { BranchSelect } from "@/components/BranchSelect";
 import { useBranchPermission } from "@/hooks/useBranchPermission";
+import Link from "next/link";
 import { useUserRole } from "@/hooks/useUserRole";
 
 // Define extended student type with relations
@@ -38,6 +40,8 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   // Ödeme/kıyafet ödemesi bölümleri yalnızca yönetim (admin + yönetici) içindir
   const { isManagement: canManagePayments } = useUserRole();
   const [branchId, setBranchId] = useState("");
+  // Velinin KVKK Aydınlatma Metni'nden haberdar edildiği (yeni kayıtta zorunlu)
+  const [kvkkConfirmed, setKvkkConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
@@ -111,6 +115,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         });
         
         setBranchId(student.branch_id || defaultBranchId);
+        setKvkkConfirmed(false);
 
         // Load student's current group
         if (student.student_groups && student.student_groups.length > 0) {
@@ -145,6 +150,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           winter_clothing_price: "3000"
         });
         setBranchId(defaultBranchId);
+        setKvkkConfirmed(false);
         setSelectedGroup("");
         setSelectedPlan(null);
         setPhotoFile(null);
@@ -307,6 +313,16 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       return;
     }
 
+    // Yeni kayıt, velinin KVKK Aydınlatma Metni onaylanmadan tamamlanamaz
+    if (!student && !kvkkConfirmed) {
+      toast({
+        title: "KVKK Onayı Gerekli",
+        description: "Velinin KVKK Aydınlatma Metni'nden haberdar edildiğini onaylamadan kayıt yapılamaz.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!branchId) {
       toast({
         title: "Eksik Bilgi",
@@ -358,7 +374,13 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
       const age = calculateAge(formData.birth_date);
 
+      const { data: authData } = await supabase.auth.getUser();
+
       const studentData = {
+        // Onay kutusu işaretliyse onay tarihi ve onayı kaydeden kullanıcı yazılır
+        ...(kvkkConfirmed
+          ? { kvkk_consent_at: new Date().toISOString(), kvkk_consent_by: authData.user?.id ?? null }
+          : {}),
         name: formData.name,
         branch_id: branchId,
         birth_date: formData.birth_date,
@@ -504,6 +526,34 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         });
       }
       
+      // Kayıtta seçilen plan/kıyafet bilgisinden borç kalemleri (yalnız yönetim; yinelenmez)
+      if (canManagePayments && studentId) {
+        try {
+          const startDate = formData.registration_start_date || new Date().toISOString().slice(0, 10);
+          const regAmount = formData.payment_amount ? parseFloat(formData.payment_amount) : 0;
+          const hasSecond = secondInstallmentAmount > 0 && !!installmentDate;
+          await chargeService.ensureCharges(studentId, [
+            { chargeType: "registration", amount: regAmount, dueDate: startDate, installmentNo: hasSecond ? 1 : null, description: formData.payment_plan || undefined },
+            ...(hasSecond
+              ? [{ chargeType: "registration" as const, amount: secondInstallmentAmount, dueDate: String(installmentDate).slice(0, 10), installmentNo: 2, description: formData.payment_plan || undefined }]
+              : []),
+            ...(formData.summer_clothing_paid && formData.summer_clothing_price
+              ? [{ chargeType: "summer_clothing" as const, amount: parseFloat(formData.summer_clothing_price), dueDate: startDate }]
+              : []),
+            ...(formData.winter_clothing_paid && formData.winter_clothing_price
+              ? [{ chargeType: "winter_clothing" as const, amount: parseFloat(formData.winter_clothing_price), dueDate: startDate }]
+              : []),
+          ]);
+        } catch (chargeError) {
+          console.error("Borç kalemi oluşturulamadı:", chargeError);
+          toast({
+            title: "Borç kalemi oluşturulamadı",
+            description: "Öğrenci kaydedildi ancak borç eklenemedi. Öğrenci kartındaki Hesap Özeti'nden ekleyebilirsiniz.",
+            variant: "destructive",
+          });
+        }
+      }
+
       setFormData({
         name: "",
         birth_date: "",
@@ -978,6 +1028,36 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
               </div>
             </div>
           </div>}
+
+          {/* KVKK onayı: yeni kayıtta zorunlu */}
+          <div className="mt-6 rounded-md border-2 border-emerald-200 bg-emerald-50 p-3">
+            {student?.kvkk_consent_at && !kvkkConfirmed ? (
+              <p className="text-sm text-emerald-800">
+                ✓ Velinin KVKK onayı alındı ({new Date(student.kvkk_consent_at).toLocaleDateString("tr-TR")}).
+              </p>
+            ) : (
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="kvkk_confirmed"
+                  checked={kvkkConfirmed}
+                  onCheckedChange={(v) => setKvkkConfirmed(v === true)}
+                  className="mt-1"
+                />
+                <Label htmlFor="kvkk_confirmed" className="cursor-pointer text-sm leading-relaxed">
+                  Velinin{" "}
+                  <Link href="/kvkk" target="_blank" className="font-medium text-emerald-700 underline">
+                    KVKK Aydınlatma Metni
+                  </Link>
+                  'nden haberdar edildiğini ve{" "}
+                  <Link href="/acik-riza" target="_blank" className="font-medium text-emerald-700 underline">
+                    Açık Rıza Metni
+                  </Link>
+                  'ni imzaladığını onaylıyorum.{" "}
+                  {!student ? <span className="font-semibold">(Zorunlu)</span> : <span className="text-gray-600">(Daha önce alınmadıysa işaretleyin)</span>}
+                </Label>
+              </div>
+            )}
+          </div>
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>

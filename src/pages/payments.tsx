@@ -4,6 +4,8 @@ import { SEO } from "@/components/SEO";
 import { BranchFilterBar } from "@/components/BranchFilterBar";
 import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
+import { companyService, type BankAccount } from "@/services/companyService";
+import { formatIban } from "@/lib/iban";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { chargeService, type StudentBalance } from "@/services/chargeService";
 import { paymentService, type PaymentMethod, type PaymentType } from "@/services/paymentService";
 import { studentService } from "@/services/studentService";
 import { CreditCard, Wallet, Building2, Loader2, TrendingUp, AlertCircle, CheckCircle2, Link as LinkIcon, Smartphone, MessageCircle } from "lucide-react";
@@ -27,6 +30,7 @@ function PaymentsPageInner() {
   const { selectedBranchId, branches, getBranchName } = useBranch();
   const [payments, setPayments] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  const [balances, setBalances] = useState<Record<string, StudentBalance>>({});
   const [stats, setStats] = useState({
     totalRevenue: 0,
     pendingPayments: 0,
@@ -37,6 +41,7 @@ function PaymentsPageInner() {
   const [isOnlineDialogOpen, setIsOnlineDialogOpen] = useState(false);
   const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [creatingLink, setCreatingLink] = useState(false);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   
   // Manual Payment Form
   const [formData, setFormData] = useState({
@@ -45,6 +50,7 @@ function PaymentsPageInner() {
     payment_method: "Nakit" as PaymentMethod,
     payment_type: "registration" as PaymentType,
     installment_number: "",
+    bank_account_id: "",
     notes: ""
   });
 
@@ -91,6 +97,16 @@ function PaymentsPageInner() {
       setPayments(paymentsData);
       setStudents(studentsData);
       setStats(statsData);
+      try {
+        setBalances(await chargeService.getBalances(selectedBranchId));
+      } catch {
+        setBalances({});
+      }
+      try {
+        setBankAccounts(await companyService.getBankAccounts());
+      } catch {
+        setBankAccounts([]);
+      }
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -122,6 +138,7 @@ function PaymentsPageInner() {
         paymentMethod: formData.payment_method,
         paymentType: formData.payment_type,
         installmentNumber: formData.installment_number ? parseInt(formData.installment_number) : undefined,
+        bankAccountId: formData.payment_method === "Havale/EFT" ? formData.bank_account_id || null : null,
         notes: formData.notes || undefined
       });
 
@@ -137,6 +154,7 @@ function PaymentsPageInner() {
         payment_method: "Nakit",
         payment_type: "registration",
         installment_number: "",
+        bank_account_id: "",
         notes: ""
       });
       loadData();
@@ -448,6 +466,40 @@ function PaymentsPageInner() {
                       </Select>
                     </div>
 
+                    {formData.payment_method === "Havale/EFT" && (() => {
+                      // Öğrencinin şubesine ait veya tüm şubeler için tanımlı aktif hesaplar
+                      const studentBranch = students.find((s) => s.id === formData.student_id)?.branch_id;
+                      const options = bankAccounts.filter(
+                        (a) => a.is_active && (!a.branch_id || !studentBranch || a.branch_id === studentBranch)
+                      );
+                      return (
+                        <div className="grid gap-2">
+                          <Label>Paranın Yattığı Hesap</Label>
+                          {options.length === 0 ? (
+                            <p className="text-xs text-gray-600">
+                              Tanımlı banka hesabı yok. Ayarlar → Şirket ve Banka bölümünden hesap ekleyebilirsiniz.
+                            </p>
+                          ) : (
+                            <Select
+                              value={formData.bank_account_id}
+                              onValueChange={(v) => setFormData({ ...formData, bank_account_id: v })}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Hesap seçin (isteğe bağlı)" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {options.map((a) => (
+                                  <SelectItem key={a.id} value={a.id}>
+                                    {a.bank_name} · {formatIban(a.iban)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     <div className="grid gap-2">
                       <Label htmlFor="installment">Taksit Numarası</Label>
                       <Input
@@ -576,6 +628,9 @@ function PaymentsPageInner() {
                       <p className="text-base sm:text-lg font-bold text-green-600">₺{payment.amount.toLocaleString("tr-TR")}</p>
                       <Badge variant="outline" className="mt-1">
                         {payment.payment_method}
+                        {payment.bank_account_id && bankAccounts.find((a) => a.id === payment.bank_account_id)
+                          ? ` · ${bankAccounts.find((a) => a.id === payment.bank_account_id)?.bank_name}`
+                          : ""}
                       </Badge>
                     </div>
                   </div>
@@ -591,6 +646,7 @@ function PaymentsPageInner() {
         onOpenChange={setIsReminderOpen}
         students={students}
         payments={payments}
+        balances={balances}
       />
     </div>
   );

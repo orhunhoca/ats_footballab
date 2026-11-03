@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { Brand } from "@/components/Brand";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { authService } from "@/services/authService";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import { parentService } from "@/services/parentService";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +17,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const [parentSignupOpen, setParentSignupOpen] = useState(false);
+  useEffect(() => {
+    parentService.isRegistrationOpen().then(setParentSignupOpen);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,6 +93,14 @@ export default function LoginPage() {
               )}
             </Button>
           </form>
+          {parentSignupOpen && (
+            <p className="mt-4 text-center text-sm text-gray-600">
+              Veli misiniz?{" "}
+              <Link href="/veli-kayit" className="font-medium text-emerald-700 underline">
+                Davet kodunuzla kayıt olun
+              </Link>
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>

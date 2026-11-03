@@ -60,6 +60,56 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          account_holder: string
+          bank_branch: string | null
+          bank_name: string
+          branch_id: string | null
+          created_at: string
+          description: string | null
+          iban: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          account_holder: string
+          bank_branch?: string | null
+          bank_name: string
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          iban: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          account_holder?: string
+          bank_branch?: string | null
+          bank_name?: string
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          iban?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -167,6 +217,99 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      company_settings: {
+        Row: {
+          parent_portal_enabled: boolean
+          address: string | null
+          email: string | null
+          id: string
+          kep_address: string | null
+          kvkk_contact_email: string | null
+          legal_name: string | null
+          mersis_no: string | null
+          phone: string | null
+          singleton: boolean
+          tax_number: string | null
+          tax_office: string | null
+          updated_at: string
+          verbis_number: string | null
+          website: string | null
+        }
+        Insert: {
+          parent_portal_enabled?: boolean
+          address?: string | null
+          email?: string | null
+          id?: string
+          kep_address?: string | null
+          kvkk_contact_email?: string | null
+          legal_name?: string | null
+          mersis_no?: string | null
+          phone?: string | null
+          singleton?: boolean
+          tax_number?: string | null
+          tax_office?: string | null
+          updated_at?: string
+          verbis_number?: string | null
+          website?: string | null
+        }
+        Update: {
+          parent_portal_enabled?: boolean
+          address?: string | null
+          email?: string | null
+          id?: string
+          kep_address?: string | null
+          kvkk_contact_email?: string | null
+          legal_name?: string | null
+          mersis_no?: string | null
+          phone?: string | null
+          singleton?: boolean
+          tax_number?: string | null
+          tax_office?: string | null
+          updated_at?: string
+          verbis_number?: string | null
+          website?: string | null
+        }
+        Relationships: []
+      }
+      consents: {
+        Row: {
+          accepted: boolean
+          accepted_at: string
+          document_type: string
+          document_version: string
+          id: string
+          ip: string | null
+          source: string
+          student_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted: boolean
+          accepted_at?: string
+          document_type: string
+          document_version: string
+          id?: string
+          ip?: string | null
+          source?: string
+          student_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted?: boolean
+          accepted_at?: string
+          document_type?: string
+          document_version?: string
+          id?: string
+          ip?: string | null
+          source?: string
+          student_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       document_templates: {
         Row: {
@@ -387,6 +530,7 @@ export type Database = {
           enabled: boolean | null
           hours_before: number | null
           id: string
+          message_text: string | null
           send_time: string | null
           setting_type: string
           template_name: string
@@ -398,6 +542,7 @@ export type Database = {
           enabled?: boolean | null
           hours_before?: number | null
           id?: string
+          message_text?: string | null
           send_time?: string | null
           setting_type: string
           template_name: string
@@ -409,6 +554,7 @@ export type Database = {
           enabled?: boolean | null
           hours_before?: number | null
           id?: string
+          message_text?: string | null
           send_time?: string | null
           setting_type?: string
           template_name?: string
@@ -532,8 +678,66 @@ export type Database = {
           },
         ]
       }
+      parent_invites: {
+        Row: {
+          code_hash: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          is_active: boolean
+          max_uses: number
+          student_id: string
+          used_count: number
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          student_id: string
+          used_count?: number
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          student_id?: string
+          used_count?: number
+        }
+        Relationships: []
+      }
+      parent_students: {
+        Row: {
+          created_at: string
+          parent_user_id: string
+          relation: string | null
+          student_id: string
+        }
+        Insert: {
+          created_at?: string
+          parent_user_id: string
+          relation?: string | null
+          student_id: string
+        }
+        Update: {
+          created_at?: string
+          parent_user_id?: string
+          relation?: string | null
+          student_id?: string
+        }
+        Relationships: []
+      }
       payment_history: {
         Row: {
+          bank_account_id: string | null
           branch_id: string | null
           amount: number
           created_at: string | null
@@ -548,6 +752,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bank_account_id?: string | null
           branch_id?: string | null
           amount: number
           created_at?: string | null
@@ -562,6 +767,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bank_account_id?: string | null
           branch_id?: string | null
           amount?: number
           created_at?: string | null
@@ -576,6 +782,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_history_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_history_branch_id_fkey"
             columns: ["branch_id"]
@@ -598,6 +811,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      student_charges: {
+        Row: {
+          id: string
+          student_id: string
+          branch_id: string | null
+          charge_type: string
+          description: string | null
+          amount: number
+          due_date: string
+          installment_no: number | null
+          is_cancelled: boolean
+          cancelled_at: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          branch_id?: string | null
+          charge_type?: string
+          description?: string | null
+          amount: number
+          due_date: string
+          installment_no?: number | null
+          is_cancelled?: boolean
+          cancelled_at?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          branch_id?: string | null
+          charge_type?: string
+          description?: string | null
+          amount?: number
+          due_date?: string
+          installment_no?: number | null
+          is_cancelled?: boolean
+          cancelled_at?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
       }
       payment_plans: {
         Row: {
@@ -876,6 +1134,8 @@ export type Database = {
       }
       students: {
         Row: {
+          kvkk_consent_at: string | null
+          kvkk_consent_by: string | null
           branch_id: string | null
           address: string | null
           age: number
@@ -914,6 +1174,8 @@ export type Database = {
           work_group_hour: string | null
         }
         Insert: {
+          kvkk_consent_at?: string | null
+          kvkk_consent_by?: string | null
           branch_id?: string | null
           address?: string | null
           age: number
@@ -952,6 +1214,8 @@ export type Database = {
           work_group_hour?: string | null
         }
         Update: {
+          kvkk_consent_at?: string | null
+          kvkk_consent_by?: string | null
           branch_id?: string | null
           address?: string | null
           age?: number
@@ -1467,10 +1731,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      student_charge_status: {
+        Row: {
+          id: string
+          student_id: string
+          branch_id: string | null
+          charge_type: string
+          description: string | null
+          amount: number
+          due_date: string
+          installment_no: number | null
+          created_at: string
+          paid_amount: number
+          remaining_amount: number
+          is_overdue: boolean
+        }
+        Relationships: []
+      }
+      student_balances: {
+        Row: {
+          student_id: string
+          branch_id: string | null
+          total_charged: number
+          total_paid: number
+          balance: number
+          overdue_amount: number
+          next_due_date: string | null
+          next_due_amount: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_registration_renewals: { Args: never; Returns: undefined }
+      get_public_company_info: { Args: never; Returns: Json }
+      is_parent_registration_open: { Args: never; Returns: boolean }
+      create_parent_invite: {
+        Args: { p_student_id: string; p_max_uses?: number; p_days?: number }
+        Returns: string
+      }
+      revoke_parent_invite: { Args: { p_invite_id: string }; Returns: undefined }
+      list_student_parents: {
+        Args: { p_student_id: string }
+        Returns: {
+          parent_user_id: string
+          full_name: string | null
+          email: string | null
+          relation: string | null
+          linked_at: string
+          is_active: boolean
+        }[]
+      }
+      get_my_children: { Args: never; Returns: Json }
+      get_my_child_ledger: { Args: { p_student_id: string }; Returns: Json }
+      get_my_child_attendance: { Args: { p_student_id: string; p_limit?: number }; Returns: Json }
+      get_my_child_performance: { Args: { p_student_id: string }; Returns: Json }
+      get_my_child_gallery: { Args: { p_student_id: string }; Returns: Json }
     }
     Enums: {
       test_type:

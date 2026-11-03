@@ -22,7 +22,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const { isAdmin, isManagement } = useUserRole();
+  const { isAdmin, isManagement, isParent, loading: roleLoading } = useUserRole();
   const [userName, setUserName] = useState("");
   const router = useRouter();
   const { toast } = useToast();
@@ -30,6 +30,11 @@ export default function Home() {
   useEffect(() => {
     checkUser();
   }, []);
+
+  // Veliler personel panelini görmez; kendi portalına yönlendirilir
+  useEffect(() => {
+    if (!roleLoading && isParent) router.replace("/portal");
+  }, [roleLoading, isParent, router]);
 
   const checkUser = async () => {
     const user = await authService.getCurrentUser();

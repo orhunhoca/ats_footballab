@@ -35,7 +35,7 @@ export function Navigation() {
 
   // Rol bazlı menü: admin = her şey; yönetici = tüm operasyon (şube/ayar/kullanıcı hariç);
   // antrenör = öğrenci ve deneme öğrencisi kaydı, yoklama, performans, raporlar
-  type MenuItem = { href: string; label: string; icon: typeof Users; roles: ("admin" | "manager" | "coach")[] };
+  type MenuItem = { href: string; label: string; icon: typeof Users; roles: ("admin" | "manager" | "coach" | "parent")[] };
   const allItems: MenuItem[] = [
     { href: "/students", label: "Öğrenciler", icon: Users, roles: ["admin", "manager", "coach"] },
     { href: "/trial-students", label: "Deneme Öğrencileri", icon: Users, roles: ["admin", "manager", "coach"] },
@@ -50,6 +50,7 @@ export function Navigation() {
     { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "manager", "coach"] },
     { href: "/users", label: "Kullanıcılar", icon: ShieldCheck, roles: ["admin"] },
     { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
+    { href: "/portal", label: "Veli Portalı", icon: Home, roles: ["parent"] },
   ];
   const menuItems = allItems.filter((item) => role !== null && item.roles.includes(role));
 

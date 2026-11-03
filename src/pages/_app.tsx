@@ -5,12 +5,14 @@ import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
 import { authService } from "@/services/authService";
 import { BranchProvider } from "@/contexts/BranchContext";
+import { Footer } from "@/components/Footer";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthed, setIsAuthed] = useState(false);
-  const publicPaths = ["/login"];
+  // Giriş gerektirmeyen sayfalar (hukuki metinler herkese açıktır)
+  const publicPaths = ["/login", "/veli-kayit", "/kvkk", "/acik-riza", "/cerez-politikasi"];
 
   useEffect(() => {
     // Check authentication on mount and route change
@@ -26,7 +28,7 @@ export default function App({ Component, pageProps }: AppProps) {
 
         if (!isPublicPath && !isLoggedIn) {
           router.push("/login");
-        } else if (isPublicPath && isLoggedIn) {
+        } else if (router.pathname === "/login" && isLoggedIn) {
           router.push("/");
         }
       } catch (error) {
@@ -53,6 +55,7 @@ export default function App({ Component, pageProps }: AppProps) {
   return (
     <BranchProvider enabled={isAuthed && !publicPaths.includes(router.pathname)}>
       <Component {...pageProps} />
+      <Footer />
       <Toaster />
     </BranchProvider>
   );

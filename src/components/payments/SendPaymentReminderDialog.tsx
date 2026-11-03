@@ -10,6 +10,7 @@ import { whatsappService } from "@/services/whatsappService";
 import { getParentRecipients } from "@/lib/parentContacts";
 import { formatTrPhone } from "@/lib/phone";
 import { useToast } from "@/hooks/use-toast";
+import type { StudentBalance } from "@/services/chargeService";
 
 interface Props {
   open: boolean;
@@ -18,6 +19,8 @@ interface Props {
   students: any[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   payments: any[];
+  /** Borç kalemi bulunan öğrencilerin bakiyesi; varsa hatırlatma buna göre hazırlanır */
+  balances?: Record<string, StudentBalance>;
 }
 
 type RowResult = { status: "sending" | "ok" | "error"; error?: string };
@@ -26,7 +29,7 @@ const PAID_STATUSES = ["paid", "ödendi"];
 
 const toDateInput = (value?: string | null) => (value ? String(value).slice(0, 10) : new Date().toISOString().slice(0, 10));
 
-export function SendPaymentReminderDialog({ open, onOpenChange, students, payments }: Props) {
+export function SendPaymentReminderDialog({ open, onOpenChange, students, payments, balances = {} }: Props) {
   const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Record<string, boolean>>({});
@@ -37,7 +40,8 @@ export function SendPaymentReminderDialog({ open, onOpenChange, students, paymen
   const [sending, setSending] = useState(false);
   const [results, setResults] = useState<Record<string, RowResult>>({});
 
-  // Borcu kalan aktif öğrenciler: kalan = ödeme tutarı − yapılan ödemeler
+  // Borcu kalan aktif öğrenciler. Borç kalemi tanımlıysa gerçek bakiyeden (geciken tutar ya da sıradaki vade),
+  // tanımlı değilse eski yöntemle (ödeme tutarı − yapılan ödemeler) hesaplanır.
   const candidates = useMemo(() => {
     const paidByStudent = new Map<string, number>();
     for (const p of payments) {
@@ -45,13 +49,26 @@ export function SendPaymentReminderDialog({ open, onOpenChange, students, paymen
     }
     return students
       .filter((s) => !s.status || s.status === "Aktif")
-      .filter((s) => !PAID_STATUSES.includes(String(s.payment_status || "").toLowerCase()))
       .map((s) => {
+        const b = balances[s.id];
+        if (b && Number(b.total_charged) > 0) {
+          const overdue = Number(b.overdue_amount || 0);
+          const remaining = overdue > 0 ? overdue : Number(b.next_due_amount || 0);
+          return { student: s, remaining, dueDate: b.next_due_date, recipients: getParentRecipients(s) };
+        }
+        if (PAID_STATUSES.includes(String(s.payment_status || "").toLowerCase())) {
+          return { student: s, remaining: 0, dueDate: null as string | null, recipients: getParentRecipients(s) };
+        }
         const remaining = Math.max(0, Number(s.payment_amount || 0) - (paidByStudent.get(s.id) || 0));
-        return { student: s, remaining, recipients: getParentRecipients(s) };
+        return {
+          student: s,
+          remaining,
+          dueDate: (s.installment_date || s.registration_end_date || null) as string | null,
+          recipients: getParentRecipients(s),
+        };
       })
       .filter((c) => c.remaining > 0);
-  }, [students, payments]);
+  }, [students, payments, balances]);
 
   useEffect(() => {
     if (!open) return;
@@ -71,7 +88,7 @@ export function SendPaymentReminderDialog({ open, onOpenChange, students, paymen
     setAmounts(Object.fromEntries(candidates.map((c) => [c.student.id, String(c.remaining)])));
     setDates(
       Object.fromEntries(
-        candidates.map((c) => [c.student.id, toDateInput(c.student.installment_date || c.student.registration_end_date)])
+        candidates.map((c) => [c.student.id, toDateInput(c.dueDate)])
       )
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps

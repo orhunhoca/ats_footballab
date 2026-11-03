@@ -6,14 +6,16 @@ import { supabase } from "@/integrations/supabase/client";
  * manager : yönetici — tüm şubelerin öğrenci/yoklama/ödeme/rapor verilerine ulaşır
  * coach   : antrenör — yalnızca kendi şubesinin öğrenci bilgisi (salt okunur), yoklama,
  *           performans testleri ve raporları
+ * parent  : veli — yalnızca kendi portalı (/portal); personel ekranlarına erişemez
  * Veritabanında antrenör rolü "user" olarak saklanır.
  */
-export type UserRole = "admin" | "manager" | "coach" | null;
+export type UserRole = "admin" | "manager" | "coach" | "parent" | null;
 
 export function roleFromProfile(dbRole: string | null | undefined): UserRole {
   if (dbRole === "admin") return "admin";
   if (dbRole === "manager") return "manager";
   if (dbRole === "user") return "coach";
+  if (dbRole === "parent") return "parent";
   return null; // pending veya bilinmeyen: hiçbir yetki yok
 }
 
@@ -75,6 +77,7 @@ export function useUserRole() {
   /** admin + yönetici: tüm şubeler, ödemeler, iletişim */
   const isManagement = role === "admin" || role === "manager";
   const isCoach = role === "coach";
+  const isParent = role === "parent";
 
   /** Admin/yönetici veya "tüm şubeler" yetkili antrenör: şube seçebilir */
   const canSeeAllBranches = isManagement || (isCoach && coachBranchAccess === "all");
@@ -86,6 +89,7 @@ export function useUserRole() {
     isManager: role === "manager",
     isManagement,
     isCoach,
+    isParent,
     coachBranchId,
     coachBranchAccess,
     canSeeAllBranches,

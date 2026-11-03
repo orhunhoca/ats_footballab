@@ -10,11 +10,14 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { authService } from "@/services/authService";
 import { whatsappService } from "@/services/whatsappService";
 import { scheduledMessageService } from "@/services/scheduledMessageService";
+import { AutoMessageEditDialog } from "@/components/settings/AutoMessageEditDialog";
+import type { AutoMessageType } from "@/lib/autoMessages";
 import { iyzicoService } from "@/services/iyzicoService";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { BranchManager } from "@/components/settings/BranchManager";
-import { Settings, Shield, Bell, Building2, User, Loader2, MessageSquare, CheckCircle2, AlertCircle, CalendarClock, CreditCard } from "lucide-react";
+import { CompanyBankSettings } from "@/components/settings/CompanyBankSettings";
+import { Settings, Shield, Bell, Building2, User, Loader2, MessageSquare, CheckCircle2, AlertCircle, CalendarClock, CreditCard, Landmark, Pencil } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -67,6 +70,8 @@ export default function SettingsPage() {
   const [testingWhatsapp, setTestingWhatsapp] = useState(false);
 
   // Scheduler settings
+  const [messageTexts, setMessageTexts] = useState<Record<string, string | null>>({});
+  const [editingMessage, setEditingMessage] = useState<AutoMessageType | null>(null);
   const [schedulerSettings, setSchedulerSettings] = useState({
     training_reminder_enabled: false,
     training_reminder_hours_before: 1,
@@ -104,6 +109,7 @@ export default function SettingsPage() {
   const loadSchedulerSettings = async () => {
     try {
       const schedSettings = await scheduledMessageService.getSchedulerSettings();
+      setMessageTexts(Object.fromEntries(schedSettings.map((r) => [r.setting_type, r.message_text])));
       if (schedSettings.length > 0) {
         const training = schedSettings.find(s => s.setting_type === "training_reminder");
         const payment = schedSettings.find(s => s.setting_type === "payment_reminder");
@@ -398,6 +404,10 @@ export default function SettingsPage() {
                 <Building2 className="w-4 h-4 mr-2" />
                 Okul Ayarları
               </TabsTrigger>
+              <TabsTrigger value="company">
+                <Landmark className="w-4 h-4 mr-2" />
+                Şirket ve Banka
+              </TabsTrigger>
               <TabsTrigger value="whatsapp">
                 <MessageSquare className="w-4 h-4 mr-2" />
                 WhatsApp
@@ -557,6 +567,10 @@ export default function SettingsPage() {
             </TabsContent>
 
             {/* School Settings Tab */}
+            <TabsContent value="company">
+              <CompanyBankSettings />
+            </TabsContent>
+
             <TabsContent value="school" className="space-y-6">
               <BranchManager />
 
@@ -631,7 +645,7 @@ export default function SettingsPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
                     <div className="space-y-0.5">
                       <Label className="text-base">WhatsApp Entegrasyonu</Label>
                       <p className="text-sm text-muted-foreground">
@@ -747,7 +761,7 @@ export default function SettingsPage() {
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Antrenman Hatırlatıcı */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
                     <div className="space-y-0.5">
                       <Label className="text-base">Antrenman Hatırlatıcısı</Label>
                       <p className="text-sm text-muted-foreground">
@@ -771,6 +785,10 @@ export default function SettingsPage() {
                           <span className="text-sm text-muted-foreground">saat önce</span>
                         </div>
                       )}
+                      <Button variant="outline" size="sm" onClick={() => setEditingMessage("training_reminder")}>
+                        <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                        Mesajı Düzenle
+                      </Button>
                       <Switch
                         checked={schedulerSettings.training_reminder_enabled}
                         onCheckedChange={(checked) =>
@@ -781,52 +799,77 @@ export default function SettingsPage() {
                   </div>
 
                   {/* Ödeme Hatırlatıcı */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
                     <div className="space-y-0.5">
                       <Label className="text-base">Ödeme Hatırlatıcısı</Label>
                       <p className="text-sm text-muted-foreground">
                         Ödeme günü yaklaşan velilere otomatik hatırlatma (15 gün, 7 gün ve son gün)
                       </p>
                     </div>
-                    <Switch
-                      checked={schedulerSettings.payment_reminder_enabled}
-                      onCheckedChange={(checked) =>
-                        setSchedulerSettings({ ...schedulerSettings, payment_reminder_enabled: checked })
-                      }
-                    />
+                    <div className="flex items-center gap-3">
+                      <Button variant="outline" size="sm" onClick={() => setEditingMessage("payment_reminder")}>
+                        <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                        Mesajı Düzenle
+                      </Button>
+                      <Switch
+                        checked={schedulerSettings.payment_reminder_enabled}
+                        onCheckedChange={(checked) =>
+                          setSchedulerSettings({ ...schedulerSettings, payment_reminder_enabled: checked })
+                        }
+                      />
+                    </div>
                   </div>
 
                   {/* Doğum Günü Kutlaması */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
                     <div className="space-y-0.5">
                       <Label className="text-base">Doğum Günü Kutlaması</Label>
                       <p className="text-sm text-muted-foreground">
                         Öğrencilerin doğum günlerinde otomatik kutlama mesajı gönder (09:00)
                       </p>
                     </div>
-                    <Switch
-                      checked={schedulerSettings.birthday_enabled}
-                      onCheckedChange={(checked) =>
-                        setSchedulerSettings({ ...schedulerSettings, birthday_enabled: checked })
-                      }
-                    />
+                    <div className="flex items-center gap-3">
+                      <Button variant="outline" size="sm" onClick={() => setEditingMessage("birthday_greeting")}>
+                        <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                        Mesajı Düzenle
+                      </Button>
+                      <Switch
+                        checked={schedulerSettings.birthday_enabled}
+                        onCheckedChange={(checked) =>
+                          setSchedulerSettings({ ...schedulerSettings, birthday_enabled: checked })
+                        }
+                      />
+                    </div>
                   </div>
 
                   {/* Yıl Dönümü Kutlaması */}
-                  <div className="flex items-center justify-between p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-4 border rounded-lg bg-slate-50 dark:bg-slate-900/50">
                     <div className="space-y-0.5">
                       <Label className="text-base">Kayıt Yıl Dönümü</Label>
                       <p className="text-sm text-muted-foreground">
                         Kayıt yıl dönümlerinde tebrik mesajı gönder (10:00)
                       </p>
                     </div>
-                    <Switch
-                      checked={schedulerSettings.anniversary_enabled}
-                      onCheckedChange={(checked) =>
-                        setSchedulerSettings({ ...schedulerSettings, anniversary_enabled: checked })
-                      }
-                    />
+                    <div className="flex items-center gap-3">
+                      <Button variant="outline" size="sm" onClick={() => setEditingMessage("anniversary_greeting")}>
+                        <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                        Mesajı Düzenle
+                      </Button>
+                      <Switch
+                        checked={schedulerSettings.anniversary_enabled}
+                        onCheckedChange={(checked) =>
+                          setSchedulerSettings({ ...schedulerSettings, anniversary_enabled: checked })
+                        }
+                      />
+                    </div>
                   </div>
+
+                  <AutoMessageEditDialog
+                    type={editingMessage}
+                    currentText={editingMessage ? messageTexts[editingMessage] ?? null : null}
+                    onClose={() => setEditingMessage(null)}
+                    onSaved={(t, text) => setMessageTexts((m) => ({ ...m, [t]: text }))}
+                  />
 
                   <div className="pt-4 flex justify-end">
                     <Button onClick={handleSaveSchedulerSettings} disabled={saving}>
