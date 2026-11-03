@@ -9,6 +9,9 @@ import { groupService } from "@/services/groupService";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
+import { BranchSelect } from "@/components/BranchSelect";
+import { useBranchPermission } from "@/hooks/useBranchPermission";
+
 type Group = Tables<"groups">;
 
 interface TrialStudentFormProps {
@@ -29,6 +32,25 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { locked: branchLocked, formDefaultBranchId: defaultBranchId } = useBranchPermission();
+  const [branchId, setBranchId] = useState(defaultBranchId);
+
+  // Şubeler yüklendikten sonra varsayılanı doldur
+  useEffect(() => {
+    if (!branchId && defaultBranchId) setBranchId(defaultBranchId);
+  }, [branchId, defaultBranchId]);
+
+  // Seçilen şubeye ait gruplar
+  const branchGroups = groups.filter((g) => !branchId || g.branch_id === branchId);
+
+  const handleBranchChange = (id: string) => {
+    setBranchId(id);
+    setFormData((prev) =>
+      prev.assigned_group_id && !groups.some((g) => g.id === prev.assigned_group_id && g.branch_id === id)
+        ? { ...prev, assigned_group_id: "" }
+        : prev
+    );
+  };
 
   useEffect(() => {
     loadGroups();
@@ -55,12 +77,12 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
 
       setFormData(prev => ({ ...prev, age_group: ageGroup }));
 
-      const matchingGroup = groups.find(g => g.age_group === ageGroup);
+      const matchingGroup = branchGroups.find(g => g.age_group === ageGroup);
       if (matchingGroup) {
         setFormData(prev => ({ ...prev, assigned_group_id: matchingGroup.id }));
       }
     }
-  }, [formData.birth_date, groups]);
+  }, [formData.birth_date, groups, branchId]);
 
   const loadGroups = async () => {
     try {
@@ -73,10 +95,19 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!branchId) {
+      toast({
+        title: "Eksik Bilgi",
+        description: "Lütfen şubeyi seçin.",
+        variant: "destructive"
+      });
+      return;
+    }
     setLoading(true);
 
     try {
       await trialStudentService.createTrialStudent({
+        branch_id: branchId,
         name: formData.name,
         birth_date: formData.birth_date,
         parent_name: formData.parent_name,
@@ -118,6 +149,7 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <BranchSelect value={branchId} onChange={handleBranchChange} disabled={branchLocked} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="name">Ad Soyad *</Label>
@@ -185,7 +217,7 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
               <SelectValue placeholder="Grup seçin" />
             </SelectTrigger>
             <SelectContent>
-              {groups.map((group) => (
+              {branchGroups.map((group) => (
                 <SelectItem key={group.id} value={group.id}>
                   {group.name} ({group.age_group}) - {group.schedule}
                 </SelectItem>

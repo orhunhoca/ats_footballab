@@ -1,4 +1,7 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
+import { useBranch } from "@/contexts/BranchContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Navigation } from "@/components/Navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,7 +20,7 @@ type TrialStudent = Tables<"trial_students"> & {
   groups?: Tables<"groups"> | null;
 };
 
-export default function TrialStudentsPage() {
+function TrialStudentsPageInner() {
   const [trialStudents, setTrialStudents] = useState<TrialStudent[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<TrialStudent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,10 +36,15 @@ export default function TrialStudentsPage() {
   const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
   const { toast } = useToast();
 
+  const { selectedBranchId, branches, getBranchName } = useBranch();
+  // Kayda dönüştürme (ödeme planı içerir) ve silme yalnızca yönetime aittir; antrenör deneme kaydı ekler
+  const { isManagement } = useUserRole();
+
   useEffect(() => {
     loadTrialStudents();
     loadStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   useEffect(() => {
     if (searchTerm) {
@@ -54,7 +62,7 @@ export default function TrialStudentsPage() {
   const loadTrialStudents = async () => {
     try {
       setLoading(true);
-      const data = await trialStudentService.getAllTrialStudents();
+      const data = await trialStudentService.getAllTrialStudents(selectedBranchId);
       setTrialStudents(data);
       setFilteredStudents(data);
     } catch (error) {
@@ -219,6 +227,9 @@ export default function TrialStudentsPage() {
                         <CardTitle className="text-lg">{student.name}</CardTitle>
                         <CardDescription className="mt-1">
                           {getStatusBadge(student.status || "Beklemede")}
+                          {branches.length > 1 && (
+                            <span className="ml-2 text-xs text-muted-foreground">{getBranchName(student.branch_id)}</span>
+                          )}
                         </CardDescription>
                       </div>
                     </div>
@@ -248,7 +259,7 @@ export default function TrialStudentsPage() {
                     </div>
 
                     <div className="flex gap-2 mt-4">
-                      {student.status === "Beklemede" && (
+                      {isManagement && student.status === "Beklemede" && (
                         <Button
                           onClick={() => handleConvert(student)}
                           className="flex-1 gap-2"
@@ -258,13 +269,15 @@ export default function TrialStudentsPage() {
                           Kayıt Ol
                         </Button>
                       )}
-                      <Button
-                        onClick={() => handleDelete(student.id)}
-                        variant="destructive"
-                        size="sm"
-                      >
-                        Sil
-                      </Button>
+                      {isManagement && (
+                        <Button
+                          onClick={() => handleDelete(student.id)}
+                          variant="destructive"
+                          size="sm"
+                        >
+                          Sil
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -289,5 +302,13 @@ export default function TrialStudentsPage() {
         />
       )}
     </>
+  );
+}
+
+export default function TrialStudentsPage() {
+  return (
+    <RoleGate level="staff">
+      <TrialStudentsPageInner />
+    </RoleGate>
   );
 }

@@ -228,7 +228,9 @@ export function ConvertToStudentDialog({ trialStudent, open, onOpenChange, onSuc
                 <SelectValue placeholder="Grup seçin" />
               </SelectTrigger>
               <SelectContent>
-                {groups.map((group) => (
+                {groups
+                  .filter((g) => !trialStudent.branch_id || g.branch_id === trialStudent.branch_id)
+                  .map((group) => (
                   <SelectItem key={group.id} value={group.id}>
                     {group.name}
                   </SelectItem>

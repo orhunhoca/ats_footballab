@@ -16,6 +16,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Camera, Upload, X } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Tables } from "@/integrations/supabase/types";
+import { BranchSelect } from "@/components/BranchSelect";
+import { useBranchPermission } from "@/hooks/useBranchPermission";
+import { useUserRole } from "@/hooks/useUserRole";
 
 // Define extended student type with relations
 type StudentWithGroups = Tables<"students"> & {
@@ -31,6 +34,10 @@ interface StudentFormProps {
 
 export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentFormProps) {
   const { toast } = useToast();
+  const { locked: branchLocked, formDefaultBranchId: defaultBranchId } = useBranchPermission();
+  // Ödeme/kıyafet ödemesi bölümleri yalnızca yönetim (admin + yönetici) içindir
+  const { isManagement: canManagePayments } = useUserRole();
+  const [branchId, setBranchId] = useState("");
   const [loading, setLoading] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
@@ -103,6 +110,8 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           winter_clothing_price: student.winter_clothing_price?.toString() || "3000"
         });
         
+        setBranchId(student.branch_id || defaultBranchId);
+
         // Load student's current group
         if (student.student_groups && student.student_groups.length > 0) {
           setSelectedGroup(student.student_groups[0].group_id);
@@ -135,6 +144,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           summer_clothing_price: "3000",
           winter_clothing_price: "3000"
         });
+        setBranchId(defaultBranchId);
         setSelectedGroup("");
         setSelectedPlan(null);
         setPhotoFile(null);
@@ -143,6 +153,22 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       }
     }
   }, [open, student]); 
+
+  // Şubeler form açıldıktan sonra yüklenirse varsayılanı doldur
+  useEffect(() => {
+    if (open && !branchId && defaultBranchId) setBranchId(defaultBranchId);
+  }, [open, branchId, defaultBranchId]);
+
+  // Seçilen şubeye ait gruplar
+  const branchGroups = groups.filter((g) => !branchId || g.branch_id === branchId);
+
+  const handleBranchChange = (id: string) => {
+    setBranchId(id);
+    // Önceden seçilen grup başka şubedense sıfırla
+    if (selectedGroup && !groups.some((g) => g.id === selectedGroup && g.branch_id === id)) {
+      setSelectedGroup("");
+    }
+  };
 
   const loadSchools = async () => {
     try {
@@ -281,6 +307,15 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       return;
     }
 
+    if (!branchId) {
+      toast({
+        title: "Eksik Bilgi",
+        description: "Lütfen öğrencinin şubesini seçin.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!selectedGroup) {
       toast({
         title: "Eksik Bilgi",
@@ -325,6 +360,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
       const studentData = {
         name: formData.name,
+        branch_id: branchId,
         birth_date: formData.birth_date,
         age: age,
         height_cm: formData.height_cm ? parseInt(formData.height_cm) : null,
@@ -650,6 +686,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                   </SelectContent>
                 </Select>
               </div>
+              <BranchSelect value={branchId} onChange={handleBranchChange} disabled={branchLocked} />
               <div className="space-y-2">
                 <Label>Grup Seçimi *</Label>
                 <Select 
@@ -661,7 +698,10 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                     <SelectValue placeholder="Grup Seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {groups.map(group => (
+                    {branchGroups.length === 0 && (
+                      <div className="px-2 py-1.5 text-sm text-muted-foreground">Bu şubede grup yok</div>
+                    )}
+                    {branchGroups.map(group => (
                       <SelectItem key={group.id} value={group.id}>
                         {group.name} {group.work_hour ? `(${group.work_hour})` : ''}
                       </SelectItem>
@@ -679,7 +719,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                     <SelectValue placeholder="Saat Seçin" />
                   </SelectTrigger>
                   <SelectContent>
-                    {groups
+                    {branchGroups
                       .filter(g => !formData.birth_date || g.target_years?.includes(new Date(formData.birth_date).getFullYear().toString()))
                       .filter(g => g.work_hour)
                       .map(group => (
@@ -772,6 +812,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
               </div>
             </div>
             
+            {canManagePayments && (<>
             <h3 className="font-semibold text-lg mb-3 mt-6">Ödeme Bilgileri</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -864,10 +905,11 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 ℹ️ 2. Taksit ({selectedPlan.installment_price?.toLocaleString('tr-TR')} TL) 45 gün sonrası için planlanacak.
               </div>
             )}
+            </>)}
           </div>
 
           {/* Kıyafet Ödemeleri */}
-          <div className="border-t pt-4">
+          {canManagePayments && <div className="border-t pt-4">
             <h3 className="font-semibold text-lg mb-3">Kıyafet Ödemeleri</h3>
             
             <div className="space-y-4">
@@ -935,7 +977,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 )}
               </div>
             </div>
-          </div>
+          </div>}
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>İptal</Button>

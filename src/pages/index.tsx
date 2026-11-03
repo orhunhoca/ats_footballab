@@ -12,7 +12,11 @@ import {
   LogOut,
   ChevronRight,
   TrendingUp,
-  Activity
+  Activity,
+  CreditCard,
+  BarChart3,
+  Building2,
+  ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -20,10 +24,11 @@ import { userService } from "@/services/userService";
 import { authService } from "@/services/authService";
 import { useRouter } from "next/router";
 import { useToast } from "@/hooks/use-toast";
+import { useUserRole } from "@/hooks/useUserRole";
 
 export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin, isManagement } = useUserRole();
   const [userName, setUserName] = useState("");
   const router = useRouter();
   const { toast } = useToast();
@@ -37,14 +42,12 @@ export default function Home() {
     if (user) {
       setIsLoggedIn(true);
       setUserName(user.full_name || "Kullanıcı");
-      setIsAdmin(user.role === 'admin');
     }
   };
 
   const handleLogout = async () => {
     await authService.signOut();
     setIsLoggedIn(false);
-    setIsAdmin(false);
     router.push("/login");
     toast({
       title: "Çıkış Yapıldı",
@@ -118,8 +121,16 @@ export default function Home() {
                 color="text-amber-600"
               />
 
-              {isAdmin && (
+              {isManagement && (
                 <>
+                  <DashboardButton 
+                    href="/payments"
+                    icon={CreditCard}
+                    title="Ödemeler"
+                    desc="Tahsilat ve ödeme takibi"
+                    color="text-green-600"
+                  />
+
                   <DashboardButton 
                     href="/coaches"
                     icon={UserCog}
@@ -139,12 +150,40 @@ export default function Home() {
               )}
 
               <DashboardButton 
-                href="/settings"
-                icon={Settings}
-                title="Ayarlar"
-                desc="Sistem ve profil ayarları"
-                color="text-gray-600"
+                href="/reports"
+                icon={BarChart3}
+                title="Raporlar"
+                desc={isManagement ? "Mali, yoklama ve performans raporları" : "Yoklama ve performans raporları"}
+                color="text-cyan-600"
               />
+
+              {isAdmin && (
+                <>
+                  <DashboardButton 
+                    href="/branches"
+                    icon={Building2}
+                    title="Şubeler"
+                    desc="Şube ekle ve yönet"
+                    color="text-teal-600"
+                  />
+
+                  <DashboardButton 
+                    href="/users"
+                    icon={ShieldCheck}
+                    title="Kullanıcılar"
+                    desc="Yönetici ve antrenör yetkileri"
+                    color="text-rose-600"
+                  />
+
+                  <DashboardButton 
+                    href="/settings"
+                    icon={Settings}
+                    title="Ayarlar"
+                    desc="Sistem ve profil ayarları"
+                    color="text-gray-600"
+                  />
+                </>
+              )}
             </div>
 
             {/* Quick Actions / Stats Summary could go here */}

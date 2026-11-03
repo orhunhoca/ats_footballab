@@ -13,12 +13,13 @@ export const authService = {
     email: string,
     password: string,
     fullName: string,
-    _role: string = "coach",
+    role: string = "coach",
     coach?: Record<string, unknown>
   ) {
     // coach verilirse antrenör kaydı aynı işlemde oluşturulur; başarısız olursa hesap da geri alınır.
     const { data, error } = await supabase.functions.invoke("admin-create-user", {
-      body: { email, password, fullName, coach },
+      // "manager": yönetici hesabı; diğer her şey antrenör (sunucuda "user")
+      body: { email, password, fullName, coach, role: role === "manager" ? "manager" : "user" },
     });
 
     if (error) {

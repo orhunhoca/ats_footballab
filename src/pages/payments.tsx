@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
+import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,9 +20,10 @@ import { CreditCard, Wallet, Building2, Loader2, TrendingUp, AlertCircle, CheckC
 import { SendPaymentReminderDialog } from "@/components/payments/SendPaymentReminderDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function PaymentsPage() {
+function PaymentsPageInner() {
   const router = useRouter();
   const { toast } = useToast();
+  const { selectedBranchId, branches, getBranchName } = useBranch();
   const [payments, setPayments] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
   const [stats, setStats] = useState({
@@ -53,8 +56,13 @@ export default function PaymentsPage() {
     send_via_whatsapp: true
   });
 
+  // Şube değişince (ve ilk açılışta) verileri yeniden yükle
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
+
+  useEffect(() => {
     // Check URL params for status messages (e.g. from iyzico callback)
     if (router.query.status === 'success') {
       toast({
@@ -74,9 +82,9 @@ export default function PaymentsPage() {
     try {
       setLoading(true);
       const [paymentsData, studentsData, statsData] = await Promise.all([
-        paymentService.getAllPayments(),
-        studentService.getAllStudents(),
-        paymentService.getPaymentStats()
+        paymentService.getAllPayments(selectedBranchId),
+        studentService.getAllStudents(selectedBranchId),
+        paymentService.getPaymentStats(selectedBranchId)
       ]);
       
       setPayments(paymentsData);
@@ -546,7 +554,12 @@ export default function PaymentsPage() {
                         {getPaymentMethodIcon(payment.payment_method)}
                       </div>
                       <div>
-                        <p className="font-medium">{payment.students?.name}</p>
+                        <p className="font-medium">
+                          {payment.students?.name}
+                          {branches.length > 1 && (
+                            <span className="ml-2 text-xs font-normal text-gray-500">{getBranchName(payment.branch_id)}</span>
+                          )}
+                        </p>
                         <p className="text-sm text-gray-600">
                           {new Date(payment.payment_date).toLocaleDateString("tr-TR")}
                           {payment.installment_number && ` - Taksit ${payment.installment_number}`}
@@ -577,5 +590,13 @@ export default function PaymentsPage() {
         payments={payments}
       />
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <RoleGate level="management">
+      <PaymentsPageInner />
+    </RoleGate>
   );
 }

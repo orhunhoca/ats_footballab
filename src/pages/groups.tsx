@@ -1,4 +1,6 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
+import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -16,21 +18,24 @@ type Group = Tables<"groups"> & {
   coaches?: Tables<"coaches"> | null;
 };
 
-export default function GroupsPage() {
+function GroupsPageInner() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null);
   const [isStudentListOpen, setIsStudentListOpen] = useState(false);
 
+  const { selectedBranchId, branches, getBranchName } = useBranch();
+
   useEffect(() => {
     loadGroups();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   const loadGroups = async () => {
     try {
       setLoading(true);
-      const data = await groupService.getAllGroups();
+      const data = await groupService.getAllGroups(selectedBranchId);
       setGroups(data);
     } catch (error) {
       console.error("Error loading groups:", error);
@@ -151,7 +156,10 @@ export default function GroupsPage() {
                           </div>
                           <div>
                             <CardTitle className="text-xl mb-1">{group.name}</CardTitle>
-                            <p className="text-sm text-gray-600">{group.age_group}</p>
+                            <p className="text-sm text-gray-600">
+                              {group.age_group}
+                              {branches.length > 1 && ` · ${getBranchName(group.branch_id)}`}
+                            </p>
                           </div>
                         </div>
                         <Button variant="outline" size="sm">
@@ -319,5 +327,13 @@ export default function GroupsPage() {
         </Dialog>
       </div>
     </>
+  );
+}
+
+export default function GroupsPage() {
+  return (
+    <RoleGate level="management">
+      <GroupsPageInner />
+    </RoleGate>
   );
 }

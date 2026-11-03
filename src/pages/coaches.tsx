@@ -1,4 +1,7 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
+import { useBranch } from "@/contexts/BranchContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -14,7 +17,7 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Coach = Tables<"coaches">;
 
-export default function CoachesPage() {
+function CoachesPageInner() {
   const [searchTerm, setSearchTerm] = useState("");
   const [coaches, setCoaches] = useState<Coach[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,15 +28,20 @@ export default function CoachesPage() {
   const [coachToDelete, setCoachToDelete] = useState<Coach | null>(null);
   const { toast } = useToast();
 
+  const { selectedBranchId, branches, getBranchName } = useBranch();
+  // Antrenör girişi (ekleme, düzenleme, silme) yalnızca admin'e aittir
+  const { isAdmin: canEditCoaches } = useUserRole();
+
   useEffect(() => {
     loadCoaches();
     loadStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   const loadCoaches = async () => {
     try {
       setLoading(true);
-      const data = await coachService.getAllCoaches();
+      const data = await coachService.getAllCoaches(selectedBranchId);
       setCoaches(data);
     } catch (error) {
       console.error("Error loading coaches:", error);
@@ -44,7 +52,7 @@ export default function CoachesPage() {
 
   const loadStats = async () => {
     try {
-      const data = await coachService.getCoachStats();
+      const data = await coachService.getCoachStats(selectedBranchId);
       setStats(data);
     } catch (error) {
       console.error("Error loading stats:", error);
@@ -112,10 +120,12 @@ export default function CoachesPage() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Antrenör Yönetimi</h1>
               <p className="text-gray-600 mt-1">Teknik kadro ve grup atamaları</p>
             </div>
-            <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsFormOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Yeni Antrenör
-            </Button>
+            {canEditCoaches && (
+              <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsFormOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Yeni Antrenör
+              </Button>
+            )}
           </div>
 
           {/* Search */}
@@ -202,12 +212,18 @@ export default function CoachesPage() {
                               <Badge className="bg-emerald-100 text-emerald-800">
                                 {coach.status}
                               </Badge>
+                              {branches.length > 1 && (
+                                <Badge variant="outline">{getBranchName(coach.branch_id)}</Badge>
+                              )}
+                              {branches.length > 1 && coach.branch_access === "all" && (
+                                <Badge className="bg-blue-100 text-blue-800">Tüm şubeler</Badge>
+                              )}
                             </div>
                             {coach.specialty && (
                               <p className="text-base sm:text-lg text-gray-600 font-medium">{coach.specialty}</p>
                             )}
                           </div>
-                          <div className="flex gap-2 flex-shrink-0">
+                          {canEditCoaches && <div className="flex gap-2 flex-shrink-0">
                             <Button variant="outline" size="sm" onClick={() => handleEdit(coach)}>
                               <Edit className="w-4 h-4 mr-2" />
                               Düzenle
@@ -216,7 +232,7 @@ export default function CoachesPage() {
                               <Trash2 className="w-4 h-4 mr-2" />
                               Sil
                             </Button>
-                          </div>
+                          </div>}
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-4 mb-4">
@@ -267,8 +283,8 @@ export default function CoachesPage() {
                     ? "Henüz kayıtlı antrenör bulunmuyor. Yeni antrenör ekleyin." 
                     : "Arama kriterlerinize uygun antrenör bulunamadı."}
                 </p>
-                {coaches.length === 0 && (
-                  <Button className="bg-emerald-600 hover:bg-emerald-700">
+                {coaches.length === 0 && canEditCoaches && (
+                  <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsFormOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" />
                     İlk Antrenörü Ekle
                   </Button>
@@ -310,5 +326,13 @@ export default function CoachesPage() {
         </AlertDialog>
       </div>
     </>
+  );
+}
+
+export default function CoachesPage() {
+  return (
+    <RoleGate level="management">
+      <CoachesPageInner />
+    </RoleGate>
   );
 }

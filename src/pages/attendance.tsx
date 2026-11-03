@@ -1,4 +1,7 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
+import { useBranch } from "@/contexts/BranchContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Navigation } from "@/components/Navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,8 +20,10 @@ import type { Tables } from "@/integrations/supabase/types";
 type Group = Tables<"groups">;
 type Student = Tables<"students">;
 
-export default function AttendancePage() {
+function AttendancePageInner() {
   const { toast } = useToast();
+  const { selectedBranchId } = useBranch();
+  const { isManagement } = useUserRole();
   const [date, setDate] = useState<Date>(new Date());
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const [groups, setGroups] = useState<Group[]>([]);
@@ -28,10 +33,14 @@ export default function AttendancePage() {
   const [saving, setSaving] = useState(false);
   const [isNotifyOpen, setIsNotifyOpen] = useState(false);
 
-  // Load groups
+  // Şube değişince grupları yenile ve seçili grubu sıfırla
   useEffect(() => {
+    setSelectedGroup("");
+    setStudents([]);
+    setAttendance({});
     loadGroups();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   // Load students when group changes
   useEffect(() => {
@@ -43,7 +52,7 @@ export default function AttendancePage() {
 
   const loadGroups = async () => {
     try {
-      const data = await groupService.getAllGroups();
+      const data = await groupService.getAllGroups(selectedBranchId);
       setGroups(data);
     } catch (error) {
       toast({
@@ -457,14 +466,14 @@ export default function AttendancePage() {
                     ))}
 
                     <div className="pt-4 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-                      <Button
+                      {isManagement && <Button
                         variant="outline"
                         onClick={() => setIsNotifyOpen(true)}
                         className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                       >
                         <MessageCircle className="h-4 w-4 mr-2" />
                         Velilere Bildir
-                      </Button>
+                      </Button>}
                       <Button 
                         onClick={handleSave} 
                         disabled={saving}
@@ -490,5 +499,13 @@ export default function AttendancePage() {
         attendance={attendance}
       />
     </>
+  );
+}
+
+export default function AttendancePage() {
+  return (
+    <RoleGate level="staff">
+      <AttendancePageInner />
+    </RoleGate>
   );
 }

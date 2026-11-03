@@ -7,14 +7,16 @@ type TrialStudentUpdate = Database["public"]["Tables"]["trial_students"]["Update
 
 export const trialStudentService = {
   // Get all trial students
-  async getAllTrialStudents() {
-    const { data, error } = await supabase
+  async getAllTrialStudents(branchId?: string | null) {
+    let query = supabase
       .from("trial_students")
       .select(`
         *,
         groups(*)
       `)
       .order("created_at", { ascending: false });
+    if (branchId) query = query.eq("branch_id", branchId);
+    const { data, error } = await query;
 
     if (error) {
       console.error("Error fetching trial students:", error);
@@ -112,6 +114,7 @@ export const trialStudentService = {
       .from("students")
       .insert({
         name: trialStudent.name,
+        branch_id: trialStudent.branch_id,
         birth_date: trialStudent.birth_date,
         age: age,
         mother_name: additionalData.mother_name,
@@ -122,7 +125,7 @@ export const trialStudentService = {
         height_cm: additionalData.height_cm ? parseInt(additionalData.height_cm) : null,
         weight_kg: additionalData.weight_kg ? parseFloat(additionalData.weight_kg) : null,
         school: additionalData.school || null,
-        jersey_size: additionalData.jersey_size || null,
+        clothing_size: additionalData.jersey_size || null,
         health_report_submitted: additionalData.health_report === "Var",
         registration_type: additionalData.registration_type,
         payment_plan: additionalData.payment_plan,

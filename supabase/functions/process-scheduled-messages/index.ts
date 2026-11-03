@@ -28,12 +28,12 @@ serve(async (req) => {
     // Create Supabase client
     const supabase = serviceClient();
 
-    // Zamanlayıcı (cron) CRON_SECRET ile, kullanıcılar ise personel JWT'si ile çağırabilir
+    // Zamanlayıcı (cron) CRON_SECRET ile, kullanıcılar ise yönetim (admin/yönetici) JWT'si ile çağırabilir
     const cronSecret = Deno.env.get("CRON_SECRET");
     const providedSecret = req.headers.get("x-cron-secret") ?? "";
     const isCron = !!cronSecret && !!providedSecret && safeEqual(providedSecret, cronSecret);
     if (!isCron) {
-      await requireStaff(req, supabase);
+      await requireStaff(req, supabase, { managementOnly: true });
     }
 
     // Get scheduler settings

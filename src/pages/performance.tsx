@@ -1,4 +1,7 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
+import { useBranch } from "@/contexts/BranchContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -70,8 +73,10 @@ import type { Tables } from "@/integrations/supabase/types";
 
 type Group = Tables<"groups">;
 
-export default function PerformancePage() {
+function PerformancePageInner() {
   const { toast } = useToast();
+  const { selectedBranchId } = useBranch();
+  const { isManagement } = useUserRole();
   const [students, setStudents] = useState<Student[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [testProtocols, setTestProtocols] = useState<TestProtocol[]>([]);
@@ -97,10 +102,17 @@ export default function PerformancePage() {
   } | null>(null);
 
   useEffect(() => {
-    loadStudents();
     loadTestProtocols();
-    loadGroups();
   }, []);
+
+  // Şube değişince öğrenci/grup listesini yenile; önceki şubenin öğrencisi seçili kalmasın
+  useEffect(() => {
+    setSelectedStudent(null);
+    setSelectedGroup("all");
+    loadStudents();
+    loadGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   useEffect(() => {
     // Önceki öğrencinin analizi yeni öğrenciye (veya WhatsApp özetine) sızmasın
@@ -121,7 +133,7 @@ export default function PerformancePage() {
   const loadStudents = async () => {
     setIsLoadingStudents(true);
     try {
-      const data = await studentService.getAllStudents();
+      const data = await studentService.getAllStudents(selectedBranchId);
       console.log("📚 Loaded students:", data.length);
       setStudents(data);
     } catch (error) {
@@ -138,7 +150,7 @@ export default function PerformancePage() {
 
   const loadGroups = async () => {
     try {
-      const data = await groupService.getAllGroups();
+      const data = await groupService.getAllGroups(selectedBranchId);
       setGroups(data);
     } catch (error) {
       console.error("Error loading groups:", error);
@@ -487,7 +499,7 @@ export default function PerformancePage() {
                             <FileDown className="mr-2 h-4 w-4" />
                             PDF İndir
                           </Button>
-                          <Button
+                          {isManagement && <Button
                             onClick={() => setIsWhatsAppOpen(true)}
                             disabled={tests.length === 0}
                             variant="outline"
@@ -495,7 +507,7 @@ export default function PerformancePage() {
                           >
                             <MessageCircle className="mr-2 h-4 w-4" />
                             Veliye Gönder
-                          </Button>
+                          </Button>}
                           <Button onClick={() => setIsFormOpen(true)}>
                             <Plus className="mr-2 h-4 w-4" />
                             Test Ekle
@@ -811,5 +823,13 @@ export default function PerformancePage() {
         />
       )}
     </>
+  );
+}
+
+export default function PerformancePage() {
+  return (
+    <RoleGate level="staff">
+      <PerformancePageInner />
+    </RoleGate>
   );
 }

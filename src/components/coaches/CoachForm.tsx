@@ -9,6 +9,8 @@ import { coachService } from "@/services/coachService";
 import { authService } from "@/services/authService";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, RefreshCw, Copy, CheckCircle2 } from "lucide-react";
+import { useBranch } from "@/contexts/BranchContext";
+import { BranchSelect } from "@/components/BranchSelect";
 
 interface CoachFormProps {
   open: boolean;
@@ -19,6 +21,10 @@ interface CoachFormProps {
 
 export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormProps) {
   const { toast } = useToast();
+  const { defaultBranchId } = useBranch();
+  const [branchId, setBranchId] = useState("");
+  // "own": yalnızca kendi şubesi, "all": tüm şubeleri görür ve kayıt ekleyebilir
+  const [branchAccess, setBranchAccess] = useState<"own" | "all">("own");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordCopied, setPasswordCopied] = useState(false);
@@ -74,7 +80,11 @@ export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormPro
           status: coach.status || "Aktif"
         });
         setShowPassword(false);
+        setBranchId(coach.branch_id || defaultBranchId);
+        setBranchAccess(coach.branch_access === "all" ? "all" : "own");
       } else {
+        setBranchId(defaultBranchId);
+        setBranchAccess("own");
         // Create mode - generate password
         if (!formData.password) {
           generateRandomPassword();
@@ -83,6 +93,11 @@ export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormPro
     }
   }, [open, coach]);
 
+  // Şubeler form açıldıktan sonra yüklenirse varsayılanı doldur
+  useEffect(() => {
+    if (open && !branchId && defaultBranchId) setBranchId(defaultBranchId);
+  }, [open, branchId, defaultBranchId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -90,6 +105,15 @@ export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormPro
       toast({
         title: "Eksik Bilgi",
         description: "Lütfen tüm zorunlu alanları doldurun.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!branchId) {
+      toast({
+        title: "Eksik Bilgi",
+        description: "Lütfen antrenörün şubesini seçin.",
         variant: "destructive"
       });
       return;
@@ -133,6 +157,8 @@ export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormPro
           name: formData.name,
           phone: formData.phone,
           email: formData.email,
+          branch_id: branchId,
+          branch_access: branchAccess,
           specialty: formData.specialty || null,
           experience: formData.experience || null,
           license: formData.license || null,
@@ -153,6 +179,8 @@ export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormPro
           {
             name: formData.name,
             phone: formData.phone,
+            branch_id: branchId,
+            branch_access: branchAccess,
             specialty: formData.specialty || null,
             experience: formData.experience || null,
             license: formData.license || null,
@@ -237,6 +265,26 @@ export function CoachForm({ open, onOpenChange, onSuccess, coach }: CoachFormPro
                 ⚠️ Email adresi düzenlenemez.
               </p>
             )}
+          </div>
+
+          <BranchSelect value={branchId} onChange={setBranchId} label="Ana Şube *" />
+
+          <div className="space-y-2">
+            <Label>Şube Yetkisi *</Label>
+            <Select value={branchAccess} onValueChange={(v) => setBranchAccess(v as "own" | "all")}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="own">Yalnızca kendi şubesi</SelectItem>
+                <SelectItem value="all">Tüm şubeler (şubeler arası geçiş yapar)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-gray-600">
+              {branchAccess === "all"
+                ? "Antrenör her şubenin öğrenci, yoklama ve performans verilerini görür; her şubeye öğrenci ve deneme öğrencisi kaydı ekleyebilir."
+                : "Antrenör yalnızca ana şubesinin verilerini görür ve yalnızca o şubeye kayıt ekleyebilir."}
+            </p>
           </div>
 
           {!coach && (

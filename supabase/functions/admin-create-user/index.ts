@@ -22,7 +22,10 @@ serve(async (req) => {
     const supabase = serviceClient();
     await requireStaff(req, supabase, { adminOnly: true });
 
-    const { email, password, fullName, coach } = await req.json();
+    const { email, password, fullName, coach, role: requestedRole } = await req.json();
+
+    // Yalnızca yönetici (manager) veya antrenör (user) hesabı açılabilir; admin buradan verilmez
+    const newRole = requestedRole === "manager" ? "manager" : "user";
 
     if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       throw new HttpError(400, "Geçersiz email");
@@ -62,7 +65,7 @@ serve(async (req) => {
         id: userId,
         email,
         full_name: fullName || email,
-        role: "user",
+        role: newRole,
       });
 
     if (profileError) {
@@ -71,7 +74,21 @@ serve(async (req) => {
 
     // İsteğe bağlı: antrenör kaydını aynı işlemde oluştur
     let coachRecord: Record<string, unknown> | null = null;
-    if (coach && typeof coach === "object") {
+    if (newRole === "user" && coach && typeof coach === "object") {
+      // Şube verilmişse var olan, aktif bir şube olmalı
+      let branchId: string | null = null;
+      if (coach.branch_id) {
+        const { data: branch } = await supabase
+          .from("branches")
+          .select("id, is_active")
+          .eq("id", String(coach.branch_id))
+          .maybeSingle();
+        if (!branch || !branch.is_active) {
+          await rollback("Seçilen şube bulunamadı veya aktif değil");
+        }
+        branchId = branch!.id;
+      }
+
       const { data: created, error: coachError } = await supabase
         .from("coaches")
         .insert({
@@ -83,6 +100,9 @@ serve(async (req) => {
           license: coach.license || null,
           status: coach.status || "Aktif",
           user_id: userId,
+          branch_id: branchId,
+          // "all": tüm şubelerde çalışabilir/kayıt ekleyebilir; "own": yalnızca kendi şubesi
+          branch_access: coach.branch_access === "all" ? "all" : "own",
           invite_status: "accepted",
         })
         .select()

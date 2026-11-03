@@ -1,4 +1,7 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
+import { useBranch } from "@/contexts/BranchContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
@@ -53,7 +56,7 @@ type Student = Tables<"students"> & {
   winter_clothing_price?: number;
 };
 
-export default function StudentsPage() {
+function StudentsPageInner() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [students, setStudents] = useState<Student[]>([]);
@@ -67,15 +70,21 @@ export default function StudentsPage() {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [deleteReason, setDeleteReason] = useState<"Kayıt İptali" | "Ara Veriyor" | "Yönetim Sildi">("Kayıt İptali");
 
+  const { selectedBranchId, branches, getBranchName } = useBranch();
+  // Antrenörler öğrenci kaydı ekleyip düzenleyebilir; silme ve ödeme bilgisi yalnızca yönetime aittir
+  const { isManagement: canManage, role: userRole } = useUserRole();
+  const canRegister = userRole !== null;
+
   useEffect(() => {
     loadStudents();
     loadStats();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
 
   const loadStudents = async () => {
     try {
       setLoading(true);
-      const data = await studentService.getAllStudents();
+      const data = await studentService.getAllStudents(selectedBranchId);
       setStudents(data as any);
     } catch (error) {
       console.error("Error loading students:", error);
@@ -91,7 +100,7 @@ export default function StudentsPage() {
 
   const loadStats = async () => {
     try {
-      const data = await studentService.getStudentStats();
+      const data = await studentService.getStudentStats(selectedBranchId);
       setStats(data);
     } catch (error) {
       console.error("Error loading stats:", error);
@@ -188,13 +197,15 @@ export default function StudentsPage() {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Öğrenci Yönetimi</h1>
               <p className="text-gray-600 mt-1">Tüm öğrencileri görüntüle ve yönet</p>
             </div>
-            <Button 
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => setIsFormOpen(true)}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Yeni Öğrenci
-            </Button>
+            {canRegister && (
+              <Button 
+                className="bg-emerald-600 hover:bg-emerald-700"
+                onClick={() => setIsFormOpen(true)}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Yeni Öğrenci
+              </Button>
+            )}
           </div>
 
           {/* Stats */}
@@ -283,6 +294,9 @@ export default function StudentsPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex flex-wrap items-center gap-2 mb-2">
                             <h3 className="text-lg font-semibold text-gray-900">{student.name}</h3>
+                            {branches.length > 1 && (
+                              <Badge variant="outline" className="text-xs">{getBranchName((student as any).branch_id)}</Badge>
+                            )}
                             <Badge variant={student.status === "Aktif" ? "default" : "secondary"}>
                               {student.status}
                             </Badge>
@@ -405,17 +419,21 @@ export default function StudentsPage() {
                       </div>
                       
                       <div className="flex flex-col items-end gap-2 text-right">
-                         <div className="text-sm">
-                            <span className="text-gray-500">Ödeme:</span>
-                            <span className={`ml-2 font-medium ${student.payment_status === "Ödendi" ? "text-green-600" : "text-amber-600"}`}>
-                              {student.payment_status}
-                            </span>
-                         </div>
-                         <div className="text-xs text-gray-500">
-                           {student.payment_plan}
-                         </div>
+                         {canManage && (
+                           <>
+                             <div className="text-sm">
+                               <span className="text-gray-500">Ödeme:</span>
+                               <span className={`ml-2 font-medium ${student.payment_status === "Ödendi" ? "text-green-600" : "text-amber-600"}`}>
+                                 {student.payment_status}
+                               </span>
+                             </div>
+                             <div className="text-xs text-gray-500">
+                               {student.payment_plan}
+                             </div>
+                           </>
+                         )}
                          
-                         <div className="flex gap-2 mt-2">
+                         {canRegister && <div className="flex gap-2 mt-2">
                            <Button variant="outline" size="sm" onClick={() => {
                              setEditingStudent(student);
                              setIsFormOpen(true);
@@ -424,7 +442,7 @@ export default function StudentsPage() {
                               Düzenle
                            </Button>
                            
-                           <DropdownMenu>
+                           {canManage && <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-9 w-9 p-0">
                                   <span className="sr-only">Menü</span>
@@ -447,8 +465,8 @@ export default function StudentsPage() {
                                   <Trash2 className="mr-2 h-4 w-4" /> Kaydı Sil / İptal Et
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
-                           </DropdownMenu>
-                         </div>
+                           </DropdownMenu>}
+                         </div>}
                       </div>
                     </div>
                   </CardContent>
@@ -524,5 +542,13 @@ export default function StudentsPage() {
         />
       </div>
     </>
+  );
+}
+
+export default function StudentsPage() {
+  return (
+    <RoleGate level="staff">
+      <StudentsPageInner />
+    </RoleGate>
   );
 }

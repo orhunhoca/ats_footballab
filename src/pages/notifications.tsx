@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { RoleGate } from "@/components/RoleGate";
 import { Navigation } from "@/components/Navigation";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,7 +22,7 @@ interface NotificationItem {
   message: string;
 }
 
-export default function NotificationsPage() {
+function NotificationsPageInner() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -418,5 +419,13 @@ export default function NotificationsPage() {
         </div>
       </div>
     </>
+  );
+}
+
+export default function NotificationsPage() {
+  return (
+    <RoleGate level="management">
+      <NotificationsPageInner />
+    </RoleGate>
   );
 }

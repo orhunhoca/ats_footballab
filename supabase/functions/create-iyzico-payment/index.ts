@@ -18,7 +18,7 @@ serve(async (req) => {
     const supabase = serviceClient();
 
     // Yalnızca giriş yapmış personel/admin ödeme linki oluşturabilir
-    await requireStaff(req, supabase);
+    await requireStaff(req, supabase, { managementOnly: true });
 
     const { apiKey, secretKey, baseUrl } = await getIyzicoCredentials(supabase);
 
