@@ -60,6 +60,56 @@ export type Database = {
           },
         ]
       }
+      bank_accounts: {
+        Row: {
+          account_holder: string
+          bank_branch: string | null
+          bank_name: string
+          branch_id: string | null
+          created_at: string
+          description: string | null
+          iban: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          account_holder: string
+          bank_branch?: string | null
+          bank_name: string
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          iban: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          account_holder?: string
+          bank_branch?: string | null
+          bank_name?: string
+          branch_id?: string | null
+          created_at?: string
+          description?: string | null
+          iban?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -167,6 +217,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      company_settings: {
+        Row: {
+          address: string | null
+          email: string | null
+          id: string
+          kep_address: string | null
+          kvkk_contact_email: string | null
+          legal_name: string | null
+          mersis_no: string | null
+          phone: string | null
+          singleton: boolean
+          tax_number: string | null
+          tax_office: string | null
+          updated_at: string
+          verbis_number: string | null
+          website: string | null
+        }
+        Insert: {
+          address?: string | null
+          email?: string | null
+          id?: string
+          kep_address?: string | null
+          kvkk_contact_email?: string | null
+          legal_name?: string | null
+          mersis_no?: string | null
+          phone?: string | null
+          singleton?: boolean
+          tax_number?: string | null
+          tax_office?: string | null
+          updated_at?: string
+          verbis_number?: string | null
+          website?: string | null
+        }
+        Update: {
+          address?: string | null
+          email?: string | null
+          id?: string
+          kep_address?: string | null
+          kvkk_contact_email?: string | null
+          legal_name?: string | null
+          mersis_no?: string | null
+          phone?: string | null
+          singleton?: boolean
+          tax_number?: string | null
+          tax_office?: string | null
+          updated_at?: string
+          verbis_number?: string | null
+          website?: string | null
+        }
+        Relationships: []
       }
       document_templates: {
         Row: {
@@ -534,6 +635,7 @@ export type Database = {
       }
       payment_history: {
         Row: {
+          bank_account_id: string | null
           branch_id: string | null
           amount: number
           created_at: string | null
@@ -548,6 +650,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          bank_account_id?: string | null
           branch_id?: string | null
           amount: number
           created_at?: string | null
@@ -562,6 +665,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          bank_account_id?: string | null
           branch_id?: string | null
           amount?: number
           created_at?: string | null
@@ -576,6 +680,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "payment_history_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payment_history_branch_id_fkey"
             columns: ["branch_id"]
@@ -1471,6 +1582,7 @@ export type Database = {
     }
     Functions: {
       check_registration_renewals: { Args: never; Returns: undefined }
+      get_public_company_info: { Args: never; Returns: Json }
     }
     Enums: {
       test_type:

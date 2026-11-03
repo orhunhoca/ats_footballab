@@ -16,6 +16,8 @@ interface CreatePaymentData {
   installmentNumber?: number;
   notes?: string;
   paymentDate?: string;
+  /** Havale/EFT ödemesinin yattığı banka hesabı (isteğe bağlı) */
+  bankAccountId?: string | null;
 }
 
 export const paymentService = {
@@ -30,6 +32,7 @@ export const paymentService = {
         amount: data.amount,
         payment_method: data.paymentMethod,
         payment_type: data.paymentType,
+        bank_account_id: data.bankAccountId ?? null,
         installment_number: data.installmentNumber,
         notes: data.notes,
         payment_date: data.paymentDate || new Date().toISOString()

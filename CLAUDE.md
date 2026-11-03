@@ -19,6 +19,12 @@ Futbol okulu yönetim paneli: öğrenciler, gruplar, antrenörler, deneme öğre
 - Formlarda şube zorunlu (`BranchSelect`); öğrenci formunda grup, antrenör ve grup formunda antrenör seçimi seçilen şubeye göre filtrelenir. `admin-create-user` antrenör kaydına `branch_id` yazar.
 - Yetki: yönetim tüm şubeleri görür; antrenör yalnız kendi şubesini (bkz. Güvenlik modeli). Şube seçici (`BranchSwitcher`) yalnız yönetime görünür.
 
+## Şirket/banka bilgileri ve hukuki metinler
+- Ayarlar → **Şirket ve Banka** (yalnız admin düzenler, yönetim okur): `company_settings` (tek satır) + `bank_accounts` (IBAN, genel veya şubeye özel). Havale/EFT ödemesi `payment_history.bank_account_id` ile hesaba bağlanır.
+- Giriş gerektirmeyen sayfalar: `/kvkk`, `/acik-riza` (yazdırılabilir), `/cerez-politikasi` (`src/lib/legal.ts`; şirket bilgisi `get_public_company_info()` RPC ile anon'a — vergi bilgisi hariç). **Metinler taslaktır** (`LEGAL_DRAFT`), avukat incelemesi gerekir: `docs/HUKUKI_METIN_NOTLARI.md`.
+- Tüm sayfaların altında `Footer`: "© ATS - All Time Sports" + KVKK/Çerez bağlantıları. Müşteri logosu/adı ileride değişse de telif ATS olarak sabit kalır.
+- **Otomatik hatırlatmalar (aidat, kayıt bitişi, doğum günü) ŞU AN ÇALIŞMIYOR**; zamanlayıcı yok. Plan: `docs/YOL_HARITASI_VELI_SAYFASI_VE_HATIRLATMALAR.md` (veli erişim sayfası tasarımı da orada).
+
 ## Teknoloji
 - Next.js 15 (Pages Router) + React 18 + TypeScript + Tailwind + shadcn/ui.
 - Supabase: Postgres + Auth + Edge Functions (Deno). İstemci `src/integrations/supabase/client.ts` (anon key, `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`; örnek `.env.example`).
@@ -65,6 +71,7 @@ Ortak kod `_shared/security.ts` (`requireStaff` seçenekleri: `adminOnly`, `mana
 - `20261102120100_security_hardening_function_grants.sql`
 - `20261102193000_coaches_specialty_optional.sql`
 - `20261103090000_branches.sql`: şubeler (canlıya `apply_migration` ile `branches_feature` adıyla uygulandı)
+- `20261104090000_company_bank_settings.sql`: şirket/banka (canlıya `company_bank_settings` adıyla uygulandı)
 - `20261103150000_coach_registration_branch_access.sql`: `coaches.branch_access`, antrenör kayıt politikaları (`coach_registration_branch_access` adıyla uygulandı)
 - `20261103120000_roles_manager.sql`: yönetici rolü, rol yardımcıları, tüm RLS yeniden (canlıya `roles_manager_and_branch_rls` adıyla uygulandı; apply_migration 60 sn'de zaman aşımı gösterse de uygulanmıştı — her zaman `execute_sql` ile doğrula)
 
