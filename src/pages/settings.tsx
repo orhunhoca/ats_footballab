@@ -68,6 +68,7 @@ export default function SettingsPage() {
   });
   const [whatsappTestPhone, setWhatsappTestPhone] = useState("");
   const [testingWhatsapp, setTestingWhatsapp] = useState(false);
+  const [testingIyzico, setTestingIyzico] = useState(false);
 
   // Scheduler settings
   const [messageTexts, setMessageTexts] = useState<Record<string, string | null>>({});
@@ -232,6 +233,25 @@ export default function SettingsPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Girilen iyzico anahtarlarını kaydeder ve sunucuda dener (para hareketi olmaz)
+  const handleTestIyzico = async () => {
+    try {
+      setTestingIyzico(true);
+      const saved = await iyzicoService.saveSettings(iyzicoSettings);
+      if (!saved.success) throw new Error(saved.error || "Ayarlar kaydedilemedi");
+      const result = await iyzicoService.testConnection();
+      if (result.success) {
+        toast({ title: "iyzico bağlantısı çalışıyor", description: `Anahtarlar kabul edildi (${result.mode} ortamı).` });
+      } else {
+        toast({ title: "iyzico bağlantısı kurulamadı", description: result.error || "Anahtarları ve adresi kontrol edin.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Hata", description: error instanceof Error ? error.message : "Test yapılamadı", variant: "destructive" });
+    } finally {
+      setTestingIyzico(false);
     }
   };
 
@@ -935,6 +955,13 @@ export default function SettingsPage() {
                           Canlı için: https://api.iyzipay.com
                         </p>
                       </div>
+                      <div>
+                        <Button type="button" variant="outline" onClick={handleTestIyzico} disabled={testingIyzico}>
+                          {testingIyzico && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          Kaydet ve Bağlantıyı Test Et
+                        </Button>
+                        <p className="mt-1 text-xs text-muted-foreground">Anahtarlar kaydedilir ve iyzico'ya deneme sorgusu gönderilir; para hareketi olmaz.</p>
+                      </div>
                     </div>
                   )}
                   
@@ -942,7 +969,7 @@ export default function SettingsPage() {
                     <h4 className="font-semibold mb-1">Bilgilendirme</h4>
                     <p>
                       Bu ayarları kaydettikten sonra, Ödemeler sayfasından öğrenciler için online ödeme linki oluşturabilirsiniz.
-                      Ödeme başarılı olduğunda otomatik olarak sisteme işlenecek ve veliye makbuz gönderilecektir.
+                      Ödeme başarılı olduğunda otomatik olarak sisteme işlenir ve Ödemeler listesinde "Online Ödeme" olarak görünür.
                     </p>
                   </div>
                 </div>
