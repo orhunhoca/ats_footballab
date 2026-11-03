@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { BranchFilterBar } from "@/components/BranchFilterBar";
 import { RoleGate } from "@/components/RoleGate";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
@@ -95,6 +96,8 @@ function ReportsPageInner() {
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Raporlar & İstatistikler</h1>
             <p className="text-gray-600 mt-1">Mali durum, katılım oranları ve performans analizleri</p>
           </div>
+
+          <BranchFilterBar />
 
           <Tabs defaultValue={isAdmin ? "financial" : "attendance"} className="space-y-6">
             <TabsList>

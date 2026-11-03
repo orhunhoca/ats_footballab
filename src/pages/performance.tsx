@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { BranchFilterBar } from "@/components/BranchFilterBar";
 import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -394,6 +395,8 @@ function PerformancePageInner() {
               Detaylı performans takibi, trend analizi ve AI destekli öneriler
             </p>
           </div>
+
+          <BranchFilterBar />
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Student Selection */}

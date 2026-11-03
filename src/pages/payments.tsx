@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { SEO } from "@/components/SEO";
+import { BranchFilterBar } from "@/components/BranchFilterBar";
 import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
 import { Navigation } from "@/components/Navigation";
@@ -479,6 +480,8 @@ function PaymentsPageInner() {
             </Dialog>
           </div>
         </div>
+
+        <BranchFilterBar />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">

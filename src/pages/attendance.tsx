@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { BranchFilterBar } from "@/components/BranchFilterBar";
 import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -346,6 +347,8 @@ function AttendancePageInner() {
               </Button>
             </div>
           </div>
+
+          <BranchFilterBar />
 
           <div className="grid gap-6 mb-6 md:grid-cols-3">
             <Card>

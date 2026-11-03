@@ -10,7 +10,6 @@ import {
   Activity,
   CreditCard,
   BarChart3,
-  Building2,
   ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
@@ -154,14 +153,6 @@ export default function Home() {
 
               {isAdmin && (
                 <>
-                  <DashboardButton 
-                    href="/branches"
-                    icon={Building2}
-                    title="Şubeler"
-                    desc="Şube ekle ve yönet"
-                    color="text-teal-600"
-                  />
-
                   <DashboardButton 
                     href="/users"
                     icon={ShieldCheck}

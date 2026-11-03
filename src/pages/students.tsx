@@ -1,4 +1,5 @@
 import { SEO } from "@/components/SEO";
+import { BranchFilterBar } from "@/components/BranchFilterBar";
 import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
 import { useUserRole } from "@/hooks/useUserRole";
@@ -207,6 +208,8 @@ function StudentsPageInner() {
               </Button>
             )}
           </div>
+
+          <BranchFilterBar />
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
