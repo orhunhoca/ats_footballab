@@ -89,6 +89,26 @@ export const groupService = {
     return data;
   },
 
+  /**
+   * Silmeyi engelleyen bağlı kayıtlar. Grup silinirse yoklama geçmişi, haftalık program ve antrenman atamaları da
+   * (veritabanında ON DELETE CASCADE) silinir; öğrencilerin grup bağlantısı kalkar. Bu yüzden öğrencisi,
+   * yoklaması ya da atanmış deneme öğrencisi olan grup silinmez, Pasif yapılır.
+   */
+  async getDeleteBlockers(id: string): Promise<{ students: number; attendance: number; trialStudents: number }> {
+    const [sg, att, trial] = await Promise.all([
+      supabase.from("student_groups").select("id", { count: "exact", head: true }).eq("group_id", id),
+      supabase.from("attendance").select("id", { count: "exact", head: true }).eq("group_id", id),
+      supabase.from("trial_students").select("id", { count: "exact", head: true }).eq("assigned_group_id", id),
+    ]);
+    if (sg.error) throw sg.error;
+    if (att.error) throw att.error;
+    if (trial.error) throw trial.error;
+    const students = sg.count ?? 0;
+    const attendance = att.count ?? 0;
+    const trialStudents = trial.count ?? 0;
+    return { students, attendance, trialStudents };
+  },
+
   // Delete group
   async deleteGroup(id: string) {
     const { error } = await supabase
