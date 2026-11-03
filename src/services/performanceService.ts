@@ -25,6 +25,7 @@ export type PerformanceTest = Tables<"performance_tests"> & {
     name: string;
     category: string;
     unit: string;
+    direction?: string | null;
   } | null;
 };
 
@@ -47,7 +48,8 @@ export const performanceService = {
           id,
           name,
           category,
-          unit
+          unit,
+          direction
         )
       `)
       .eq("student_id", studentId)
@@ -174,7 +176,8 @@ export const performanceService = {
           id,
           name,
           category,
-          unit
+          unit,
+          direction
         )
       `)
       .order("test_date", { ascending: false });
