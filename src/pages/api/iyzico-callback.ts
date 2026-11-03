@@ -86,15 +86,20 @@ export default async function handler(
           const parentPhone = student.father_phone || student.mother_phone;
           
           if (parentPhone) {
-            await whatsappService.sendCustomMessage(
-              parentPhone,
+            try {
+              await whatsappService.sendCustomMessage(
+                parentPhone,
               `✅ ÖDEME BAŞARILI!\n\n` +
               `Öğrenci: ${student.name}\n` +
               `Tutar: ${onlinePayment.amount.toLocaleString("tr-TR")} TL\n` +
               `İşlem No: ${paymentResult.paymentId}\n\n` +
               `Ödeme makbuzunuz WhatsApp'tan gönderildi.\n\n` +
               `Teşekkür ederiz! ⚽`
-            );
+              );
+            } catch (notifyError) {
+              // Bildirim gönderilemese de ödeme kaydı tamamlanmış sayılır
+              console.error("Payment success WhatsApp notification failed:", notifyError);
+            }
           }
         }
       }

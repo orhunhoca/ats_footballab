@@ -232,6 +232,8 @@ export const paymentService = {
     success: boolean;
     paymentLink?: string;
     error?: string;
+    /** Link oluşturuldu ama WhatsApp mesajı gönderilemediyse nedeni */
+    whatsappError?: string;
   }> {
     try {
       // Get student info
@@ -262,8 +264,9 @@ export const paymentService = {
         const parentPhone = student.father_phone || student.mother_phone;
         
         if (parentPhone) {
-          await whatsappService.sendCustomMessage(
-            parentPhone,
+          try {
+            await whatsappService.sendCustomMessage(
+              parentPhone,
             `🔐 FOOTBALLAB ONLINE ÖDEME\n\n` +
             `Öğrenci: ${student.name}\n` +
             `Tutar: ${params.amount.toLocaleString("tr-TR")} TL\n` +
@@ -271,7 +274,14 @@ export const paymentService = {
             `Güvenli ödeme linki:\n${result.paymentLink}\n\n` +
             `⏰ Link 24 saat geçerlidir.\n` +
             `✅ Ödemeniz onaylandığında otomatik bildirim alacaksınız.`
-          );
+            );
+          } catch (error) {
+            console.error("Payment link WhatsApp send failed:", error);
+            return {
+              ...result,
+              whatsappError: error instanceof Error ? error.message : "WhatsApp gönderimi başarısız",
+            };
+          }
         }
       }
 

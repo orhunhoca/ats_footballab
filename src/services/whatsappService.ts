@@ -24,6 +24,14 @@ interface SendMessageParams {
   messageType?: "payment_reminder" | "attendance" | "announcement" | "performance_report" | "custom";
 }
 
+/** WhatsApp bağlı/aktif değilken fırlatılır (mesaj kuyruğa/kayda alınmaz, "gönderildi" denmez). */
+export class WhatsAppNotConnectedError extends Error {
+  constructor() {
+    super("WhatsApp bağlı değil. Ayarlar → WhatsApp bölümünden bağlantıyı kurun.");
+    this.name = "WhatsAppNotConnectedError";
+  }
+}
+
 /** supabase.functions.invoke hata gövdesindeki gerçek mesajı çıkarır. */
 async function extractFunctionError(error: unknown): Promise<string> {
   const ctx = (error as { context?: Response })?.context;
@@ -131,7 +139,7 @@ export const whatsappService = {
       if (!settings || !settings.is_active) {
         return {
           success: false,
-          error: "WhatsApp is not configured or inactive"
+          error: new WhatsAppNotConnectedError().message
         };
       }
 
@@ -384,17 +392,7 @@ export const whatsappService = {
     try {
       // Get settings
       const settings = await this.getSettings();
-      // If no settings, log and return simulated
-      if (!settings?.is_active) {
-         console.log("Simulating custom message send:", { phoneNumber, messageText });
-         return { 
-             id: "simulated-" + Date.now(), 
-             recipient_phone: phoneNumber,
-             status: "sent", 
-             message_content: messageText,
-             created_at: new Date().toISOString() 
-         } as WhatsAppMessage;
-      }
+      if (!settings?.is_active) throw new WhatsAppNotConnectedError();
 
       // Call Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
@@ -430,6 +428,8 @@ export const whatsappService = {
       if (insertError) throw insertError;
       return data;
     } catch (error) {
+      // Bağlantı yoksa başarısız kayıt da oluşturma; hatayı olduğu gibi ilet
+      if (error instanceof WhatsAppNotConnectedError) throw error;
       // Record failed message
       const failedRecord: WhatsAppMessageInsert = {
         recipient_phone: phoneNumber,
@@ -461,20 +461,7 @@ export const whatsappService = {
           caption
       });
 
-      // If no settings, log and return simulated
-      if (!settings?.is_active) {
-         console.log("Simulating document message send:", { phoneNumber, documentUrl });
-         // Mock record
-         const mock: WhatsAppMessageInsert = {
-             recipient_phone: phoneNumber,
-             message_type: "document",
-             message_content: messageContent,
-             status: "sent"
-         };
-         // Insert mock to DB to keep history
-         const { data } = await supabase.from("whatsapp_messages").insert(mock).select().single();
-         return data as WhatsAppMessage;
-      }
+      if (!settings?.is_active) throw new WhatsAppNotConnectedError();
 
       // Call Edge Function
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
@@ -520,6 +507,8 @@ export const whatsappService = {
 
       return data;
     } catch (error) {
+      // Bağlantı yoksa başarısız kayıt da oluşturma; hatayı olduğu gibi ilet
+      if (error instanceof WhatsAppNotConnectedError) throw error;
       // Record failed message
       const failedRecord: WhatsAppMessageInsert = {
         recipient_phone: phoneNumber,
@@ -548,17 +537,7 @@ export const whatsappService = {
           caption
       });
 
-      if (!settings?.is_active) {
-        console.log("Simulating image message send:", { phoneNumber, imageUrl });
-        const mock: WhatsAppMessageInsert = {
-             recipient_phone: phoneNumber,
-             message_type: "image",
-             message_content: messageContent,
-             status: "sent"
-         };
-         const { data } = await supabase.from("whatsapp_messages").insert(mock).select().single();
-         return data as WhatsAppMessage;
-      }
+      if (!settings?.is_active) throw new WhatsAppNotConnectedError();
 
       // Call Edge Function (assuming it supports images too)
       const { data: functionData, error: functionError } = await supabase.functions.invoke(
@@ -592,6 +571,7 @@ export const whatsappService = {
       return data;
 
     } catch (error) {
+      if (error instanceof WhatsAppNotConnectedError) throw error;
       console.error("Error sending image:", error);
 
       // Record failed message

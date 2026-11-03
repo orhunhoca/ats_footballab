@@ -165,8 +165,12 @@ export default function PaymentsPage() {
 
       if (result.success) {
         toast({
-          title: "Başarılı",
-          description: "Ödeme linki oluşturuldu ve gönderildi."
+          title: result.whatsappError ? "Link oluşturuldu, mesaj gönderilemedi" : "Başarılı",
+          description: result.whatsappError
+            ? `Ödeme linki oluşturuldu ama WhatsApp mesajı gönderilemedi: ${result.whatsappError}`
+            : onlineFormData.send_via_whatsapp
+              ? "Ödeme linki oluşturuldu ve gönderildi."
+              : "Ödeme linki oluşturuldu."
         });
         setIsOnlineDialogOpen(false);
         setOnlineFormData({
