@@ -14,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, Upload, Send, Trash2, Download, Image as ImageIcon, Users } from "lucide-react";
-import { storageService } from "@/services/storageService";
 import { whatsappService } from "@/services/whatsappService";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
@@ -31,6 +30,9 @@ function GalleryInner() {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [caption, setCaption] = useState("");
+  const [groups, setGroups] = useState<{ id: string; name: string }[]>([]);
+  const [groupId, setGroupId] = useState("");
+  const [urls, setUrls] = useState<Record<string, string>>({});
   const [uploading, setUploading] = useState(false);
   const [sending, setSending] = useState(false);
 
@@ -62,6 +64,18 @@ function GalleryInner() {
 
       if (mediaError) throw mediaError;
       setMedia(mediaData || []);
+
+      const { data: groupsData } = await supabase.from("groups").select("id, name").order("name");
+      setGroups(groupsData || []);
+
+      // Fotoğraflar özel depoda; görüntüleme/indirme için 1 saat geçerli imzalı bağlantı
+      const paths = (mediaData || []).map((m) => m.media_url);
+      if (paths.length > 0) {
+        const { data: signed } = await supabase.storage.from("gallery").createSignedUrls(paths, 3600);
+        setUrls(Object.fromEntries((signed || []).filter((r) => r.path && r.signedUrl).map((r) => [r.path as string, r.signedUrl])));
+      } else {
+        setUrls({});
+      }
     } catch (error) {
       console.error("Error loading data:", error);
       toast({
@@ -80,49 +94,54 @@ function GalleryInner() {
 
   const handleUploadPhotos = async () => {
     if (selectedFiles.length === 0) {
-      toast({
-        title: "Uyarı",
-        description: "Lütfen en az bir fotoğraf seçin",
-        variant: "destructive",
-      });
+      toast({ title: "Uyarı", description: "Lütfen en az bir fotoğraf seçin", variant: "destructive" });
+      return;
+    }
+    if (!groupId) {
+      toast({ title: "Uyarı", description: "Fotoğrafların hangi gruba ait olduğunu seçin. Grubun velileri görebilir.", variant: "destructive" });
       return;
     }
 
     setUploading(true);
     try {
-      const uploadedUrls: string[] = [];
+      let uploaded = 0;
+      let lastError = "";
 
       for (const file of selectedFiles) {
-        const fileName = `photos/${Date.now()}_${file.name}`;
-        const result = await storageService.uploadFile(file, fileName, "student-photos");
-
-        if (result.success && result.url) {
-          uploadedUrls.push(result.url);
-
-          // Record in database
-          await supabase.from("whatsapp_media").insert({
-            media_type: "photo",
-            media_url: result.url,
-            caption: caption || "Antrenman fotoğrafı",
-          });
+        const safeName = file.name.replace(/[^A-Za-z0-9._-]/g, "_");
+        const path = `${groupId}/${Date.now()}_${safeName}`;
+        const { error: uploadError } = await supabase.storage.from("gallery").upload(path, file, { contentType: file.type, upsert: false });
+        if (uploadError) {
+          lastError = uploadError.message;
+          continue;
         }
+        const { error: insertError } = await supabase.from("whatsapp_media").insert({
+          media_type: "photo",
+          media_url: path,
+          caption: caption || "Antrenman fotoğrafı",
+          group_id: groupId,
+          file_name: file.name,
+          file_size: file.size,
+          mime_type: file.type,
+        });
+        if (insertError) {
+          await supabase.storage.from("gallery").remove([path]);
+          lastError = insertError.message;
+          continue;
+        }
+        uploaded++;
       }
 
       toast({
-        title: "Başarılı",
-        description: `${uploadedUrls.length} fotoğraf yüklendi`,
+        title: uploaded === selectedFiles.length ? "Başarılı" : uploaded > 0 ? "Kısmen yüklendi" : "Yüklenemedi",
+        description:
+          `${uploaded}/${selectedFiles.length} fotoğraf yüklendi.` + (lastError ? ` Hata: ${lastError}` : ""),
+        variant: uploaded === 0 ? "destructive" : "default",
       });
 
       setSelectedFiles([]);
       setCaption("");
       loadData();
-    } catch (error) {
-      console.error("Error uploading photos:", error);
-      toast({
-        title: "Hata",
-        description: "Fotoğraflar yüklenirken bir hata oluştu",
-        variant: "destructive",
-      });
     } finally {
       setUploading(false);
     }
@@ -183,8 +202,9 @@ function GalleryInner() {
 
   const handleDeletePhoto = async (mediaId: string, mediaUrl: string) => {
     try {
-      // Delete from storage
-      await storageService.deleteStudentPhoto(mediaUrl);
+      // Özel depodan sil
+      const { error: removeError } = await supabase.storage.from("gallery").remove([mediaUrl]);
+      if (removeError) throw removeError;
 
       // Delete from database
       await supabase.from("whatsapp_media").delete().eq("id", mediaId);
@@ -263,6 +283,25 @@ function GalleryInner() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label>Grup *</Label>
+                    <Select value={groupId} onValueChange={setGroupId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Fotoğrafların ait olduğu grubu seçin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groups.map((g) => (
+                          <SelectItem key={g.id} value={g.id}>
+                            {g.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-600">
+                      Bu gruptaki öğrencilerin velileri, fotoğraf paylaşım onayı vermişse fotoğrafları veli portalında görür.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="caption">Açıklama (Opsiyonel)</Label>
                     <Textarea
                       id="caption"
@@ -331,7 +370,7 @@ function GalleryInner() {
                           <DialogFooter>
                             <Button
                               onClick={() => {
-                                const recentPhotos = media.slice(0, 5).map((m) => m.media_url);
+                                const recentPhotos = media.slice(0, 5).map((m) => urls[m.media_url]).filter(Boolean);
                                 handleSendPhotos(recentPhotos, selectedStudents);
                               }}
                               disabled={sending || selectedStudents.length === 0}
@@ -372,7 +411,7 @@ function GalleryInner() {
                         <Card key={item.id} className="overflow-hidden">
                           <div className="aspect-video relative bg-gray-100">
                             <img
-                              src={item.media_url}
+                              src={urls[item.media_url]}
                               alt={item.caption || "Antrenman fotoğrafı"}
                               className="w-full h-full object-cover"
                             />
@@ -388,13 +427,16 @@ function GalleryInner() {
                               {item.students && (
                                 <Badge variant="secondary">{item.students.name}</Badge>
                               )}
+                              {item.group_id && (
+                                <Badge variant="outline">{groups.find((g) => g.id === item.group_id)?.name ?? "Grup"}</Badge>
+                              )}
                             </div>
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 className="flex-1"
-                                onClick={() => window.open(item.media_url, "_blank")}
+                                onClick={() => urls[item.media_url] && window.open(urls[item.media_url], "_blank")}
                               >
                                 <Download className="w-3 h-3 mr-1" />
                                 İndir

@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { LEGAL_VERSION } from "@/lib/legal";
+import type { AnalysisTestRecord } from "@/lib/performanceAnalysis";
 
 export type ParentInvite = Tables<"parent_invites">;
 
@@ -39,6 +40,19 @@ export interface ChildLedger {
   }[];
   payments: { payment_date: string; amount: number; payment_method: string }[];
   bank_accounts: { bank_name: string; account_holder: string; iban: string; description: string | null }[];
+}
+
+export interface ChildAttendance {
+  present: number;
+  absent: number;
+  excused: number;
+  total: number;
+  records: { date: string; status: string; group_name: string | null }[];
+}
+
+export interface ChildGallery {
+  consent: boolean;
+  items: { id: string; path: string; caption: string | null; created_at: string }[];
 }
 
 /** Kayıtta isteğe bağlı açık rıza maddeleri (kabul veya ret kaydedilir) */
@@ -117,6 +131,48 @@ export const parentService = {
     const { data, error } = await supabase.rpc("get_my_child_ledger", { p_student_id: studentId });
     if (error) throw error;
     return data as unknown as ChildLedger;
+  },
+
+  async getChildAttendance(studentId: string): Promise<ChildAttendance> {
+    const { data, error } = await supabase.rpc("get_my_child_attendance", { p_student_id: studentId });
+    if (error) throw error;
+    return data as unknown as ChildAttendance;
+  },
+
+  /** Performans testleri (analiz motoruna doğrudan verilebilir biçimde) */
+  async getChildPerformance(studentId: string): Promise<AnalysisTestRecord[]> {
+    const { data, error } = await supabase.rpc("get_my_child_performance", { p_student_id: studentId });
+    if (error) throw error;
+    return (data as unknown as AnalysisTestRecord[]) || [];
+  },
+
+  async getChildGallery(studentId: string): Promise<ChildGallery> {
+    const { data, error } = await supabase.rpc("get_my_child_gallery", { p_student_id: studentId });
+    if (error) throw error;
+    return data as unknown as ChildGallery;
+  },
+
+  /** Galeri fotoğrafları özel depoda; 1 saat geçerli imzalı bağlantılar üretir (path -> url) */
+  async signGalleryUrls(paths: string[]): Promise<Record<string, string>> {
+    if (paths.length === 0) return {};
+    const { data, error } = await supabase.storage.from("gallery").createSignedUrls(paths, 3600);
+    if (error) throw error;
+    const map: Record<string, string> = {};
+    for (const row of data || []) if (row.path && row.signedUrl) map[row.path] = row.signedUrl;
+    return map;
+  },
+
+  /** Velinin okul içi fotoğraf/video paylaşımı onayını kaydeder (en son kayıt geçerlidir) */
+  async setMediaConsent(userId: string, accepted: boolean): Promise<void> {
+    const { error } = await supabase.from("consents").insert({
+      user_id: userId,
+      document_type: "acik_riza_medya_ici",
+      document_version: LEGAL_VERSION,
+      accepted,
+      source: "portal",
+      user_agent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 300) : null,
+    });
+    if (error) throw error;
   },
 
   /** Velinin güncel KVKK sürümünü onaylayıp onaylamadığı */

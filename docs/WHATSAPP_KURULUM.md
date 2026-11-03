@@ -74,6 +74,54 @@ FootbalLab Futbol Okulu
 
 Onaylanan şablonların durumunu veritabanında `approved` yapmak şart değildir; gönderimi Meta doğrular.
 
+## C2. Otomatik mesaj şablonları (zamanlayıcı kurulduğunda gerekir)
+Ayarlar → Otomatik Mesajlar'daki dört mesaj için Meta'da şablon oluşturun. Ad, dil **Turkish (tr)** ve gövde aşağıdakiyle aynı olmalı.
+Değişkenler Meta'da sıra numarasıyla ({{1}}, {{2}}…) yazılır; panelde düzenlediğiniz metindeki `{veli_adi}`, `{ogrenci_adi}` vb. aynı sırayla eşleşir.
+Panelde metni değiştirirseniz Meta'daki şablonu da aynı metinle yeniden onaylatın.
+
+**5) `training_reminder`** (Kategori: Utility)
+```
+Merhaba {{1}} 👋
+
+{{2}} için bugün saat {{3}} antrenmanımız var. Görüşmek üzere!
+
+FootbalLab Futbol Okulu
+```
+Örnekler: Ayşe Hanım · Ali · 17:00
+
+**6) `birthday_greeting`** (Kategori: Marketing — Meta kutlama mesajlarını genelde Marketing sayar)
+```
+Merhaba {{1}} 🎂
+
+{{2}}'in doğum gününü kutlar, nice mutlu ve sağlıklı yıllar dileriz!
+
+FootbalLab Futbol Okulu
+```
+Örnekler: Ayşe Hanım · Ali
+
+**7) `anniversary_greeting`** (Kategori: Marketing)
+```
+Merhaba {{1}} ⚽
+
+{{2}} ile birlikte {{3}}. yılımızı tamamladık. Bize güvendiğiniz için teşekkür ederiz!
+
+FootbalLab Futbol Okulu
+```
+Örnekler: Ayşe Hanım · Ali · 2
+
+**8) `registration_expiry`** (Kategori: Utility; kayıt bitişi hatırlatması için)
+```
+Merhaba {{1}} 👋
+
+{{2}} için kayıt süresi {{3}} tarihinde sona erecektir. Yenileme için bize WhatsApp üzerinden yazabilirsiniz.
+
+FootbalLab Futbol Okulu
+```
+Örnekler: Ayşe Hanım · Ali · 15.12.2026
+
+Not: Marketing kategorisindeki mesajlar velinin ticari ileti onayına (`acik_riza_ticari_ileti`) tabi olmalıdır; zamanlayıcı kurulurken
+doğum günü/yıl dönümü gönderimi yalnızca bu onayı veren velilere yapılacaktır.
+
 ## D. Veliye gönderim
 Performans → öğrenci seç → **Veliye Gönder**. Alıcılar öğrencinin `mother_phone` / `father_phone` alanlarından gelir.
 Serbest metin/doküman/görsel mesajlar yalnızca velinin son mesajından sonraki 24 saat içinde teslim edilir; diğer her şey için onaylı şablon gerekir.

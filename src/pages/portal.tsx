@@ -3,16 +3,14 @@ import { Navigation } from "@/components/Navigation";
 import { RoleGate } from "@/components/RoleGate";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Loader2, Users, Building2, Plus, ShieldCheck, Clock } from "lucide-react";
+import { Loader2, Plus, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ChildLedgerCard } from "@/components/portal/ChildLedgerCard";
+import { ChildSection } from "@/components/portal/ChildSection";
 import { parentService, type MyChild } from "@/services/parentService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -144,41 +142,10 @@ function PortalInner() {
                   <CardContent className="py-8 text-center text-gray-600">Hesabınıza bağlı öğrenci bulunmuyor. Aşağıdan davet kodu ekleyebilirsiniz.</CardContent>
                 </Card>
               ) : (
-                <div className="grid gap-4 md:grid-cols-2">
-                  {children.map((c) => (
-                    <Card key={c.student_id}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center justify-between gap-2">
-                          <span className="truncate">{c.name}</span>
-                          {c.relation && <Badge variant="outline">{c.relation}</Badge>}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-2 text-sm text-gray-700">
-                        {c.branch_name && (
-                          <p className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-emerald-600" />
-                            {c.branch_name}
-                          </p>
-                        )}
-                        <p className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-emerald-600" />
-                          {c.groups.length > 0 ? c.groups.join(", ") : "Grup atanmadı"}
-                        </p>
-                      </CardContent>
-                    </Card>
-                  ))}
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {userId && children.map((c) => <ChildSection key={c.student_id} child={c} userId={userId} />)}
                 </div>
               )}
-
-              {children.map((c) => (
-                <ChildLedgerCard key={`ledger-${c.student_id}`} studentId={c.student_id} studentName={c.name} />
-              ))}
-
-              <Alert>
-                <Clock className="h-4 w-4" />
-                <AlertTitle>Çok yakında</AlertTitle>
-                <AlertDescription>Yoklama kayıtları, performans test raporları ve galeri bu sayfaya eklenecek.</AlertDescription>
-              </Alert>
 
               <Card>
                 <CardHeader>

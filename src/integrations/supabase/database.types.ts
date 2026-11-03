@@ -1784,6 +1784,9 @@ export type Database = {
       }
       get_my_children: { Args: never; Returns: Json }
       get_my_child_ledger: { Args: { p_student_id: string }; Returns: Json }
+      get_my_child_attendance: { Args: { p_student_id: string; p_limit?: number }; Returns: Json }
+      get_my_child_performance: { Args: { p_student_id: string }; Returns: Json }
+      get_my_child_gallery: { Args: { p_student_id: string }; Returns: Json }
     }
     Enums: {
       test_type:

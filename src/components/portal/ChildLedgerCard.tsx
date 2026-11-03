@@ -11,7 +11,7 @@ const money = (n: number | null | undefined) =>
 const date = (iso: string) => new Date(iso).toLocaleDateString("tr-TR");
 
 /** Velinin portalında çocuğun borç / ödeme özeti ve ödeme yapılacak banka hesapları (yalnızca görüntüleme). */
-export function ChildLedgerCard({ studentId, studentName }: { studentId: string; studentName: string }) {
+export function ChildLedgerCard({ studentId, studentName, embedded = false }: { studentId: string; studentName: string; embedded?: boolean }) {
   const [ledger, setLedger] = useState<ChildLedger | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -32,15 +32,8 @@ export function ChildLedgerCard({ studentId, studentName }: { studentId: string;
   if (failed) return null;
   const owed = Number(ledger?.balance || 0);
 
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Wallet className="h-5 w-5 text-emerald-600" />
-          {studentName} — Ödeme Durumu
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 text-sm">
+  const content = (
+    <>
         {loading || !ledger ? (
           <Loader2 className="mx-auto h-6 w-6 animate-spin text-emerald-600" />
         ) : ledger.charges.length === 0 && ledger.payments.length === 0 ? (
@@ -121,7 +114,20 @@ export function ChildLedgerCard({ studentId, studentName }: { studentId: string;
             )}
           </>
         )}
-      </CardContent>
+    </>
+  );
+
+  if (embedded) return <div className="space-y-4 text-sm">{content}</div>;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Wallet className="h-5 w-5 text-emerald-600" />
+          {studentName} — Ödeme Durumu
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">{content}</CardContent>
     </Card>
   );
 }
