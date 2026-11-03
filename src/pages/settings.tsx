@@ -556,7 +556,22 @@ export default function SettingsPage() {
             </TabsContent>
 
             {/* School Settings Tab */}
-            <TabsContent value="school">
+            <TabsContent value="school" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Şubeler</CardTitle>
+                  <CardDescription>
+                    Okulunuzun şubelerini ekleyin, düzenleyin veya pasife alın. Öğrenci, antrenör, grup, ödeme ve raporlar şubeye göre ayrılır.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => router.push("/branches")} className="bg-emerald-600 hover:bg-emerald-700">
+                    <Building2 className="w-4 h-4 mr-2" />
+                    Şubeleri Yönet
+                  </Button>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <CardTitle>Okul Bilgileri</CardTitle>
