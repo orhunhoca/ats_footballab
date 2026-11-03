@@ -5,6 +5,8 @@
  * - Yapay zekâ anahtarı yokken de çalışan, yalnızca gerçek verilere dayanan bir rapor üretir
  */
 
+import { evaluateNorm, getReferenceNorm, NORM_LEVEL_LABEL, NORM_SOURCE_LABEL, type NormLevel, type NormRef } from "@/lib/testNorms";
+
 export interface AnalysisTestRecord {
   test_date: string;
   value: number | string;
@@ -33,6 +35,15 @@ export interface MetricSummary {
   changePct: number | null;
   trend: Trend;
   isPersonalBest: boolean;
+  /** Yaş grubu karşılaştırması (yaş bilinmiyor ya da norm yoksa tanımsız); son ölçüme göre */
+  norm?: { level: NormLevel; ref: NormRef };
+}
+
+export interface AnalyzeOptions {
+  /** Öğrencinin yaşı (norm karşılaştırması için) */
+  age?: number | null;
+  /** Okulun kendi verisinden hesaplanan normlar: MetricSummary.key (test_protocol_id) -> norm */
+  schoolNorms?: Record<string, NormRef>;
 }
 
 export interface StudentAnalysis {
@@ -85,7 +96,7 @@ function formatDateTr(iso: string): string {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleDateString("tr-TR");
 }
 
-export function analyzeStudentTests(tests: AnalysisTestRecord[]): StudentAnalysis {
+export function analyzeStudentTests(tests: AnalysisTestRecord[], options: AnalyzeOptions = {}): StudentAnalysis {
   const groups = new Map<string, AnalysisTestRecord[]>();
   for (const t of tests) {
     const key = t.test_protocol_id || t.test_protocols?.name || t.test_type || "diger";
@@ -122,6 +133,9 @@ export function analyzeStudentTests(tests: AnalysisTestRecord[]): StudentAnalysi
         changePct >= STABLE_THRESHOLD_PCT ? "improving" : changePct <= -STABLE_THRESHOLD_PCT ? "declining" : "stable";
     }
 
+    const ref = options.schoolNorms?.[key] ?? getReferenceNorm(name, options.age);
+    const norm = ref ? { level: evaluateNorm(latest, direction, ref), ref } : undefined;
+
     metrics.push({
       key,
       name,
@@ -137,6 +151,7 @@ export function analyzeStudentTests(tests: AnalysisTestRecord[]): StudentAnalysi
       changePct,
       trend,
       isPersonalBest: sorted.length >= 2 && latest === best,
+      norm,
     });
   });
 
@@ -218,6 +233,18 @@ export function buildRuleBasedAnalysis(
   }
   lines.push("");
 
+  const withNorm = analysis.metrics.filter((m) => m.norm);
+  if (withNorm.length > 0) {
+    lines.push("## Yaş Grubuna Göre Konum");
+    withNorm.forEach((m) => {
+      const n = m.norm!;
+      lines.push(
+        `- **${m.name}:** ${formatNumber(m.latest)} ${formatUnit(m.unit)} — ${NORM_LEVEL_LABEL[n.level]} (${NORM_SOURCE_LABEL[n.ref.source].toLowerCase()}: ortanca ${formatNumber(n.ref.median)} ${formatUnit(m.unit)})`
+      );
+    });
+    lines.push("");
+  }
+
   lines.push("## Güçlü Yönler");
   if (analysis.improving.length > 0) {
     analysis.improving.slice(0, 5).forEach((m) => {
@@ -259,7 +286,11 @@ export function buildRuleBasedAnalysis(
     if (days > 60) lines.push(`- Son test ${days} gün önce yapıldı; güncel durum için yeni ölçüm alınması önerilir.`);
   }
   lines.push("");
-  lines.push("_Not: Bu değerlendirme yalnızca okulda kaydedilen ölçümlere dayanır; yaş grubu normu içermez ve tıbbi değerlendirme yerine geçmez._");
+  lines.push(
+    withNorm.length > 0
+      ? "_Not: Yaş grubu karşılaştırması okulun kendi ölçümlerinden (yeterli veri varsa) ya da yaklaşık başlangıç referanslarından gelir; bilimsel norm tablosu değildir ve tıbbi değerlendirme yerine geçmez._"
+      : "_Not: Bu değerlendirme yalnızca okulda kaydedilen ölçümlere dayanır; yaş grubu normu içermez ve tıbbi değerlendirme yerine geçmez._"
+  );
   return lines.join("\n");
 }
 
@@ -322,6 +353,16 @@ export function toAiPayload(age: number | null | undefined, analysis: StudentAna
       trend: m.trend,
       first_date: m.firstDate,
       latest_date: m.latestDate,
+      norm: m.norm
+        ? {
+            level: NORM_LEVEL_LABEL[m.norm.level],
+            source: NORM_SOURCE_LABEL[m.norm.ref.source],
+            median: m.norm.ref.median,
+            weak: m.norm.ref.weak,
+            strong: m.norm.ref.strong,
+            sample_size: m.norm.ref.n ?? null,
+          }
+        : null,
     })),
     missing_categories: analysis.missingCategories,
   };
