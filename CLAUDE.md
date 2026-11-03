@@ -23,6 +23,7 @@ Futbol okulu yönetim paneli: öğrenciler, gruplar, antrenörler, deneme öğre
 - Ayarlar → **Şirket ve Banka** (yalnız admin düzenler, yönetim okur): `company_settings` (tek satır) + `bank_accounts` (IBAN, genel veya şubeye özel). Havale/EFT ödemesi `payment_history.bank_account_id` ile hesaba bağlanır.
 - Giriş gerektirmeyen sayfalar: `/kvkk`, `/acik-riza` (yazdırılabilir), `/cerez-politikasi` (`src/lib/legal.ts`; şirket bilgisi `get_public_company_info()` RPC ile anon'a — vergi bilgisi hariç). **Metinler taslaktır** (`LEGAL_DRAFT`), avukat incelemesi gerekir: `docs/HUKUKI_METIN_NOTLARI.md`.
 - Tüm sayfaların altında `Footer`: "© ATS - All Time Sports" + KVKK/Çerez bağlantıları. Müşteri logosu/adı ileride değişse de telif ATS olarak sabit kalır.
+- **KURAL (kullanıcı kararı)**: Veliler sisteme açıldığında KVKK Aydınlatma Metni onaylanmadan kayıt/giriş olamaz; sunucu tarafında zorunlu (tasarım: yol haritası dosyası). Supabase herkese açık kaydı kapalı kalmalı.
 - **Otomatik hatırlatmalar (aidat, kayıt bitişi, doğum günü) ŞU AN ÇALIŞMIYOR**; zamanlayıcı yok. Plan: `docs/YOL_HARITASI_VELI_SAYFASI_VE_HATIRLATMALAR.md` (veli erişim sayfası tasarımı da orada).
 
 ## Teknoloji

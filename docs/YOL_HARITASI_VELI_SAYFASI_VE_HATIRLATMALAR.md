@@ -8,6 +8,12 @@
 ## 1. Veli erişim sayfası (`/portal`) — önerilen tasarım
 **Rol ve bağlantı**: `profiles.role = 'parent'`; `parent_students(parent_user_id, student_id, relation)` ile veli ↔ çocuk(lar).
 Veli yalnızca kendi çocuklarının verisini görür (RLS ile veritabanında zorunlu; `requireStaff` varsayılanı parent'ı zaten dışarıda bırakır).
+**Kayıtta zorunlu KVKK onayı (KURAL — kullanıcı kararı)**: Veli, KVKK Aydınlatma Metni'ni onaylamadan kayıt olamaz/devam edemez.
+Yalnızca arayüzdeki onay kutusuna güvenilmez; **sunucu tarafında zorunlu** kılınır:
+- Supabase'in herkese açık kaydı kapalı kalır; veli hesabı yalnızca kayıt Edge Function'ı (`parent-register`) ile oluşur. Fonksiyon, `kvkk_accepted !== true` ise hesabı hiç oluşturmaz (400).
+- Onay `consents` tablosuna kalıcı yazılır: kullanıcı, belge türü, **belge sürümü**, onay/ret, tarih-saat, IP, tarayıcı, kaynak. Yönetim denetim için okur.
+- Metin sürümü (`LEGAL_VERSION`) değişirse veli bir sonraki girişte yeni sürümü onaylamadan portala giremez.
+- Açık Rıza maddeleri (sağlık, medya, WhatsApp, ticari ileti, yurt dışı) ayrı ayrı ve isteğe bağlıdır; reddedilirse ilgili özellik (örn. galeri) kapalı kalır.
 **Hesap yönetimi (admin + yönetici)**: öğrenci kartından "Veli Hesabı Aç" (e-posta + geçici şifre; çoklu çocuk bağlama), pasife alma, şifre sıfırlama, "Veliler" listesi.
 **Veli ekranları**: Yoklama (çocuk bazlı), Performans testleri ve raporlar (PDF), Galeri (yalnız medya rızası olan ve çocuğun grubu/kendisi için yüklenenler), Bakiye ve ödemeler.
 **İlk giriş**: KVKK Aydınlatma okuma + Açık Rıza maddeleri (sağlık, medya, WhatsApp, yurt dışı) → `consents` tablosuna tarih damgalı kayıt; medya rızası yoksa galeri kapalı.
