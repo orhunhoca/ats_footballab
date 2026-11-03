@@ -14,7 +14,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { paymentService, type PaymentMethod, type PaymentType } from "@/services/paymentService";
 import { studentService } from "@/services/studentService";
-import { CreditCard, Wallet, Building2, Loader2, TrendingUp, AlertCircle, CheckCircle2, Link as LinkIcon, Smartphone } from "lucide-react";
+import { CreditCard, Wallet, Building2, Loader2, TrendingUp, AlertCircle, CheckCircle2, Link as LinkIcon, Smartphone, MessageCircle } from "lucide-react";
+import { SendPaymentReminderDialog } from "@/components/payments/SendPaymentReminderDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PaymentsPage() {
@@ -30,6 +31,7 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isOnlineDialogOpen, setIsOnlineDialogOpen] = useState(false);
+  const [isReminderOpen, setIsReminderOpen] = useState(false);
   const [creatingLink, setCreatingLink] = useState(false);
   
   // Manual Payment Form
@@ -163,8 +165,12 @@ export default function PaymentsPage() {
 
       if (result.success) {
         toast({
-          title: "Başarılı",
-          description: "Ödeme linki oluşturuldu ve gönderildi."
+          title: result.whatsappError ? "Link oluşturuldu, mesaj gönderilemedi" : "Başarılı",
+          description: result.whatsappError
+            ? `Ödeme linki oluşturuldu ama WhatsApp mesajı gönderilemedi: ${result.whatsappError}`
+            : onlineFormData.send_via_whatsapp
+              ? "Ödeme linki oluşturuldu ve gönderildi."
+              : "Ödeme linki oluşturuldu."
         });
         setIsOnlineDialogOpen(false);
         setOnlineFormData({
@@ -226,7 +232,16 @@ export default function PaymentsPage() {
             <p className="text-gray-600">Ödeme takip ve yönetim sistemi</p>
           </div>
           
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsReminderOpen(true)}
+              className="text-emerald-700 border-emerald-200 hover:bg-emerald-50"
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Ödeme Hatırlatması
+            </Button>
+
             {/* Online Payment Link Dialog */}
             <Dialog open={isOnlineDialogOpen} onOpenChange={setIsOnlineDialogOpen}>
               <DialogTrigger asChild>
@@ -554,6 +569,13 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
       </main>
+
+      <SendPaymentReminderDialog
+        open={isReminderOpen}
+        onOpenChange={setIsReminderOpen}
+        students={students}
+        payments={payments}
+      />
     </div>
   );
 }

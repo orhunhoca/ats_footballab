@@ -6,6 +6,22 @@ import { whatsappService } from "./whatsappService";
 
 type DocumentTemplate = Database["public"]["Tables"]["document_templates"]["Row"];
 
+// WhatsApp gönderimi başarısız olsa bile PDF üretimi/kaydı başarılı sayılır; hata ayrıca döndürülür.
+async function trySendDocument(
+  phone: string,
+  url: string,
+  filename: string,
+  caption: string
+): Promise<string | undefined> {
+  try {
+    await whatsappService.sendDocumentMessage(phone, url, filename, caption);
+    return undefined;
+  } catch (error) {
+    console.error("WhatsApp document send failed:", error);
+    return error instanceof Error ? error.message : "WhatsApp gönderimi başarısız";
+  }
+}
+
 export const documentService = {
   // Get all document templates
   async getTemplates(): Promise<DocumentTemplate[]> {
@@ -23,7 +39,7 @@ export const documentService = {
     studentId: string,
     month: string,
     sendViaWhatsApp = true
-  ): Promise<{ success: boolean; pdfUrl?: string; error?: string }> {
+  ): Promise<{ success: boolean; pdfUrl?: string; error?: string; whatsappError?: string }> {
     try {
       // Fetch student data
       const { data: student, error: studentError } = await supabase
@@ -104,8 +120,9 @@ export const documentService = {
 
       // Send via WhatsApp if requested
       const parentPhone = studentData.father_phone || studentData.mother_phone;
+      let whatsappError: string | undefined;
       if (sendViaWhatsApp && parentPhone) {
-        await whatsappService.sendDocumentMessage(
+        whatsappError = await trySendDocument(
           parentPhone,
           uploadResult.url!,
           `${studentData.full_name.replace(/\s+/g, '_')}_${month}_Raporu.pdf`,
@@ -116,6 +133,7 @@ export const documentService = {
       return {
         success: true,
         pdfUrl: uploadResult.url,
+        whatsappError,
       };
     } catch (error) {
       console.error("Error generating performance report:", error);
@@ -130,7 +148,7 @@ export const documentService = {
   async generateAndSendPaymentReceipt(
     paymentId: string,
     sendViaWhatsApp = true
-  ): Promise<{ success: boolean; pdfUrl?: string; error?: string }> {
+  ): Promise<{ success: boolean; pdfUrl?: string; error?: string; whatsappError?: string }> {
     try {
       // Fetch payment data with student info
       // Using payment_history table
@@ -198,8 +216,9 @@ export const documentService = {
 
       // Send via WhatsApp if requested
       const parentPhone = studentData.father_phone || studentData.mother_phone;
+      let whatsappError: string | undefined;
       if (sendViaWhatsApp && parentPhone) {
-        await whatsappService.sendDocumentMessage(
+        whatsappError = await trySendDocument(
           parentPhone,
           uploadResult.url!,
           `Odeme_Makbuzu_${Date.now()}.pdf`,
@@ -210,6 +229,7 @@ export const documentService = {
       return {
         success: true,
         pdfUrl: uploadResult.url,
+        whatsappError,
       };
     } catch (error) {
       console.error("Error generating payment receipt:", error);
@@ -225,7 +245,7 @@ export const documentService = {
     groupId: string,
     month: string,
     sendViaWhatsApp = true
-  ): Promise<{ success: boolean; pdfUrl?: string; error?: string }> {
+  ): Promise<{ success: boolean; pdfUrl?: string; error?: string; whatsappError?: string }> {
     try {
       // Fetch group data
       const { data: group, error: groupError } = await supabase
@@ -272,6 +292,7 @@ export const documentService = {
       }
 
       // Send to all students in the group via WhatsApp
+      let whatsappError: string | undefined;
       if (sendViaWhatsApp) {
         const { data: students, error: studentsError } = await supabase
           .from("students")
@@ -304,12 +325,13 @@ export const documentService = {
             const parentPhone = s.father_phone || s.mother_phone;
             
             if (parentPhone) {
-              await whatsappService.sendDocumentMessage(
+              const err = await trySendDocument(
                 parentPhone,
                 uploadResult.url!,
                 `Antrenman_Programi_${month}.pdf`,
                 `Merhaba, ${group.name} grubu için ${month} dönemi antrenman programını gönderiyoruz.`
               );
+              whatsappError = whatsappError ?? err;
             }
           }
         }
@@ -318,6 +340,7 @@ export const documentService = {
       return {
         success: true,
         pdfUrl: uploadResult.url,
+        whatsappError,
       };
     } catch (error) {
       console.error("Error generating training schedule:", error);
