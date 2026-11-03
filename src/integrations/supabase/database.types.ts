@@ -1783,6 +1783,8 @@ export type Database = {
         }[]
       }
       get_my_children: { Args: never; Returns: Json }
+      get_attendance_report: { Args: { p_from: string; p_to: string; p_branch?: string | null; p_group?: string | null }; Returns: Json }
+      get_performance_report: { Args: { p_from: string; p_to: string; p_branch?: string | null }; Returns: Json }
       get_finance_report: { Args: { p_from: string; p_to: string; p_branch?: string | null }; Returns: Json }
       get_my_child_ledger: { Args: { p_student_id: string }; Returns: Json }
       get_my_child_attendance: { Args: { p_student_id: string; p_limit?: number }; Returns: Json }

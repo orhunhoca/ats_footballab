@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { AnalysisTestRecord } from "@/lib/performanceAnalysis";
 
 export interface FinanceReport {
   collected: {
@@ -20,6 +21,22 @@ export interface FinanceReport {
   registrations: { new: number; renewal: number };
   by_branch: { branch_id: string | null; collected: number; open: number; overdue: number }[];
   top_overdue: { student_id: string; name: string; overdue_amount: number; oldest_due: string | null }[];
+}
+
+export interface AttendanceReport {
+  totals: { present: number; absent: number; excused: number; total: number; sessions: number; students: number };
+  by_group: { group_id: string | null; name: string; present: number; absent: number; excused: number; total: number }[];
+  by_week: { week_start: string; present: number; total: number }[];
+  low_attendance: { student_id: string; name: string; present: number; absent: number; total: number }[];
+}
+
+export type PerformanceTestRow = AnalysisTestRecord & { student_id: string; student_name: string };
+
+export interface PerformanceReportData {
+  tests: PerformanceTestRow[];
+  active_students: number;
+  untested_count: number;
+  untested: { student_id: string; name: string; last_test: string | null }[];
 }
 
 export type PeriodKey = "last7" | "thisMonth" | "lastMonth" | "last90" | "custom";
@@ -52,5 +69,31 @@ export const reportService = {
     const { data, error } = await supabase.rpc("get_finance_report", { p_from: from, p_to: to, p_branch: branchId ?? null });
     if (error) throw error;
     return data as unknown as FinanceReport;
+  },
+
+  async getAttendanceReport(from: string, to: string, branchId?: string | null, groupId?: string | null): Promise<AttendanceReport> {
+    const { data, error } = await supabase.rpc("get_attendance_report", {
+      p_from: from,
+      p_to: to,
+      p_branch: branchId ?? null,
+      p_group: groupId ?? null,
+    });
+    if (error) throw error;
+    return data as unknown as AttendanceReport;
+  },
+
+  async getPerformanceReport(from: string, to: string, branchId?: string | null): Promise<PerformanceReportData> {
+    const { data, error } = await supabase.rpc("get_performance_report", { p_from: from, p_to: to, p_branch: branchId ?? null });
+    if (error) throw error;
+    return data as unknown as PerformanceReportData;
+  },
+
+  /** Rapor filtresi için gruplar (şube verilirse yalnız o şubenin) */
+  async getGroups(branchId?: string | null): Promise<{ id: string; name: string }[]> {
+    let query = supabase.from("groups").select("id, name").order("name");
+    if (branchId) query = query.eq("branch_id", branchId);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
   },
 };
