@@ -169,11 +169,12 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   const branchGroups = groups.filter((g) => !branchId || g.branch_id === branchId);
 
   const handleBranchChange = (id: string) => {
+    if (!id) return; // seçenekler yüklenmeden gelen boş değer kayıtlı şubeyi silmesin
     setBranchId(id);
-    // Önceden seçilen grup başka şubedense sıfırla
-    if (selectedGroup && !groups.some((g) => g.id === selectedGroup && g.branch_id === id)) {
-      setSelectedGroup("");
-    }
+    // Şube gerçekten değiştiyse ve gruplar yüklendiyse, başka şubeye ait seçili grubu sıfırla.
+    // (Gruplar henüz yüklenmemişken ya da aynı şube bildirilirken sıfırlanmaz; aksi halde düzenleme formunda grup silinirdi.)
+    if (!id || id === branchId || groups.length === 0) return;
+    setSelectedGroup((prev) => (prev && !groups.some((g) => g.id === prev && g.branch_id === id) ? "" : prev));
   };
 
   const loadSchools = async () => {
@@ -662,7 +663,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 <Input 
                   required
                   value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, name: e.target.value}))}
                 />
               </div>
               <div className="space-y-2">
@@ -671,7 +672,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                   type="date"
                   required
                   value={formData.birth_date}
-                  onChange={e => setFormData({...formData, birth_date: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, birth_date: e.target.value}))}
                 />
               </div>
               <div className="space-y-2">
@@ -680,7 +681,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                   type="number"
                   placeholder="Örn: 145"
                   value={formData.height_cm}
-                  onChange={e => setFormData({...formData, height_cm: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, height_cm: e.target.value}))}
                 />
               </div>
               <div className="space-y-2">
@@ -690,13 +691,13 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                   step="0.1"
                   placeholder="Örn: 38.5"
                   value={formData.weight_kg}
-                  onChange={e => setFormData({...formData, weight_kg: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, weight_kg: e.target.value}))}
                 />
               </div>
               <div className="space-y-2 col-span-2">
                 <Label>Okul</Label>
                 <Select 
-                  onValueChange={v => setFormData({...formData, school: v})}
+                  onValueChange={v => v && setFormData(prev => ({...prev, school: v}))}
                   value={formData.school}
                 >
                   <SelectTrigger>
@@ -716,14 +717,14 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 <Input 
                   placeholder="veya yeni okul adı yazın"
                   value={formData.school}
-                  onChange={e => setFormData({...formData, school: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, school: e.target.value}))}
                   className="mt-2"
                 />
               </div>
               <div className="space-y-2">
                 <Label>Kıyafet Bedeni</Label>
                 <Select 
-                  onValueChange={v => setFormData({...formData, clothing_size: v})}
+                  onValueChange={v => v && setFormData(prev => ({...prev, clothing_size: v}))}
                   value={formData.clothing_size}
                 >
                   <SelectTrigger>
@@ -740,7 +741,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
               <div className="space-y-2">
                 <Label>Grup Seçimi *</Label>
                 <Select 
-                  onValueChange={setSelectedGroup}
+                  onValueChange={(v) => v && setSelectedGroup(v)}
                   value={selectedGroup}
                   required
                 >
@@ -762,7 +763,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
               <div className="space-y-2">
                 <Label>Çalışma Grubu Saati</Label>
                 <Select 
-                  onValueChange={v => setFormData({...formData, work_group_hour: v})}
+                  onValueChange={v => v && setFormData(prev => ({...prev, work_group_hour: v}))}
                   value={formData.work_group_hour}
                 >
                   <SelectTrigger>
@@ -792,7 +793,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 id="health_report"
                 checked={formData.health_report_submitted}
                 onCheckedChange={(checked) => 
-                  setFormData({...formData, health_report_submitted: checked as boolean})
+                  setFormData(prev => ({...prev, health_report_submitted: checked as boolean}))
                 }
               />
               <Label htmlFor="health_report">Sağlık Raporu Teslim Edildi</Label>
@@ -808,7 +809,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 <Input 
                   placeholder="Anne adı soyadı"
                   value={formData.mother_name}
-                  onChange={e => setFormData({...formData, mother_name: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, mother_name: e.target.value}))}
                 />
               </div>
               <div className="space-y-2">
@@ -816,7 +817,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 <Input 
                   placeholder="5XX XXX XX XX"
                   value={formData.mother_phone}
-                  onChange={e => setFormData({...formData, mother_phone: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, mother_phone: e.target.value}))}
                 />
               </div>
               <div className="space-y-2">
@@ -824,7 +825,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 <Input 
                   placeholder="Baba adı soyadı"
                   value={formData.father_name}
-                  onChange={e => setFormData({...formData, father_name: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, father_name: e.target.value}))}
                 />
               </div>
               <div className="space-y-2">
@@ -832,7 +833,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 <Input 
                   placeholder="5XX XXX XX XX"
                   value={formData.father_phone}
-                  onChange={e => setFormData({...formData, father_phone: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, father_phone: e.target.value}))}
                 />
               </div>
             </div>
@@ -848,7 +849,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                   type="date"
                   required
                   value={formData.registration_start_date}
-                  onChange={e => setFormData({...formData, registration_start_date: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, registration_start_date: e.target.value}))}
                 />
               </div>
               <div className="space-y-2">
@@ -857,7 +858,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                   type="date"
                   required
                   value={formData.registration_end_date}
-                  onChange={e => setFormData({...formData, registration_end_date: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, registration_end_date: e.target.value}))}
                 />
               </div>
             </div>
@@ -868,7 +869,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
               <div className="space-y-2">
                 <Label>Kayıt Tipi</Label>
                 <Select 
-                  onValueChange={v => setFormData({...formData, registration_type: v})}
+                  onValueChange={v => v && setFormData(prev => ({...prev, registration_type: v}))}
                   value={formData.registration_type}
                 >
                   <SelectTrigger>
@@ -905,7 +906,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 <Input 
                   type="number"
                   value={formData.payment_amount}
-                  onChange={e => setFormData({...formData, payment_amount: e.target.value})}
+                  onChange={e => setFormData(prev => ({...prev, payment_amount: e.target.value}))}
                   readOnly={!["Bireysel", "Atletik Performans"].includes(formData.payment_plan)}
                   className={!["Bireysel", "Atletik Performans"].includes(formData.payment_plan) ? "bg-gray-100" : ""}
                 />
@@ -913,7 +914,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
               <div className="space-y-2">
                 <Label>Ödeme Durumu</Label>
                 <Select 
-                  onValueChange={v => setFormData({...formData, payment_status: v})}
+                  onValueChange={v => v && setFormData(prev => ({...prev, payment_status: v}))}
                   value={formData.payment_status}
                 >
                   <SelectTrigger>
@@ -929,7 +930,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
               <div className="space-y-2">
                 <Label>Ödeme Yöntemi</Label>
                 <Select 
-                  onValueChange={v => setFormData({...formData, payment_method: v as PaymentMethod})}
+                  onValueChange={v => v && setFormData(prev => ({...prev, payment_method: v as PaymentMethod}))}
                   value={formData.payment_method}
                 >
                   <SelectTrigger>
@@ -971,7 +972,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                       id="summer_clothing"
                       checked={formData.summer_clothing_paid}
                       onCheckedChange={(checked) => 
-                        setFormData({...formData, summer_clothing_paid: checked as boolean})
+                        setFormData(prev => ({...prev, summer_clothing_paid: checked as boolean}))
                       }
                     />
                     <Label htmlFor="summer_clothing" className="text-base font-medium cursor-pointer">
@@ -988,7 +989,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                     <Input 
                       type="number"
                       value={formData.summer_clothing_price}
-                      onChange={e => setFormData({...formData, summer_clothing_price: e.target.value})}
+                      onChange={e => setFormData(prev => ({...prev, summer_clothing_price: e.target.value}))}
                       className="max-w-xs"
                     />
                   </div>
@@ -1003,7 +1004,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                       id="winter_clothing"
                       checked={formData.winter_clothing_paid}
                       onCheckedChange={(checked) => 
-                        setFormData({...formData, winter_clothing_paid: checked as boolean})
+                        setFormData(prev => ({...prev, winter_clothing_paid: checked as boolean}))
                       }
                     />
                     <Label htmlFor="winter_clothing" className="text-base font-medium cursor-pointer">
@@ -1020,7 +1021,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                     <Input 
                       type="number"
                       value={formData.winter_clothing_price}
-                      onChange={e => setFormData({...formData, winter_clothing_price: e.target.value})}
+                      onChange={e => setFormData(prev => ({...prev, winter_clothing_price: e.target.value}))}
                       className="max-w-xs"
                     />
                   </div>

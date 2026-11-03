@@ -458,12 +458,6 @@ function StudentsPageInner() {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>İşlemler</DropdownMenuLabel>
-                                <DropdownMenuItem onClick={() => {
-                                  setEditingStudent(student);
-                                  setIsFormOpen(true);
-                                }}>
-                                  <Edit className="mr-2 h-4 w-4" /> Düzenle
-                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => setInviteStudent({ id: student.id, name: student.name })}>
                                   <KeyRound className="mr-2 h-4 w-4" /> Veli Davet Kodu
                                 </DropdownMenuItem>
