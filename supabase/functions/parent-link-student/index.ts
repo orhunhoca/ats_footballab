@@ -1,6 +1,13 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, errorResponse, HttpError, jsonResponse, serviceClient } from "../_shared/security.ts";
-import { assertNotRateLimited, clientIp, consumeInvite, findValidInvite, recordAttempt } from "../_shared/parent.ts";
+import {
+  assertNotRateLimited,
+  clientIp,
+  consumeInvite,
+  findValidInvite,
+  recordAttempt,
+  verifyParentIdentity,
+} from "../_shared/parent.ts";
 
 /**
  * Giriş yapmış velinin portaldan yeni bir davet koduyla ikinci/üçüncü çocuğunu hesabına bağlaması.
@@ -34,6 +41,19 @@ serve(async (req) => {
       throw e;
     }
 
+    // İkinci doğrulama: öğrenci adı + doğum tarihi + anne/baba cep telefonu
+    let relation: string;
+    try {
+      relation = await verifyParentIdentity(supabase, invite.student_id, {
+        studentName: body.studentName,
+        birthDate: body.studentBirthDate,
+        phone: body.parentPhone,
+      });
+    } catch (e) {
+      await recordAttempt(supabase, ip, false);
+      throw e;
+    }
+
     const { data: existing } = await supabase
       .from("parent_students")
       .select("student_id")
@@ -45,7 +65,6 @@ serve(async (req) => {
     if (!(await consumeInvite(supabase, invite))) {
       throw new HttpError(400, "Davet kodunun kullanım hakkı bitti. Lütfen okuldan yeni kod isteyin.");
     }
-    const relation = String(body.relation ?? "").trim().slice(0, 30) || null;
     const { error: linkError } = await supabase
       .from("parent_students")
       .insert({ parent_user_id: userId, student_id: invite.student_id, relation });

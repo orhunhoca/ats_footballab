@@ -7,12 +7,14 @@ import {
   CURRENT_KVKK_VERSION,
   findValidInvite,
   recordAttempt,
+  verifyParentIdentity,
 } from "../_shared/parent.ts";
 
 /**
  * Veli kaydı (davet kodu ile). Herkese açık uç nokta; güvenlik sunucuda sağlanır:
  *  - "KVKK Aydınlatma Metni'ni onaylamadan kayıt olunamaz": kvkk_accepted !== true ise HESAP HİÇ OLUŞTURULMAZ.
- *  - Geçerli davet kodu şart (yalnızca özeti saklanır); IP başına hatalı deneme sınırı vardır.
+ *  - Geçerli davet kodu şart (yalnızca özeti saklanır) VE öğrenci adı + doğum tarihi + anne/baba cep telefonu
+ *    öğrenci kaydıyla eşleşmeli; IP başına hatalı deneme sınırı vardır.
  *  - Onay kaydı (sürüm, tarih, IP, tarayıcı) consents tablosuna yazılır.
  *  - Supabase'in herkese açık kaydı kapalı kalmalıdır; veli hesabı yalnızca bu fonksiyonla oluşur.
  */
@@ -50,7 +52,6 @@ serve(async (req) => {
     const fullName = String(body.fullName ?? "").trim();
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
-    const relation = String(body.relation ?? "").trim().slice(0, 30) || null;
     if (fullName.length < 2 || fullName.length > 100) throw new HttpError(400, "Ad soyad 2-100 karakter olmalı.");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 200) throw new HttpError(400, "Geçerli bir e-posta girin.");
     if (password.length < 8 || password.length > 72) throw new HttpError(400, "Şifre 8-72 karakter olmalı.");
@@ -60,6 +61,19 @@ serve(async (req) => {
     let invite;
     try {
       invite = await findValidInvite(supabase, body.code);
+    } catch (e) {
+      await recordAttempt(supabase, ip, false);
+      throw e;
+    }
+
+    // 3b) İkinci doğrulama: öğrenci adı + doğum tarihi + anne/baba cep telefonu öğrenci kaydıyla eşleşmeli
+    let relation: string;
+    try {
+      relation = await verifyParentIdentity(supabase, invite.student_id, {
+        studentName: body.studentName,
+        birthDate: body.studentBirthDate,
+        phone: body.parentPhone,
+      });
     } catch (e) {
       await recordAttempt(supabase, ip, false);
       throw e;

@@ -56,7 +56,9 @@ export const parentService = {
     fullName: string;
     email: string;
     password: string;
-    relation?: string;
+    studentName: string;
+    studentBirthDate: string;
+    parentPhone: string;
     kvkkAccepted: boolean;
     consents: OptionalConsents;
   }): Promise<void> {
@@ -66,7 +68,9 @@ export const parentService = {
         fullName: input.fullName,
         email: input.email,
         password: input.password,
-        relation: input.relation,
+        studentName: input.studentName,
+        studentBirthDate: input.studentBirthDate,
+        parentPhone: input.parentPhone,
         kvkk_accepted: input.kvkkAccepted,
         kvkk_version: LEGAL_VERSION,
         consents: input.consents,
@@ -76,8 +80,8 @@ export const parentService = {
   },
 
   /** Giriş yapmış veli, yeni bir davet koduyla başka bir çocuğunu bağlar */
-  async linkStudent(code: string, relation?: string): Promise<string | null> {
-    const { data, error } = await supabase.functions.invoke("parent-link-student", { body: { code, relation } });
+  async linkStudent(input: { code: string; studentName: string; studentBirthDate: string; parentPhone: string }): Promise<string | null> {
+    const { data, error } = await supabase.functions.invoke("parent-link-student", { body: input });
     if (error || data?.success !== true) throw new Error(await functionErrorMessage(error, data));
     return (data?.studentName as string | null) ?? null;
   },

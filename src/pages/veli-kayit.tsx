@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { parentService, type OptionalConsents } from "@/services/parentService";
 import { authService } from "@/services/authService";
 
@@ -27,7 +26,16 @@ const OPTIONAL_ITEMS: { key: keyof OptionalConsents; label: string }[] = [
 export default function ParentRegisterPage() {
   const router = useRouter();
   const [open, setOpen] = useState<boolean | null>(null);
-  const [form, setForm] = useState({ code: "", fullName: "", relation: "Anne", email: "", password: "", password2: "" });
+  const [form, setForm] = useState({
+    code: "",
+    fullName: "",
+    studentName: "",
+    studentBirthDate: "",
+    parentPhone: "",
+    email: "",
+    password: "",
+    password2: "",
+  });
   const [kvkk, setKvkk] = useState(false);
   const [consents, setConsents] = useState<OptionalConsents>({});
   const [loading, setLoading] = useState(false);
@@ -49,6 +57,9 @@ export default function ParentRegisterPage() {
     !loading &&
     form.code.replace(/[^A-Za-z0-9]/g, "").length === 8 &&
     form.fullName.trim().length >= 2 &&
+    form.studentName.trim().length >= 2 &&
+    form.studentBirthDate !== "" &&
+    form.parentPhone.replace(/\D/g, "").length >= 10 &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email) &&
     form.password.length >= 8 &&
     passwordsMatch;
@@ -73,7 +84,9 @@ export default function ParentRegisterPage() {
       await parentService.register({
         code: form.code,
         fullName: form.fullName,
-        relation: form.relation,
+        studentName: form.studentName,
+        studentBirthDate: form.studentBirthDate,
+        parentPhone: form.parentPhone,
         email: form.email,
         password: form.password,
         kvkkAccepted: kvkk,
@@ -93,6 +106,7 @@ export default function ParentRegisterPage() {
       <Head>
         <title>Veli Kaydı - FootbalLab</title>
         <meta name="robots" content="noindex" />
+        <meta name="referrer" content="no-referrer" />
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 px-4 py-6 sm:py-10">
         <div className="mx-auto max-w-lg">
@@ -130,18 +144,24 @@ export default function ParentRegisterPage() {
                     <Label htmlFor="fullName">Ad Soyad *</Label>
                     <Input id="fullName" value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} autoComplete="name" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Öğrenciye Yakınlığınız</Label>
-                    <Select value={form.relation} onValueChange={(v) => setForm({ ...form, relation: v })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Anne">Anne</SelectItem>
-                        <SelectItem value="Baba">Baba</SelectItem>
-                        <SelectItem value="Vasi">Vasi / Diğer</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-3 rounded-md border bg-gray-50 p-3">
+                    <p className="text-xs text-gray-600">
+                      Güvenlik için, okul kaydındaki bilgilerle eşleşen öğrenci bilgilerini girin.
+                    </p>
+                    <div className="space-y-2">
+                      <Label htmlFor="studentName">Öğrencinin Adı Soyadı *</Label>
+                      <Input id="studentName" value={form.studentName} onChange={(e) => setForm({ ...form, studentName: e.target.value })} autoComplete="off" />
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="studentBirthDate">Öğrencinin Doğum Tarihi *</Label>
+                        <Input id="studentBirthDate" type="date" value={form.studentBirthDate} onChange={(e) => setForm({ ...form, studentBirthDate: e.target.value })} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="parentPhone">Anne veya Baba Cep Telefonu *</Label>
+                        <Input id="parentPhone" type="tel" inputMode="tel" placeholder="05XX XXX XX XX" value={form.parentPhone} onChange={(e) => setForm({ ...form, parentPhone: e.target.value })} autoComplete="tel" />
+                      </div>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">E-posta *</Label>

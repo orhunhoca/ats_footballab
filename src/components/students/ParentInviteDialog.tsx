@@ -62,7 +62,7 @@ export function ParentInviteDialog({ open, onOpenChange, student }: Props) {
     }
   }, [open, load]);
 
-  const registrationUrl = typeof window !== "undefined" ? `${window.location.origin}/veli-kayit` : "/veli-kayit";
+  const registrationBase = typeof window !== "undefined" ? `${window.location.origin}/veli-kayit` : "/veli-kayit";
 
   const createInvite = async () => {
     if (!student) return;
@@ -87,7 +87,7 @@ export function ParentInviteDialog({ open, onOpenChange, student }: Props) {
   };
 
   const message = newCode
-    ? `Merhaba, ${student?.name} için veli hesabı davet kodunuz: ${newCode}\n\nKayıt adresi: ${registrationUrl}\n\nKodu girerek e-posta ve şifrenizle kayıt olabilirsiniz. Kod 14 gün geçerlidir.`
+    ? `Merhaba, ${student?.name} için veli hesabı kayıt bağlantınız:\n${registrationBase}?kod=${newCode}\n\nBağlantıyı açıp e-posta adresiniz ve belirleyeceğiniz şifreyle kayıt olabilirsiniz. Güvenlik için öğrencinin adı, doğum tarihi ve okula kayıtlı anne/baba cep telefonu istenecektir. Davet kodunuz: ${newCode} (14 gün geçerli).`
     : "";
 
   const revoke = async (invite: ParentInvite) => {

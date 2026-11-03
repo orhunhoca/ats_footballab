@@ -27,6 +27,7 @@ function PortalInner() {
   const [accepting, setAccepting] = useState(false);
 
   const [code, setCode] = useState("");
+  const [link, setLink] = useState({ studentName: "", studentBirthDate: "", parentPhone: "" });
   const [linking, setLinking] = useState(false);
 
   const load = useCallback(async () => {
@@ -71,11 +72,16 @@ function PortalInner() {
       toast({ title: "Geçersiz kod", description: "Davet kodu 8 karakterdir (XXXX-XXXX).", variant: "destructive" });
       return;
     }
+    if (link.studentName.trim().length < 2 || !link.studentBirthDate || link.parentPhone.replace(/\D/g, "").length < 10) {
+      toast({ title: "Eksik bilgi", description: "Öğrenci adı, doğum tarihi ve anne/baba cep telefonu gerekli.", variant: "destructive" });
+      return;
+    }
     setLinking(true);
     try {
-      const name = await parentService.linkStudent(code);
+      const name = await parentService.linkStudent({ code, ...link });
       toast({ title: "Öğrenci eklendi", description: name ? `${name} hesabınıza bağlandı.` : "Öğrenci hesabınıza bağlandı." });
       setCode("");
+      setLink({ studentName: "", studentBirthDate: "", parentPhone: "" });
       setChildren(await parentService.getMyChildren());
     } catch (error) {
       toast({ title: "Eklenemedi", description: error instanceof Error ? error.message : "Kod kabul edilmedi.", variant: "destructive" });
@@ -175,15 +181,35 @@ function PortalInner() {
                   <CardDescription>Okuldan aldığınız yeni davet kodunu girerek diğer çocuğunuzu da hesabınıza bağlayın.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={linkStudent} className="flex flex-col gap-3 sm:flex-row">
+                  <form onSubmit={linkStudent} className="grid gap-3 sm:grid-cols-2">
                     <Input
                       value={code}
                       onChange={(e) => setCode(e.target.value.toUpperCase().slice(0, 9))}
-                      placeholder="XXXX-XXXX"
-                      className="font-mono tracking-widest sm:max-w-xs"
+                      placeholder="Davet kodu (XXXX-XXXX)"
+                      className="font-mono tracking-widest"
                       autoComplete="off"
                     />
-                    <Button type="submit" disabled={linking}>
+                    <Input
+                      value={link.studentName}
+                      onChange={(e) => setLink({ ...link, studentName: e.target.value })}
+                      placeholder="Öğrencinin adı soyadı"
+                      autoComplete="off"
+                    />
+                    <Input
+                      type="date"
+                      aria-label="Öğrencinin doğum tarihi"
+                      value={link.studentBirthDate}
+                      onChange={(e) => setLink({ ...link, studentBirthDate: e.target.value })}
+                    />
+                    <Input
+                      type="tel"
+                      inputMode="tel"
+                      value={link.parentPhone}
+                      onChange={(e) => setLink({ ...link, parentPhone: e.target.value })}
+                      placeholder="Anne/baba cep telefonu"
+                      autoComplete="tel"
+                    />
+                    <Button type="submit" disabled={linking} className="sm:col-span-2 sm:w-fit">
                       {linking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
                       Ekle
                     </Button>

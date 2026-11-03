@@ -42,6 +42,57 @@ export async function recordAttempt(supabase: SupabaseClient, ip: string, succes
   await supabase.from("registration_attempts").insert({ ip, success });
 }
 
+/** Türkçe karakter ve büyük/küçük harf farklarını yok sayarak adı karşılaştırılabilir hâle getirir. */
+export function normalizeName(raw: unknown): string {
+  return String(raw ?? "")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/ı/g, "i")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Telefonun son 10 hanesi (0532..., +90532..., 532... hepsi aynı numaraya indirgenir). */
+export function lastTenDigits(raw: unknown): string {
+  const digits = String(raw ?? "").replace(/\D/g, "");
+  return digits.length >= 10 ? digits.slice(-10) : "";
+}
+
+export const IDENTITY_MISMATCH_MESSAGE =
+  "Girdiğiniz öğrenci bilgileri okul kaydıyla eşleşmedi. Öğrencinin adını, doğum tarihini ve anne/baba cep telefonunu okula kayıtlı olduğu şekilde girin.";
+
+/**
+ * Kodun bağlı olduğu öğrenci kaydıyla veli beyanını doğrular: öğrenci adı + doğum tarihi + anne/baba cep telefonu.
+ * Davet kodunun yanında ikinci doğrulama katmanıdır. Yakınlık (Anne/Baba) telefondan türetilir.
+ */
+export async function verifyParentIdentity(
+  supabase: SupabaseClient,
+  studentId: string,
+  input: { studentName: unknown; birthDate: unknown; phone: unknown },
+): Promise<"Anne" | "Baba" | "Veli"> {
+  const { data: student } = await supabase
+    .from("students")
+    .select("name, birth_date, mother_phone, father_phone")
+    .eq("id", studentId)
+    .maybeSingle();
+
+  const motherPhone = lastTenDigits(student?.mother_phone);
+  const fatherPhone = lastTenDigits(student?.father_phone);
+  if (!student || !student.birth_date || (!motherPhone && !fatherPhone)) {
+    throw new HttpError(400, "Öğrenci kaydında doğrulama bilgisi eksik. Lütfen okulla iletişime geçin.");
+  }
+
+  const phone = lastTenDigits(input.phone);
+  const nameOk = normalizeName(input.studentName) !== "" && normalizeName(input.studentName) === normalizeName(student.name);
+  const dateOk = String(input.birthDate ?? "") === String(student.birth_date);
+  const isMother = !!phone && phone === motherPhone;
+  const isFather = !!phone && phone === fatherPhone;
+
+  if (!nameOk || !dateOk || (!isMother && !isFather)) throw new HttpError(400, IDENTITY_MISMATCH_MESSAGE);
+  return isMother && !isFather ? "Anne" : isFather && !isMother ? "Baba" : "Veli";
+}
+
 export interface InviteRow {
   id: string;
   student_id: string;
