@@ -72,6 +72,23 @@ FootbalLab Futbol Okulu
 ```
 Örnek: Bu cumartesi antrenman saat 10:00'a alınmıştır.
 
+**5) `performance_report_pdf`** (PDF'li performans raporu — Performans sayfası → *Veliye Gönder* → "Raporu PDF olarak gönder")
+
+Bu şablonda **Header (Başlık) = Document** seçilir; Meta örnek bir PDF ister (uygulamadan "PDF İndir" ile aldığınız herhangi bir rapor olur). Kategori: Utility, dil: Turkish (tr).
+```
+Merhaba {{1}} 👋
+
+{{2}} için {{3}} tarihli performans raporu ekte PDF olarak paylaşılmıştır.
+
+💬 Antrenör değerlendirmesi: {{4}}
+
+Gelişimi birlikte takip etmeye devam ediyoruz.
+FootbalLab Futbol Okulu
+```
+Örnekler: Ayşe Hanım · Ali · 03.11.2026 · Hız ve kuvvet alanında gelişim görülüyor.
+
+PDF, uygulamada üretilir, özel `reports` deposuna yüklenir ve Meta'ya 24 saat geçerli imzalı bağlantıyla verilir.
+
 Onaylanan şablonların durumunu veritabanında `approved` yapmak şart değildir; gönderimi Meta doğrular.
 
 ## C2. Otomatik mesaj şablonları (zamanlayıcı kurulduğunda gerekir)
