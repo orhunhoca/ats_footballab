@@ -530,6 +530,7 @@ export type Database = {
           enabled: boolean | null
           hours_before: number | null
           id: string
+          message_text: string | null
           send_time: string | null
           setting_type: string
           template_name: string
@@ -541,6 +542,7 @@ export type Database = {
           enabled?: boolean | null
           hours_before?: number | null
           id?: string
+          message_text?: string | null
           send_time?: string | null
           setting_type: string
           template_name: string
@@ -552,6 +554,7 @@ export type Database = {
           enabled?: boolean | null
           hours_before?: number | null
           id?: string
+          message_text?: string | null
           send_time?: string | null
           setting_type?: string
           template_name?: string

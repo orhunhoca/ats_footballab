@@ -105,6 +105,35 @@ export const chargeService = {
     if (error) throw error;
   },
 
+  /**
+   * Kayıtta seçilen plana göre borçları oluşturur. Yinelenmez: öğrencide o türde (iptal edilmiş olsa da)
+   * borç varsa o tür atlanır. Oluşturulan kalem sayısını döndürür.
+   */
+  async ensureCharges(
+    studentId: string,
+    items: { chargeType: ChargeType; amount: number; dueDate: string; installmentNo?: number | null; description?: string }[],
+  ): Promise<number> {
+    const wanted = items.filter((i) => i.amount > 0);
+    if (wanted.length === 0) return 0;
+    const { data: existing, error } = await supabase.from("student_charges").select("charge_type").eq("student_id", studentId);
+    if (error) throw error;
+    const have = new Set((existing || []).map((r) => r.charge_type));
+    const rows = wanted
+      .filter((i) => !have.has(i.chargeType))
+      .map((i) => ({
+        student_id: studentId,
+        charge_type: i.chargeType,
+        amount: i.amount,
+        due_date: i.dueDate,
+        installment_no: i.installmentNo ?? null,
+        description: i.description ?? null,
+      }));
+    if (rows.length === 0) return 0;
+    const { error: insertError } = await supabase.from("student_charges").insert(rows);
+    if (insertError) throw insertError;
+    return rows.length;
+  },
+
   /** Borcu iptal eder (silmez; geçmiş korunur) */
   async cancelCharge(id: string): Promise<void> {
     const { error } = await supabase.from("student_charges").update({ is_cancelled: true }).eq("id", id);

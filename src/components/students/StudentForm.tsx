@@ -11,6 +11,7 @@ import { groupService } from "@/services/groupService";
 import { storageService } from "@/services/storageService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
 import { paymentService, type PaymentMethod } from "@/services/paymentService";
+import { chargeService } from "@/services/chargeService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Camera, Upload, X } from "lucide-react";
@@ -525,6 +526,34 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         });
       }
       
+      // Kayıtta seçilen plan/kıyafet bilgisinden borç kalemleri (yalnız yönetim; yinelenmez)
+      if (canManagePayments && studentId) {
+        try {
+          const startDate = formData.registration_start_date || new Date().toISOString().slice(0, 10);
+          const regAmount = formData.payment_amount ? parseFloat(formData.payment_amount) : 0;
+          const hasSecond = secondInstallmentAmount > 0 && !!installmentDate;
+          await chargeService.ensureCharges(studentId, [
+            { chargeType: "registration", amount: regAmount, dueDate: startDate, installmentNo: hasSecond ? 1 : null, description: formData.payment_plan || undefined },
+            ...(hasSecond
+              ? [{ chargeType: "registration" as const, amount: secondInstallmentAmount, dueDate: String(installmentDate).slice(0, 10), installmentNo: 2, description: formData.payment_plan || undefined }]
+              : []),
+            ...(formData.summer_clothing_paid && formData.summer_clothing_price
+              ? [{ chargeType: "summer_clothing" as const, amount: parseFloat(formData.summer_clothing_price), dueDate: startDate }]
+              : []),
+            ...(formData.winter_clothing_paid && formData.winter_clothing_price
+              ? [{ chargeType: "winter_clothing" as const, amount: parseFloat(formData.winter_clothing_price), dueDate: startDate }]
+              : []),
+          ]);
+        } catch (chargeError) {
+          console.error("Borç kalemi oluşturulamadı:", chargeError);
+          toast({
+            title: "Borç kalemi oluşturulamadı",
+            description: "Öğrenci kaydedildi ancak borç eklenemedi. Öğrenci kartındaki Hesap Özeti'nden ekleyebilirsiniz.",
+            variant: "destructive",
+          });
+        }
+      }
+
       setFormData({
         name: "",
         birth_date: "",

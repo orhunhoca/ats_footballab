@@ -391,6 +391,13 @@ export const scheduledMessageService = {
     }
 
     // Update Birthday Greeting
+    if (settings.anniversary_enabled !== undefined) {
+      const { error } = await supabase.from("message_scheduler_settings")
+        .update({ enabled: settings.anniversary_enabled, updated_at: new Date().toISOString() })
+        .eq("setting_type", "anniversary_greeting");
+      if (error) throw error;
+    }
+
     if (settings.birthday_enabled !== undefined) {
       const { error } = await supabase.from("message_scheduler_settings")
         .update({
@@ -401,5 +408,20 @@ export const scheduledMessageService = {
 
       if (error) throw error;
     }
+  },
+
+  /** Otomatik mesaj metinleri (setting_type -> metin) */
+  async getMessageTexts(): Promise<Record<string, string | null>> {
+    const { data, error } = await supabase.from("message_scheduler_settings").select("setting_type, message_text");
+    if (error) throw error;
+    return Object.fromEntries((data || []).map((r) => [r.setting_type, r.message_text]));
+  },
+
+  async updateMessageText(settingType: string, text: string): Promise<void> {
+    const { error } = await supabase
+      .from("message_scheduler_settings")
+      .update({ message_text: text, updated_at: new Date().toISOString() })
+      .eq("setting_type", settingType);
+    if (error) throw error;
   },
 };
