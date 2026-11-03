@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
+import { chargeService, type StudentBalance } from "@/services/chargeService";
 import { paymentService, type PaymentMethod, type PaymentType } from "@/services/paymentService";
 import { studentService } from "@/services/studentService";
 import { CreditCard, Wallet, Building2, Loader2, TrendingUp, AlertCircle, CheckCircle2, Link as LinkIcon, Smartphone, MessageCircle } from "lucide-react";
@@ -29,6 +30,7 @@ function PaymentsPageInner() {
   const { selectedBranchId, branches, getBranchName } = useBranch();
   const [payments, setPayments] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
+  const [balances, setBalances] = useState<Record<string, StudentBalance>>({});
   const [stats, setStats] = useState({
     totalRevenue: 0,
     pendingPayments: 0,
@@ -95,6 +97,11 @@ function PaymentsPageInner() {
       setPayments(paymentsData);
       setStudents(studentsData);
       setStats(statsData);
+      try {
+        setBalances(await chargeService.getBalances(selectedBranchId));
+      } catch {
+        setBalances({});
+      }
       try {
         setBankAccounts(await companyService.getBankAccounts());
       } catch {
@@ -639,6 +646,7 @@ function PaymentsPageInner() {
         onOpenChange={setIsReminderOpen}
         students={students}
         payments={payments}
+        balances={balances}
       />
     </div>
   );

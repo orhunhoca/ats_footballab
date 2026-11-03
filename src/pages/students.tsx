@@ -4,13 +4,14 @@ import { RoleGate } from "@/components/RoleGate";
 import { useBranch } from "@/contexts/BranchContext";
 import { useUserRole } from "@/hooks/useUserRole";
 import { ParentInviteDialog } from "@/components/students/ParentInviteDialog";
+import { StudentLedgerDialog } from "@/components/students/StudentLedgerDialog";
 import { Navigation } from "@/components/Navigation";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2, AlertTriangle, Shirt, Clock, MessageCircle, Trash2, Edit, MoreHorizontal, KeyRound } from "lucide-react";
+import { Search, Plus, Filter, UserCircle2, Phone, Mail, Calendar, Loader2, AlertTriangle, Shirt, Clock, MessageCircle, Trash2, Edit, MoreHorizontal, KeyRound, Wallet } from "lucide-react";
 import { studentService } from "@/services/studentService";
 import { StudentForm } from "@/components/students/StudentForm";
 import type { Tables } from "@/integrations/supabase/types";
@@ -77,6 +78,7 @@ function StudentsPageInner() {
   const { isManagement: canManage, role: userRole } = useUserRole();
   const canRegister = userRole !== null;
   const [inviteStudent, setInviteStudent] = useState<{ id: string; name: string } | null>(null);
+  const [ledgerStudent, setLedgerStudent] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     loadStudents();
@@ -465,6 +467,9 @@ function StudentsPageInner() {
                                 <DropdownMenuItem onClick={() => setInviteStudent({ id: student.id, name: student.name })}>
                                   <KeyRound className="mr-2 h-4 w-4" /> Veli Davet Kodu
                                 </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setLedgerStudent({ id: student.id, name: student.name })}>
+                                  <Wallet className="mr-2 h-4 w-4" /> Hesap Özeti / Borçlar
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem 
                                   onClick={() => handleDeleteClick(student)}
@@ -549,6 +554,11 @@ function StudentsPageInner() {
           }} 
         />
       </div>
+      <StudentLedgerDialog
+        open={!!ledgerStudent}
+        onOpenChange={(o) => !o && setLedgerStudent(null)}
+        student={ledgerStudent}
+      />
       <ParentInviteDialog
         open={!!inviteStudent}
         onOpenChange={(o) => !o && setInviteStudent(null)}

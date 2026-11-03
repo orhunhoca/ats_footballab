@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ChildLedgerCard } from "@/components/portal/ChildLedgerCard";
 import { parentService, type MyChild } from "@/services/parentService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -169,10 +170,14 @@ function PortalInner() {
                 </div>
               )}
 
+              {children.map((c) => (
+                <ChildLedgerCard key={`ledger-${c.student_id}`} studentId={c.student_id} studentName={c.name} />
+              ))}
+
               <Alert>
                 <Clock className="h-4 w-4" />
                 <AlertTitle>Çok yakında</AlertTitle>
-                <AlertDescription>Yoklama kayıtları, performans test raporları, galeri ve bakiye/ödeme bilgileri bu sayfaya eklenecek.</AlertDescription>
+                <AlertDescription>Yoklama kayıtları, performans test raporları ve galeri bu sayfaya eklenecek.</AlertDescription>
               </Alert>
 
               <Card>

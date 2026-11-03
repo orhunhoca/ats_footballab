@@ -809,6 +809,51 @@ export type Database = {
           },
         ]
       }
+      student_charges: {
+        Row: {
+          id: string
+          student_id: string
+          branch_id: string | null
+          charge_type: string
+          description: string | null
+          amount: number
+          due_date: string
+          installment_no: number | null
+          is_cancelled: boolean
+          cancelled_at: string | null
+          created_by: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          branch_id?: string | null
+          charge_type?: string
+          description?: string | null
+          amount: number
+          due_date: string
+          installment_no?: number | null
+          is_cancelled?: boolean
+          cancelled_at?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          branch_id?: string | null
+          charge_type?: string
+          description?: string | null
+          amount?: number
+          due_date?: string
+          installment_no?: number | null
+          is_cancelled?: boolean
+          cancelled_at?: string | null
+          created_by?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       payment_plans: {
         Row: {
           created_at: string | null
@@ -1683,7 +1728,36 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      student_charge_status: {
+        Row: {
+          id: string
+          student_id: string
+          branch_id: string | null
+          charge_type: string
+          description: string | null
+          amount: number
+          due_date: string
+          installment_no: number | null
+          created_at: string
+          paid_amount: number
+          remaining_amount: number
+          is_overdue: boolean
+        }
+        Relationships: []
+      }
+      student_balances: {
+        Row: {
+          student_id: string
+          branch_id: string | null
+          total_charged: number
+          total_paid: number
+          balance: number
+          overdue_amount: number
+          next_due_date: string | null
+          next_due_amount: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       check_registration_renewals: { Args: never; Returns: undefined }
@@ -1706,6 +1780,7 @@ export type Database = {
         }[]
       }
       get_my_children: { Args: never; Returns: Json }
+      get_my_child_ledger: { Args: { p_student_id: string }; Returns: Json }
     }
     Enums: {
       test_type:

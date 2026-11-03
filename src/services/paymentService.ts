@@ -187,9 +187,15 @@ export const paymentService = {
 
       const monthlyRevenue = monthly?.reduce((sum, p) => sum + p.amount, 0) || 0;
 
+      // Bekleyen = borç kalemi olan öğrencilerin kalan bakiyeleri toplamı
+      let balanceQuery = supabase.from("student_balances").select("balance");
+      if (branchId) balanceQuery = balanceQuery.eq("branch_id", branchId);
+      const { data: balances } = await balanceQuery;
+      const pendingPayments = (balances || []).reduce((sum, b) => sum + Math.max(0, Number(b.balance) || 0), 0);
+
       return {
         totalRevenue,
-        pendingPayments: 0,
+        pendingPayments,
         monthlyRevenue,
       };
     } catch (error) {

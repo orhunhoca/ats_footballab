@@ -21,6 +21,26 @@ export interface MyChild {
   groups: string[];
 }
 
+export interface ChildLedger {
+  total_charged: number;
+  total_paid: number;
+  balance: number;
+  overdue_amount: number;
+  next_due_date: string | null;
+  charges: {
+    description: string;
+    charge_type: string;
+    amount: number;
+    due_date: string;
+    installment_no: number | null;
+    paid_amount: number;
+    remaining_amount: number;
+    is_overdue: boolean;
+  }[];
+  payments: { payment_date: string; amount: number; payment_method: string }[];
+  bank_accounts: { bank_name: string; account_holder: string; iban: string; description: string | null }[];
+}
+
 /** Kayıtta isteğe bağlı açık rıza maddeleri (kabul veya ret kaydedilir) */
 export type OptionalConsents = Partial<
   Record<"health" | "media_internal" | "media_social" | "whatsapp" | "commercial" | "abroad", boolean>
@@ -90,6 +110,13 @@ export const parentService = {
     const { data, error } = await supabase.rpc("get_my_children");
     if (error) throw error;
     return (data as unknown as MyChild[]) || [];
+  },
+
+  /** Velinin kendi çocuğunun borç/ödeme özeti ve ödeme yapılabilecek banka hesapları */
+  async getChildLedger(studentId: string): Promise<ChildLedger> {
+    const { data, error } = await supabase.rpc("get_my_child_ledger", { p_student_id: studentId });
+    if (error) throw error;
+    return data as unknown as ChildLedger;
   },
 
   /** Velinin güncel KVKK sürümünü onaylayıp onaylamadığı */
