@@ -14,7 +14,9 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useBranch } from "@/contexts/BranchContext";
 import { reportService, periodRange, PERIOD_LABELS, type FinanceReport, type PeriodKey } from "@/services/reportService";
 import { chargeTypeLabel } from "@/services/chargeService";
-import { Loader2, TrendingUp, Users, Wallet, AlertTriangle, Building2, CalendarClock } from "lucide-react";
+import { AttendanceReportTab } from "@/components/reports/AttendanceReportTab";
+import { PerformanceReportTab } from "@/components/reports/PerformanceReportTab";
+import { Loader2, TrendingUp, Wallet, AlertTriangle, Building2, CalendarClock } from "lucide-react";
 
 const formatCurrency = (amount: number) =>
   new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", maximumFractionDigits: 0 }).format(Number(amount) || 0);
@@ -333,31 +335,11 @@ function ReportsPageInner() {
             )}
 
             <TabsContent value="attendance">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Katılım İstatistikleri</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                    <Users className="mb-4 h-16 w-16 opacity-20" />
-                    <p>Detaylı katılım raporları yakında eklenecek.</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <AttendanceReportTab />
             </TabsContent>
 
             <TabsContent value="performance">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Performans Analizi</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                    <TrendingUp className="mb-4 h-16 w-16 opacity-20" />
-                    <p>Performans metrikleri yakında eklenecek.</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <PerformanceReportTab />
             </TabsContent>
           </Tabs>
         </div>
