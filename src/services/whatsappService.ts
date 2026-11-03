@@ -219,7 +219,8 @@ export const whatsappService = {
     parentPhone: string,
     studentName: string,
     amount: number,
-    dueDate: string
+    dueDate: string,
+    parentName?: string
   ): Promise<{ success: boolean; error?: string }> {
     const formattedDate = new Date(dueDate).toLocaleDateString("tr-TR");
     const formattedAmount = amount.toLocaleString("tr-TR");
@@ -227,12 +228,15 @@ export const whatsappService = {
     return this.sendMessage({
       phoneNumber: parentPhone,
       templateName: "payment_reminder",
+      // Anahtarlar whatsapp_templates.variables ile birebir aynı olmalı
       variables: {
+        parent_name: parentName || "Sayın Veli",
         student_name: studentName,
-        amount: formattedAmount,
-        due_date: formattedDate
+        payment_date: formattedDate,
+        amount: formattedAmount
       },
       studentId,
+      recipientName: parentName,
       messageType: "payment_reminder"
     });
   },
@@ -243,7 +247,8 @@ export const whatsappService = {
     parentPhone: string,
     studentName: string,
     attended: boolean,
-    date: string
+    date: string,
+    parentName?: string
   ): Promise<{ success: boolean; error?: string }> {
     const formattedDate = new Date(date).toLocaleDateString("tr-TR");
     const status = attended ? "katıldı" : "katılmadı";
@@ -251,12 +256,15 @@ export const whatsappService = {
     return this.sendMessage({
       phoneNumber: parentPhone,
       templateName: "attendance_notification",
+      // Şablon gövdesinde tarih yok ("bugünkü antrenman"); date yalnızca kayıt için tutulur
       variables: {
+        parent_name: parentName || "Sayın Veli",
         student_name: studentName,
-        attendance_status: status,
-        attendance_date: formattedDate
+        attendance_status: status
       },
       studentId,
+      recipientName: parentName,
+      messagePreview: `${studentName} ${formattedDate} tarihli antrenmana ${status}.`,
       messageType: "attendance"
     });
   },
