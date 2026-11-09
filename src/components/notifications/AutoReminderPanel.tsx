@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle2, Loader2, PlayCircle, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, PlayCircle, Eye, Pencil } from "lucide-react";
 import { TemplateEditorDialog } from "@/components/notifications/TemplateEditorDialog";
-import { templateService, type WaTemplate } from "@/services/templateService";
+import { type WaTemplate } from "@/services/templateService";
 import { reminderService, type ReminderRule, type RuleType } from "@/services/reminderService";
 import { useToast } from "@/hooks/use-toast";
 
@@ -29,17 +30,6 @@ export function AutoReminderPanel({ isAdmin, whatsappActive, templates, onTempla
   const openEditor = (t: WaTemplate | null) => {
     setEditing(t);
     setEditorOpen(true);
-  };
-  const customTemplates = templates.filter((t) => t.template_type === "custom");
-  const removeTemplate = async (t: WaTemplate) => {
-    if (!window.confirm(`"${t.template_name}" şablonu silinsin mi?`)) return;
-    try {
-      await templateService.remove(t.id);
-      toast({ title: "Şablon silindi" });
-      onTemplatesChanged();
-    } catch {
-      toast({ title: "Silinemedi", description: "Şablonları yalnız admin silebilir.", variant: "destructive" });
-    }
   };
   const [rules, setRules] = useState<ReminderRule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,39 +142,9 @@ export function AutoReminderPanel({ isAdmin, whatsappActive, templates, onTempla
           </div>
         )}
 
-        <div className="space-y-2 rounded-md border p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="font-medium">Özel bildirim şablonlarım</p>
-              <p className="text-xs text-muted-foreground">Kendi mesajınızı yazın; yukarıdaki listelerde (Bildirim Merkezi) "Kullanılacak şablon" kutusundan seçip velilere gönderebilirsiniz.</p>
-            </div>
-            {isAdmin && (
-              <Button size="sm" variant="outline" onClick={() => openEditor(null)}>
-                <Plus className="mr-1.5 h-4 w-4" /> Yeni şablon
-              </Button>
-            )}
-          </div>
-          {customTemplates.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Henüz özel şablon yok.</p>
-          ) : (
-            <ul className="divide-y text-sm">
-              {customTemplates.map((t) => (
-                <li key={t.id} className="flex items-center justify-between gap-2 py-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-medium">{t.template_name}</p>
-                    <p className="text-[11px] text-muted-foreground">Meta adı: <code>{t.template_id ?? "—"}</code> · {t.status === "approved" ? "onaylı" : t.status === "rejected" ? "reddedildi" : "onay bekliyor"}</p>
-                  </div>
-                  {isAdmin && (
-                    <div className="flex shrink-0 gap-1">
-                      <Button size="sm" variant="outline" onClick={() => openEditor(t)}><Pencil className="mr-1.5 h-3.5 w-3.5" /> Düzenle</Button>
-                      <Button size="icon" variant="ghost" aria-label="Sil" onClick={() => removeTemplate(t)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
-                    </div>
-                  )}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <p className="text-xs text-muted-foreground">
+          Yeni mesaj eklemek ve tüm şablonları yönetmek için: <Link href="/settings" className="underline">Ayarlar → Otomatik Mesajlar → Mesaj Şablonları</Link>. Özel mesajlarınız Bildirim Merkezi listelerinde "Kullanılacak şablon" kutusundan seçilir.
+        </p>
 
         <TemplateEditorDialog open={editorOpen} onOpenChange={setEditorOpen} template={editing} onSaved={onTemplatesChanged} />
 

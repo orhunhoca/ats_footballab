@@ -11,6 +11,7 @@ import { authService } from "@/services/authService";
 import { whatsappService } from "@/services/whatsappService";
 import { scheduledMessageService } from "@/services/scheduledMessageService";
 import { AutoMessageEditDialog } from "@/components/settings/AutoMessageEditDialog";
+import { MessageTemplateManager } from "@/components/settings/MessageTemplateManager";
 import type { AutoMessageType } from "@/lib/autoMessages";
 import { iyzicoService } from "@/services/iyzicoService";
 import { useState, useEffect } from "react";
@@ -899,6 +900,10 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+            
+              <div className="mt-6">
+                <MessageTemplateManager />
+              </div>
             </TabsContent>
 
             {/* iyzico / Online Payment Settings Tab */}
