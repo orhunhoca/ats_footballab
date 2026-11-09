@@ -139,6 +139,35 @@ FootbalLab Futbol Okulu
 Not: Marketing kategorisindeki mesajlar velinin ticari ileti onayına (`acik_riza_ticari_ileti`) tabi olmalıdır; zamanlayıcı kurulurken
 doğum günü/yıl dönümü gönderimi yalnızca bu onayı veren velilere yapılacaktır.
 
+## C3. Bildirim Merkezi hatırlatma şablonları (otomatik hatırlatmalar için gerekir)
+Bildirimler → Otomatik Hatırlatmalar'ın çalışması için Meta'da şu şablonları oluşturun (kategori **Utility**, dil **Turkish (tr)**, ad ve gövde aşağıdakiyle aynı). `payment_reminder` yukarıda (Şablon 1) zaten var; bakiye hatırlatması onu kullanır: ad, öğrenci, vade tarihi ve bakiye tutarı sistem tarafından otomatik doldurulur.
+
+**`health_report_reminder`** — örnekler: Ayşe Hanım · Ali Yılmaz
+```
+Merhaba {{1}} 👋
+
+{{2}} için sağlık raporu henüz okulumuza ulaşmadı. Antrenmanlara güvenle devam edebilmesi için raporu en kısa sürede iletmenizi rica ederiz.
+
+FootbalLab Futbol Okulu
+```
+**`registration_form_reminder`** — örnekler: Ayşe Hanım · Ali Yılmaz
+```
+Merhaba {{1}} 👋
+
+{{2}} için kayıt formu henüz tamamlanmamış görünüyor. Formu okulumuza ulaştırmanızı rica ederiz.
+
+FootbalLab Futbol Okulu
+```
+**`trial_reminder`** — örnekler: Hakan Bey · Deniz · 12.11.2026 · U12 Mavi · Çarşamba 18:00-19:00 · Saha 2
+```
+Merhaba {{1}} 👋
+
+{{2}} için deneme antrenmanımız {{3}} tarihinde, {{4}}. Sizi bekliyoruz!
+
+FootbalLab Futbol Okulu
+```
+Gönderim her gün 09:00'da (Türkiye) kendiliğinden yapılır; kurallar Bildirimler sayfasında (yalnız admin) açılır. WhatsApp bağlanmadan ya da şablonlar onaylanmadan açılırsa mesaj gitmez/başarısız olur; önce **Önizleme** ile kime ne gideceğine bakın.
+
 ## D. Veliye gönderim
 Performans → öğrenci seç → **Veliye Gönder**. Alıcılar öğrencinin `mother_phone` / `father_phone` alanlarından gelir.
 Serbest metin/doküman/görsel mesajlar yalnızca velinin son mesajından sonraki 24 saat içinde teslim edilir; diğer her şey için onaylı şablon gerekir.

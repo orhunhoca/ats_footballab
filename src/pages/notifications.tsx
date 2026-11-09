@@ -1,421 +1,332 @@
 import { SEO } from "@/components/SEO";
+import { BranchFilterBar } from "@/components/BranchFilterBar";
 import { RoleGate } from "@/components/RoleGate";
 import { Navigation } from "@/components/Navigation";
-import { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useBranch } from "@/contexts/BranchContext";
+import { useUserRole } from "@/hooks/useUserRole";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, Calendar, AlertCircle, CheckCircle2, Clock, DollarSign, FileText, Shirt, MessageCircle, Phone } from "lucide-react";
-import { studentService } from "@/services/studentService";
-import { attendanceService } from "@/services/attendanceService";
-import type { Tables } from "@/integrations/supabase/types";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertTriangle,
+  CalendarClock,
+  FileHeart,
+  FileText,
+  Loader2,
+  MessageCircle,
+  Phone,
+  ShieldCheck,
+  Timer,
+  Users,
+  Wallet,
+  Send,
+} from "lucide-react";
+import { reminderService, type Overview, type ParentContact } from "@/services/reminderService";
+import { whatsappService } from "@/services/whatsappService";
+import { AutoReminderPanel } from "@/components/notifications/AutoReminderPanel";
+import { useToast } from "@/hooks/use-toast";
 
-type Student = Tables<"students">;
+type Category = "trials" | "debts" | "health" | "form" | "kvkk" | "expiry";
 
-interface NotificationItem {
-  student: Student;
-  type: "expired" | "expiring_7" | "expiring_14" | "installment" | "health_report" | "clothing";
-  priority: "high" | "medium" | "low";
-  daysRemaining?: number;
-  daysOverdue?: number;
-  message: string;
+interface Row {
+  key: string;
+  title: string;
+  detail: string;
+  badge?: { text: string; tone: "red" | "amber" | "gray" };
+  studentId: string | null;
+  contacts: ParentContact[];
+  /** WhatsApp şablonu + değişkenleri (null: bu kategoride şablonlu gönderim yok) */
+  template: { type: string; variables: Record<string, string> } | null;
 }
 
+const fmtMoney = (n: number) => n.toLocaleString("tr-TR", { maximumFractionDigits: 2 });
+const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("tr-TR");
+
+/** Şablon gövdesindeki {{n}} yerlerini değişkenlerle doldurur (önizleme / wa.me metni) */
+function fillBody(body: string, order: string[], vars: Record<string, string>) {
+  let out = body;
+  order.forEach((k, i) => (out = out.replace(`{{${i + 1}}}`, vars[k] ?? "")));
+  return out;
+}
+
+const CATEGORIES: { id: Category; label: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
+  { id: "trials", label: "Bu hafta deneme", icon: CalendarClock, color: "text-blue-700 bg-blue-50 border-blue-200" },
+  { id: "debts", label: "Bakiye borcu", icon: Wallet, color: "text-red-700 bg-red-50 border-red-200" },
+  { id: "health", label: "Sağlık raporu eksik", icon: FileHeart, color: "text-orange-700 bg-orange-50 border-orange-200" },
+  { id: "form", label: "Kayıt formu eksik", icon: FileText, color: "text-amber-700 bg-amber-50 border-amber-200" },
+  { id: "kvkk", label: "KVKK onayı eksik", icon: ShieldCheck, color: "text-purple-700 bg-purple-50 border-purple-200" },
+  { id: "expiry", label: "Üyeliği bitiyor / bitti", icon: Timer, color: "text-slate-700 bg-slate-50 border-slate-200" },
+];
+
 function NotificationsPageInner() {
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const { toast } = useToast();
+  const { selectedBranchId } = useBranch();
+  const { isAdmin } = useUserRole();
+  const [data, setData] = useState<Overview | null>(null);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    expired: 0,
-    expiring_7: 0,
-    expiring_14: 0,
-    installment: 0,
-    health_report: 0,
-    clothing: 0
-  });
-  const [expiringStudents, setExpiringStudents] = useState<any[]>([]);
-  const [recentAbsences, setRecentAbsences] = useState<any[]>([]);
+  const [error, setError] = useState(false);
+  const [active, setActive] = useState<Category>("debts");
+  const [waActive, setWaActive] = useState(false);
+  const [templates, setTemplates] = useState<{ template_type: string; message_content: string; variables: unknown }[]>([]);
+  const [sending, setSending] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadNotifications();
-  }, []);
-
-  const loadNotifications = async () => {
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(false);
     try {
-      setLoading(true);
-      
-      // Load expiring registrations
-      const expiring = await studentService.getExpiringRegistrations(20);
-      setExpiringStudents(expiring);
-
-      // Load recent absences (existing logic or placeholder)
-      // For now we'll focus on the new requirement
-      
-    } catch (error) {
-      console.error("Error loading notifications:", error);
+      setData(await reminderService.getOverview(selectedBranchId));
+    } catch (e) {
+      console.error("Bildirim verisi yüklenemedi:", e);
+      setError(true);
     } finally {
       setLoading(false);
     }
+  }, [selectedBranchId]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  useEffect(() => {
+    whatsappService.getSettings().then((s) => setWaActive(!!s?.is_active));
+    whatsappService.getTemplates().then((t) => setTemplates(t as never)).catch(() => undefined);
+  }, []);
+
+  const rows = useMemo<Record<Category, Row[]>>(() => {
+    const empty = { trials: [], debts: [], health: [], form: [], kvkk: [], expiry: [] } as Record<Category, Row[]>;
+    if (!data) return empty;
+    const parents = (m: ParentContact | null, f: ParentContact | null) => [m, f].filter((x): x is ParentContact => !!x);
+    const primary = (m: ParentContact | null, f: ParentContact | null) => m ?? f;
+    return {
+      trials: data.trials.map((t) => ({
+        key: t.id,
+        title: t.name,
+        detail: `${fmtDate(t.trialDate)}${t.groupName ? ` · ${t.groupName}` : " · grup atanmamış"}`,
+        badge: t.groupName ? undefined : { text: "Grup yok", tone: "amber" },
+        studentId: null,
+        contacts: t.parent ? [t.parent] : [],
+        template: { type: "trial_reminder", variables: { parent_name: t.parent?.name ?? "Sayın Veli", student_name: t.name, trial_date: fmtDate(t.trialDate), group_info: t.groupName ?? "antrenman saatimizde" } },
+      })),
+      debts: data.debts.map((d) => ({
+        key: d.id,
+        title: d.name,
+        detail: `Bakiye ${fmtMoney(d.balance)} TL${d.overdue > 0 ? ` · geciken ${fmtMoney(d.overdue)} TL` : ""}${d.earliestDue ? ` · ilk vade ${fmtDate(d.earliestDue)}` : ""}`,
+        badge: d.overdue > 0 ? { text: "Gecikmiş", tone: "red" } : undefined,
+        studentId: d.id,
+        contacts: parents(d.mother, d.father),
+        template: { type: "payment_reminder", variables: { parent_name: primary(d.mother, d.father)?.name ?? "Sayın Veli", student_name: d.name, payment_date: d.earliestDue ? fmtDate(d.earliestDue) : fmtDate(new Date().toISOString()), amount: fmtMoney(d.balance) } },
+      })),
+      health: data.healthMissing.map((s) => ({
+        key: s.id, title: s.name, detail: "Sağlık raporu teslim edilmemiş", studentId: s.id, contacts: parents(s.mother, s.father),
+        template: { type: "health_report_reminder", variables: { parent_name: primary(s.mother, s.father)?.name ?? "Sayın Veli", student_name: s.name } },
+      })),
+      form: data.formMissing.map((s) => ({
+        key: s.id, title: s.name, detail: "Kayıt formu teslim edilmemiş", studentId: s.id, contacts: parents(s.mother, s.father),
+        template: { type: "registration_form_reminder", variables: { parent_name: primary(s.mother, s.father)?.name ?? "Sayın Veli", student_name: s.name } },
+      })),
+      kvkk: data.kvkkMissing.map((s) => ({ key: s.id, title: s.name, detail: "KVKK aydınlatma onayı alınmamış", studentId: s.id, contacts: parents(s.mother, s.father), template: null })),
+      expiry: data.expiring.map((s) => ({
+        key: s.id,
+        title: s.name,
+        detail: s.daysLeft < 0 ? `Üyelik ${-s.daysLeft} gün önce bitti (${fmtDate(s.endDate)})` : `Üyelik ${s.daysLeft} gün sonra bitiyor (${fmtDate(s.endDate)})`,
+        badge: s.daysLeft < 0 ? { text: "Bitti", tone: "red" } : s.daysLeft <= 7 ? { text: "7 gün içinde", tone: "amber" } : undefined,
+        studentId: s.id,
+        contacts: parents(s.mother, s.father),
+        template: null,
+      })),
+    };
+  }, [data]);
+
+  const counts: Record<Category, number> = {
+    trials: rows.trials.length,
+    debts: rows.debts.length,
+    health: rows.health.length,
+    form: rows.form.length,
+    kvkk: rows.kvkk.length,
+    expiry: rows.expiry.length,
+  };
+  const totalDebt = data?.debts.reduce((s, d) => s + d.balance, 0) ?? 0;
+  const overdueCount = data?.debts.filter((d) => d.overdue > 0).length ?? 0;
+
+  const messageText = (row: Row): string => {
+    if (!row.template) return `Merhaba ${row.contacts[0]?.name ?? ""}, ${row.title} ile ilgili bilgilendirme: ${row.detail}.\n\nFootbalLab Futbol Okulu`;
+    const t = templates.find((x) => x.template_type === row.template!.type);
+    const order = Array.isArray(t?.variables) ? (t!.variables as string[]) : Object.keys(row.template.variables);
+    return t?.message_content ? fillBody(t.message_content, order, row.template.variables) : Object.values(row.template.variables).join(" · ");
   };
 
-  const getDaysRemaining = (endDate: string) => {
-    const end = new Date(endDate);
-    const today = new Date();
-    const diffTime = end.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const getWhatsAppLink = (notification: NotificationItem) => {
-    const phone = (notification.student.mother_phone || notification.student.father_phone)?.replace(/\D/g, "");
-    if (!phone) return "#";
-
-    const message = encodeURIComponent(notification.message);
-    return `https://wa.me/90${phone}?text=${message}`;
-  };
-
-  const getPhoneLink = (notification: NotificationItem) => {
-    const phone = (notification.student.mother_phone || notification.student.father_phone)?.replace(/\D/g, "");
-    if (!phone) return "#";
-    return `tel:+90${phone}`;
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high": return "destructive";
-      case "medium": return "default";
-      case "low": return "secondary";
-      default: return "default";
+  const sendOne = async (row: Row, contact: ParentContact) => {
+    const id = `${row.key}-${contact.phone}`;
+    if (!waActive || !row.template) {
+      // WhatsApp bağlı değil (ya da şablonsuz kategori): kişisel WhatsApp bağlantısıyla elle gönder
+      const digits = contact.phone.replace(/\D/g, "");
+      const phone = digits.startsWith("90") ? digits : digits.startsWith("0") ? `9${digits}` : `90${digits}`;
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(messageText(row))}`, "_blank");
+      return;
     }
+    setSending(id);
+    const res = await whatsappService.sendMessage({
+      phoneNumber: contact.phone,
+      templateName: row.template.type,
+      variables: row.template.variables,
+      studentId: row.studentId ?? undefined,
+      recipientName: contact.name,
+      messagePreview: messageText(row),
+      messageType: "custom",
+    });
+    setSending(null);
+    toast({ title: res.success ? "Hatırlatma gönderildi" : "Gönderilemedi", description: res.success ? `${row.title} — ${contact.name}` : res.error, variant: res.success ? "default" : "destructive" });
   };
 
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case "expired": return <AlertCircle className="h-5 w-5" />;
-      case "expiring_7":
-      case "expiring_14": return <Clock className="h-5 w-5" />;
-      case "installment": return <DollarSign className="h-5 w-5" />;
-      case "health_report": return <FileText className="h-5 w-5" />;
-      case "clothing": return <Shirt className="h-5 w-5" />;
-      default: return <AlertCircle className="h-5 w-5" />;
+  const sendAll = async (list: Row[]) => {
+    const targets = list.filter((r) => r.template && r.contacts.length > 0);
+    if (targets.length === 0) return;
+    if (!window.confirm(`${targets.length} kişiye hatırlatma mesajı gönderilecek. Devam edilsin mi?`)) return;
+    setSending("all");
+    let ok = 0;
+    let fail = 0;
+    for (const r of targets) {
+      const res = await whatsappService.sendMessage({
+        phoneNumber: r.contacts[0].phone,
+        templateName: r.template!.type,
+        variables: r.template!.variables,
+        studentId: r.studentId ?? undefined,
+        recipientName: r.contacts[0].name,
+        messagePreview: messageText(r),
+        messageType: "custom",
+      });
+      if (res.success) ok++;
+      else fail++;
     }
+    setSending(null);
+    toast({ title: "Toplu hatırlatma bitti", description: `${ok} gönderildi, ${fail} başarısız.`, variant: fail > 0 ? "destructive" : "default" });
   };
 
-  const getTypeLabel = (type: string) => {
-    switch (type) {
-      case "expired": return "Üyelik Bitti";
-      case "expiring_7": return "7 Gün İçinde";
-      case "expiring_14": return "14 Gün İçinde";
-      case "installment": return "Taksit Ödemesi";
-      case "health_report": return "Sağlık Raporu";
-      case "clothing": return "Kıyafet Ödemesi";
-      default: return "Bilinmeyen";
-    }
-  };
-
-  const filterByType = (type: string) => {
-    if (type === "all") return notifications;
-    return notifications.filter(n => n.type === type);
-  };
-
-  const renderNotificationCard = (notification: NotificationItem) => (
-    <Card key={`${notification.student.id}-${notification.type}`} className="mb-4">
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 flex-1">
-            <div className={`p-2 rounded-lg ${notification.priority === "high" ? "bg-red-100 text-red-600" : notification.priority === "medium" ? "bg-yellow-100 text-yellow-600" : "bg-gray-100 text-gray-600"}`}>
-              {getTypeIcon(notification.type)}
-            </div>
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-semibold text-lg">{notification.student.name}</h3>
-                <Badge variant={getPriorityColor(notification.priority)}>
-                  {getTypeLabel(notification.type)}
-                </Badge>
-                {notification.daysRemaining && (
-                  <Badge variant="outline">{notification.daysRemaining} gün kaldı</Badge>
-                )}
-                {notification.daysOverdue && (
-                  <Badge variant="destructive">{notification.daysOverdue} gün gecikme</Badge>
-                )}
-              </div>
-              <p className="text-sm text-muted-foreground">{notification.message}</p>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                {(notification.student.mother_name || notification.student.father_name) && (
-                  <div className="flex flex-col gap-1">
-                    {notification.student.mother_name && notification.student.mother_phone && (
-                      <div>
-                        <span>Anne: {notification.student.mother_name}</span>
-                        <span className="ml-2">({notification.student.mother_phone})</span>
-                      </div>
-                    )}
-                    {notification.student.father_name && notification.student.father_phone && (
-                      <div>
-                        <span>Baba: {notification.student.father_name}</span>
-                        <span className="ml-2">({notification.student.father_phone})</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {notification.student.mother_phone && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-start text-green-600 hover:text-green-700 hover:bg-green-50"
-                  onClick={() => {
-                    window.open(`https://wa.me/90${notification.student.mother_phone?.replace(/\D/g, '')}?text=${encodeURIComponent(notification.message)}`, '_blank');
-                  }}
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Anne WA
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    window.location.href = `tel:${notification.student.mother_phone}`;
-                  }}
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Anne Ara
-                </Button>
-              </>
-            )}
-            {notification.student.father_phone && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="justify-start text-green-600 hover:text-green-700 hover:bg-green-50"
-                  onClick={() => {
-                    window.open(`https://wa.me/90${notification.student.father_phone?.replace(/\D/g, '')}?text=${encodeURIComponent(notification.message)}`, '_blank');
-                  }}
-                >
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Baba WA
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    window.location.href = `tel:${notification.student.father_phone}`;
-                  }}
-                >
-                  <Phone className="w-4 h-4 mr-2" />
-                  Baba Ara
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const list = rows[active];
+  const canSendTemplate = list.some((r) => r.template);
 
   return (
     <>
       <SEO title="Bildirimler - FootbalLab Futbol Okulu" />
       <div className="min-h-screen bg-gray-50">
         <Navigation />
-        <div className="container mx-auto px-4 py-4 sm:py-8">
-          <div className="mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2">Bildirimler ve Hatırlatıcılar</h1>
-            <p className="text-muted-foreground">
-              Üyelik yenileme, ödeme ve sağlık raporu hatırlatıcıları
-            </p>
+        <div className="container mx-auto space-y-6 px-4 py-4 sm:py-8">
+          <div>
+            <h1 className="mb-1 text-2xl font-bold sm:text-3xl">Bildirim Merkezi</h1>
+            <p className="text-muted-foreground">Bu hafta ilgilenmeniz gerekenler ve velilere hatırlatmalar</p>
           </div>
 
-          {/* İstatistik Kartları */}
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6 mb-8">
-            <Card className="bg-red-50 border-red-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-red-700">Üyelik Bitti</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-red-700">{stats.expired}</div>
-              </CardContent>
-            </Card>
+          <BranchFilterBar />
 
-            <Card className="bg-orange-50 border-orange-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-orange-700">7 Gün İçinde</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-orange-700">{stats.expiring_7}</div>
-              </CardContent>
-            </Card>
+          {error && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>Bildirim verileri yüklenemedi. Sayfayı yenileyin.</AlertDescription>
+            </Alert>
+          )}
 
-            <Card className="bg-yellow-50 border-yellow-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-yellow-700">14 Gün İçinde</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-yellow-700">{stats.expiring_14}</div>
-              </CardContent>
-            </Card>
+          {data && data.fullGroups.length > 0 && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Kontenjanı dolu gruplar:</strong> {data.fullGroups.join(", ")} — bu gruplara yeni deneme öğrencisi alınamaz.
+              </AlertDescription>
+            </Alert>
+          )}
 
-            <Card className="bg-purple-50 border-purple-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-purple-700">Taksit Ödemesi</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-purple-700">{stats.installment}</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-blue-50 border-blue-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-blue-700">Sağlık Raporu</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-700">{stats.health_report}</div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-gray-50 border-gray-200">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-gray-700">Kıyafet Ödemesi</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-gray-700">{stats.clothing}</div>
-              </CardContent>
-            </Card>
+          {/* Özet kartları */}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
+            {CATEGORIES.map((c) => {
+              const Icon = c.icon;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setActive(c.id)}
+                  className={`rounded-lg border p-3 text-left transition ${c.color} ${active === c.id ? "ring-2 ring-offset-1 ring-current" : "hover:shadow-sm"}`}
+                >
+                  <Icon className="mb-1 h-5 w-5" />
+                  <div className="text-2xl font-bold">{loading ? "…" : counts[c.id]}</div>
+                  <div className="text-xs font-medium leading-tight">{c.label}</div>
+                  {c.id === "debts" && !loading && counts.debts > 0 && (
+                    <div className="mt-1 text-[11px]">
+                      Toplam {fmtMoney(totalDebt)} TL{overdueCount > 0 ? ` · ${overdueCount} gecikmiş` : ""}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Bildirim Listesi */}
+          {/* Liste */}
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Tüm Bildirimler</CardTitle>
-                  <CardDescription>
-                    Toplam {notifications.length} bildirim
-                  </CardDescription>
-                </div>
-                <Button onClick={loadNotifications} variant="outline">
-                  Yenile
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Users className="h-5 w-5" />
+                {CATEGORIES.find((c) => c.id === active)?.label} ({counts[active]})
+              </CardTitle>
+              {canSendTemplate && list.length > 0 && (
+                <Button variant="outline" size="sm" disabled={sending !== null || !waActive} onClick={() => sendAll(list)} title={waActive ? undefined : "WhatsApp bağlandığında toplu gönderim açılır"}>
+                  {sending === "all" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                  Hepsine hatırlat
                 </Button>
-              </div>
+              )}
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue="all" className="w-full">
-                <TabsList className="flex w-full justify-start">
-                  <TabsTrigger value="all">
-                    Tümü ({notifications.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="expired">
-                    Bitti ({stats.expired})
-                  </TabsTrigger>
-                  <TabsTrigger value="expiring_7">
-                    7 Gün ({stats.expiring_7})
-                  </TabsTrigger>
-                  <TabsTrigger value="expiring_14">
-                    14 Gün ({stats.expiring_14})
-                  </TabsTrigger>
-                  <TabsTrigger value="installment">
-                    Taksit ({stats.installment})
-                  </TabsTrigger>
-                  <TabsTrigger value="health_report">
-                    Rapor ({stats.health_report})
-                  </TabsTrigger>
-                  <TabsTrigger value="clothing">
-                    Kıyafet ({stats.clothing})
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="all" className="mt-6">
-                  {loading ? (
-                    <div className="text-center py-8">Yükleniyor...</div>
-                  ) : notifications.length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Henüz bildirim yok
+              {loading ? (
+                <div className="flex justify-center py-10">
+                  <Loader2 className="h-7 w-7 animate-spin text-emerald-600" />
+                </div>
+              ) : list.length === 0 ? (
+                <p className="py-8 text-center text-sm text-muted-foreground">Bu başlıkta bekleyen kayıt yok. 🎉</p>
+              ) : (
+                <div className="divide-y">
+                  {list.map((r) => (
+                    <div key={r.key} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-semibold">{r.title}</span>
+                          {r.badge && <Badge variant={r.badge.tone === "red" ? "destructive" : "outline"}>{r.badge.text}</Badge>}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{r.detail}</p>
+                        {r.contacts.length === 0 ? (
+                          <p className="text-xs text-red-600">Veli telefonu kayıtlı değil</p>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">{r.contacts.map((c) => `${c.name} (${c.phone})`).join(" · ")}</p>
+                        )}
+                      </div>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        {r.contacts.map((c) => (
+                          <span key={c.phone} className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="text-green-700 hover:bg-green-50"
+                              disabled={sending !== null}
+                              onClick={() => sendOne(r, c)}
+                              title={waActive && r.template ? "Şablonla gönder" : "WhatsApp'ta mesajı aç"}
+                            >
+                              {sending === `${r.key}-${c.phone}` ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-1.5 h-4 w-4" />}
+                              {r.contacts.length > 1 ? c.name.split(" ")[0] : "Hatırlat"}
+                            </Button>
+                            <Button variant="ghost" size="icon" aria-label={`${c.name} ara`} asChild>
+                              <a href={`tel:${c.phone}`}>
+                                <Phone className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {notifications.map(renderNotificationCard)}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="expired" className="mt-6">
-                  {filterByType("expired").length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Üyeliği biten öğrenci yok
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {filterByType("expired").map(renderNotificationCard)}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="expiring_7" className="mt-6">
-                  {filterByType("expiring_7").length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      7 gün içinde bitecek üyelik yok
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {filterByType("expiring_7").map(renderNotificationCard)}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="expiring_14" className="mt-6">
-                  {filterByType("expiring_14").length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      14 gün içinde bitecek üyelik yok
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {filterByType("expiring_14").map(renderNotificationCard)}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="installment" className="mt-6">
-                  {filterByType("installment").length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Bekleyen taksit ödemesi yok
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {filterByType("installment").map(renderNotificationCard)}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="health_report" className="mt-6">
-                  {filterByType("health_report").length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Bekleyen sağlık raporu yok
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {filterByType("health_report").map(renderNotificationCard)}
-                    </div>
-                  )}
-                </TabsContent>
-
-                <TabsContent value="clothing" className="mt-6">
-                  {filterByType("clothing").length === 0 ? (
-                    <div className="text-center py-8 text-muted-foreground">
-                      Bekleyen kıyafet ödemesi yok
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {filterByType("clothing").map(renderNotificationCard)}
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          <AutoReminderPanel isAdmin={isAdmin} whatsappActive={waActive} />
         </div>
       </div>
     </>

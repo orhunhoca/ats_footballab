@@ -72,6 +72,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     clothing_size: "",
     work_group_hour: "",
     health_report_submitted: false,
+    registration_form_submitted: false,
     registration_type: "Yeni Kayıt",
     payment_plan: "",
     payment_amount: "",
@@ -107,6 +108,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           clothing_size: student.clothing_size || "",
           work_group_hour: student.work_group_hour || "",
           health_report_submitted: student.health_report_submitted || false,
+          registration_form_submitted: (student as { registration_form_submitted?: boolean }).registration_form_submitted || false,
           registration_type: student.registration_type || "Yeni Kayıt",
           payment_plan: student.payment_plan || "",
           payment_amount: student.payment_amount?.toString() || "",
@@ -143,6 +145,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
           clothing_size: "",
           work_group_hour: "",
           health_report_submitted: false,
+          registration_form_submitted: false,
           registration_type: "Yeni Kayıt",
           payment_plan: "",
           payment_amount: "",
@@ -391,6 +394,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         clothing_size: formData.clothing_size || null,
         work_group_hour: formData.work_group_hour || null,
         health_report_submitted: formData.health_report_submitted,
+        registration_form_submitted: formData.registration_form_submitted,
         registration_type: formData.registration_type,
         payment_plan: formData.payment_plan || null,
         payment_amount: formData.payment_amount ? parseFloat(formData.payment_amount) : null,
@@ -561,6 +565,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
         clothing_size: "",
         work_group_hour: "",
         health_report_submitted: false,
+        registration_form_submitted: false,
         registration_type: "Yeni Kayıt",
         payment_plan: "",
         payment_amount: "",
@@ -809,6 +814,16 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 }
               />
               <Label htmlFor="health_report">Sağlık Raporu Teslim Edildi</Label>
+            </div>
+            <div className="flex items-center space-x-2 py-2">
+              <Checkbox
+                id="registration_form"
+                checked={formData.registration_form_submitted}
+                onCheckedChange={(checked) =>
+                  setFormData(prev => ({...prev, registration_form_submitted: checked as boolean}))
+                }
+              />
+              <Label htmlFor="registration_form">Kayıt Formu Teslim Edildi</Label>
             </div>
           </div>
 
