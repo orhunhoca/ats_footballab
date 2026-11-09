@@ -72,22 +72,29 @@ serve(async (req) => {
       await rollback(`Profil oluşturulamadı: ${profileError.message}`);
     }
 
-    // İsteğe bağlı: antrenör kaydını aynı işlemde oluştur
+    // İsteğe bağlı: antrenör kaydını aynı işlemde oluştur (antrenör hesabı ya da "aynı zamanda antrenör" olan yönetici)
     let coachRecord: Record<string, unknown> | null = null;
-    if (newRole === "user" && coach && typeof coach === "object") {
-      // Şube verilmişse var olan, aktif bir şube olmalı
-      let branchId: string | null = null;
-      if (coach.branch_id) {
-        const { data: branch } = await supabase
-          .from("branches")
-          .select("id, is_active")
-          .eq("id", String(coach.branch_id))
-          .maybeSingle();
-        if (!branch || !branch.is_active) {
-          await rollback("Seçilen şube bulunamadı veya aktif değil");
+    if (coach && typeof coach === "object") {
+      // Çalışılan şubeler: coach.branch_ids (birden fazla) ya da tek coach.branch_id; hepsi aktif şube olmalı
+      const wanted: string[] = Array.from(
+        new Set(
+          [
+            ...(Array.isArray(coach.branch_ids) ? coach.branch_ids : []),
+            ...(coach.branch_id ? [coach.branch_id] : []),
+          ].map((v: unknown) => String(v)),
+        ),
+      );
+      let branchIds: string[] = [];
+      if (wanted.length > 0) {
+        const { data: found } = await supabase.from("branches").select("id, is_active").in("id", wanted);
+        const ok = (found ?? []).filter((b: { is_active: boolean }) => b.is_active).map((b: { id: string }) => b.id);
+        if (ok.length !== wanted.length) {
+          await rollback("Seçilen şubelerden biri bulunamadı veya aktif değil");
         }
-        branchId = branch!.id;
+        branchIds = ok;
       }
+      // Ana şube: belirtilen, yoksa ilk seçilen
+      const primaryId = coach.branch_id && branchIds.includes(String(coach.branch_id)) ? String(coach.branch_id) : branchIds[0] ?? null;
 
       const { data: created, error: coachError } = await supabase
         .from("coaches")
@@ -100,8 +107,8 @@ serve(async (req) => {
           license: coach.license || null,
           status: coach.status || "Aktif",
           user_id: userId,
-          branch_id: branchId,
-          // "all": tüm şubelerde çalışabilir/kayıt ekleyebilir; "own": yalnızca kendi şubesi
+          branch_id: primaryId,
+          // "all": tüm şubelerde çalışabilir/kayıt ekleyebilir; "own": yalnızca seçilen şubeler
           branch_access: coach.branch_access === "all" ? "all" : "own",
           invite_status: "accepted",
         })
@@ -110,6 +117,15 @@ serve(async (req) => {
 
       if (coachError) {
         await rollback(`Antrenör kaydı oluşturulamadı: ${coachError.message}`);
+      }
+      if (branchIds.length > 0) {
+        const { error: cbError } = await supabase
+          .from("coach_branches")
+          .insert(branchIds.map((b) => ({ coach_id: created!.id, branch_id: b })));
+        if (cbError) {
+          await supabase.from("coaches").delete().eq("id", created!.id);
+          await rollback(`Antrenör şubeleri kaydedilemedi: ${cbError.message}`);
+        }
       }
       coachRecord = created;
     }

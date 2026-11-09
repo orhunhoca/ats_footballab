@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trialStudentService } from "@/services/trialStudentService";
-import { groupService } from "@/services/groupService";
+import { capacityErrorMessage, isFull, remaining } from "@/lib/groupRules";
+import { recommendGroups } from "@/lib/groupRecommendation";
+import { useGroupDirectory } from "@/hooks/useGroupDirectory";
+import { GroupRecommendations } from "@/components/groups/GroupRecommendations";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -29,7 +32,8 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
     trial_date: new Date().toISOString().split("T")[0],
     notes: ""
   });
-  const [groups, setGroups] = useState<Group[]>([]);
+  const { groups, occupancy, sessions, fields, reload: reloadGroups } = useGroupDirectory();
+  const lastRecKey = useRef("");
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { locked: branchLocked, formDefaultBranchId: defaultBranchId } = useBranchPermission();
@@ -53,10 +57,6 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
   };
 
   useEffect(() => {
-    loadGroups();
-  }, []);
-
-  useEffect(() => {
     if (formData.birth_date) {
       const birthDate = new Date(formData.birth_date);
       const today = new Date();
@@ -77,21 +77,15 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
 
       setFormData(prev => ({ ...prev, age_group: ageGroup }));
 
-      const matchingGroup = branchGroups.find(g => g.age_group === ageGroup);
-      if (matchingGroup) {
-        setFormData(prev => ({ ...prev, assigned_group_id: matchingGroup.id }));
-      }
+      // Doğum yılına uyan, kontenjanı olan en uygun grup (öneri listesinin başı).
+      // Doğum tarihi/şube değişince yeniden önerilir; aksi halde kullanıcının seçimi korunur (yalnız boşsa doldurulur).
+      const key = `${formData.birth_date}|${branchId}`;
+      const keyChanged = lastRecKey.current !== key;
+      lastRecKey.current = key;
+      const top = recommendGroups(formData.birth_date, branchId, groups, occupancy).available[0];
+      setFormData((prev) => (keyChanged || !prev.assigned_group_id ? { ...prev, assigned_group_id: top ? top.id : "" } : prev));
     }
-  }, [formData.birth_date, groups, branchId]);
-
-  const loadGroups = async () => {
-    try {
-      const data = await groupService.getAllGroups();
-      setGroups(data);
-    } catch (error) {
-      console.error("Error loading groups:", error);
-    }
-  };
+  }, [formData.birth_date, groups, branchId, occupancy]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,11 +131,13 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
 
       onSuccess();
     } catch (error) {
+      const full = capacityErrorMessage(error);
       toast({
-        title: "Hata",
-        description: "Deneme öğrenci eklenirken bir hata oluştu.",
+        title: full ? "Kontenjan dolu" : "Hata",
+        description: full ?? "Deneme öğrenci eklenirken bir hata oluştu.",
         variant: "destructive"
       });
+      if (full) await reloadGroups(); // doluluk güncellensin
     } finally {
       setLoading(false);
     }
@@ -196,6 +192,19 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
         </div>
       </div>
 
+      {formData.birth_date && (
+        <GroupRecommendations
+          birthDate={formData.birth_date}
+          branchId={branchId}
+          groups={groups}
+          occupancy={occupancy}
+          sessions={sessions}
+          fields={fields}
+          selectedId={formData.assigned_group_id}
+          onSelect={(id) => setFormData((prev) => ({ ...prev, assigned_group_id: id }))}
+        />
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="age_group">Yaş Grubu</Label>
@@ -217,11 +226,18 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
               <SelectValue placeholder="Grup seçin" />
             </SelectTrigger>
             <SelectContent>
-              {branchGroups.map((group) => (
-                <SelectItem key={group.id} value={group.id}>
-                  {group.name} ({group.age_group}) - {group.schedule}
-                </SelectItem>
-              ))}
+              {branchGroups
+                .filter((g) => g.status === "Aktif")
+                .map((group) => {
+                  const full = isFull(occupancy[group.id]);
+                  const left = remaining(occupancy[group.id]);
+                  return (
+                    <SelectItem key={group.id} value={group.id} disabled={full}>
+                      {group.name} ({group.age_group}){group.work_hour ? ` · ${group.work_hour}` : ""}
+                      {full ? " — DOLU" : left != null ? ` — ${left} yer kaldı` : ""}
+                    </SelectItem>
+                  );
+                })}
             </SelectContent>
           </Select>
         </div>

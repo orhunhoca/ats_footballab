@@ -25,6 +25,8 @@ import { userService } from "@/services/userService";
 import { authService } from "@/services/authService";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { BranchMultiSelect } from "@/components/BranchMultiSelect";
 
 type DbRole = "admin" | "manager" | "user" | "parent" | "pending";
 
@@ -72,6 +74,11 @@ function UsersPageInner() {
   const [adding, setAdding] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState({ fullName: "", email: "", password: "" });
+  // Yönetici aynı zamanda antrenör olarak da çalışıyorsa
+  const [alsoCoach, setAlsoCoach] = useState(false);
+  const [mgrPhone, setMgrPhone] = useState("");
+  const [mgrBranchIds, setMgrBranchIds] = useState<string[]>([]);
+  const [mgrPrimary, setMgrPrimary] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -116,7 +123,7 @@ function UsersPageInner() {
   const openAdd = () => {
     setForm({ fullName: "", email: "", password: generatePassword() });
     setShowPassword(true);
-    setIsAddOpen(true);
+    { setAlsoCoach(false); setMgrPhone(""); setMgrBranchIds([]); setMgrPrimary(""); setIsAddOpen(true); };
   };
 
   const handleAdd = async (e: React.FormEvent) => {
@@ -131,7 +138,20 @@ function UsersPageInner() {
     }
     setAdding(true);
     try {
-      await authService.createUserWithoutLogin(form.email.trim(), form.password, form.fullName.trim(), "manager");
+      if (alsoCoach && mgrBranchIds.length === 0) {
+        toast({ title: "Eksik Bilgi", description: "Antrenör olarak çalışacağı en az bir şubeyi seçin.", variant: "destructive" });
+        setAdding(false);
+        return;
+      }
+      await authService.createUserWithoutLogin(
+        form.email.trim(),
+        form.password,
+        form.fullName.trim(),
+        "manager",
+        alsoCoach
+          ? { name: form.fullName.trim(), phone: mgrPhone || null, branch_id: mgrPrimary || mgrBranchIds[0], branch_ids: mgrBranchIds, branch_access: "own", status: "Aktif" }
+          : undefined
+      );
       toast({
         title: "Yönetici eklendi",
         description: `${form.fullName.trim()} belirlenen şifre ile giriş yapabilir. Şifreyi kendisine güvenli bir yolla iletin.`,
@@ -249,7 +269,7 @@ function UsersPageInner() {
         </div>
 
         <Dialog open={isAddOpen} onOpenChange={(o) => !adding && setIsAddOpen(o)}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md max-h-[92vh] overflow-y-auto">
             <form onSubmit={handleAdd} className="space-y-4">
               <DialogHeader>
                 <DialogTitle>Yönetici Ekle</DialogTitle>
@@ -293,6 +313,24 @@ function UsersPageInner() {
                     <Copy className="w-4 h-4" />
                   </Button>
                 </div>
+              </div>
+              <div className="space-y-3 rounded-md border bg-gray-50 p-3">
+                <label className="flex cursor-pointer items-start gap-2 text-sm">
+                  <Checkbox checked={alsoCoach} onCheckedChange={(c) => setAlsoCoach(c === true)} className="mt-0.5" />
+                  <span>
+                    <strong>Bu yönetici aynı zamanda antrenör mü?</strong>
+                    <span className="block text-xs text-gray-600">İşaretlerseniz antrenör listesine de eklenir; gruplara antrenör olarak atanabilir.</span>
+                  </span>
+                </label>
+                {alsoCoach && (
+                  <div className="space-y-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="mgr-phone">Telefon</Label>
+                      <Input id="mgr-phone" value={mgrPhone} onChange={(e) => setMgrPhone(e.target.value)} />
+                    </div>
+                    <BranchMultiSelect value={mgrBranchIds} onChange={setMgrBranchIds} primary={mgrPrimary} onPrimaryChange={setMgrPrimary} label="Antrenör olarak çalıştığı şubeler *" />
+                  </div>
+                )}
               </div>
               <DialogFooter className="gap-2 sm:gap-0">
                 <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)} disabled={adding}>İptal</Button>

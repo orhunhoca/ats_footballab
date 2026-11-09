@@ -144,12 +144,18 @@ export const trialStudentService = {
 
     // Assign to selected group
     if (additionalData.group_id && newStudent) {
-      await supabase
+      const { error: groupError } = await supabase
         .from("student_groups")
         .insert({
           student_id: newStudent.id,
           group_id: additionalData.group_id
         });
+      if (groupError) {
+        console.error("Error assigning converted student to group:", groupError);
+        // Gruba yazılamadıysa yarım (gruplu olmayan) öğrenci kaydı bırakma; deneme öğrencisi beklemede kalır
+        await supabase.from("students").delete().eq("id", newStudent.id);
+        throw groupError;
+      }
     }
 
     // Update trial student status

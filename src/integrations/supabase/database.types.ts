@@ -110,6 +110,42 @@ export type Database = {
           },
         ]
       }
+      branch_fields: {
+        Row: {
+          branch_id: string
+          capacity: number
+          close_time: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          open_time: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          capacity: number
+          close_time?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          open_time?: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          capacity?: number
+          close_time?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          open_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       branches: {
         Row: {
           address: string | null
@@ -139,6 +175,32 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      coach_branches: {
+        Row: {
+          branch_id: string
+          coach_id: string
+          created_at: string
+        }
+        Insert: {
+          branch_id: string
+          coach_id: string
+          created_at?: string
+        }
+        Update: {
+          branch_id?: string
+          coach_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_branches_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       coaches: {
         Row: {
@@ -434,6 +496,10 @@ export type Database = {
         Row: {
           branch_id: string | null
           age_group: string
+          age_max: number | null
+          age_min: number | null
+          capacity: number | null
+          field_id: string | null
           coach_id: string | null
           color: string | null
           created_at: string | null
@@ -449,6 +515,10 @@ export type Database = {
         Insert: {
           branch_id?: string | null
           age_group: string
+          age_max?: number | null
+          age_min?: number | null
+          capacity?: number | null
+          field_id?: string | null
           coach_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -464,6 +534,10 @@ export type Database = {
         Update: {
           branch_id?: string | null
           age_group?: string
+          age_max?: number | null
+          age_min?: number | null
+          capacity?: number | null
+          field_id?: string | null
           coach_id?: string | null
           color?: string | null
           created_at?: string | null
@@ -1839,6 +1913,15 @@ export type Database = {
       }
     }
     Views: {
+      group_occupancy: {
+        Row: {
+          group_id: string | null
+          enrolled: number | null
+          trial_pending: number | null
+          capacity: number | null
+        }
+        Relationships: []
+      }
       student_charge_status: {
         Row: {
           id: string

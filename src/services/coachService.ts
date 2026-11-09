@@ -12,11 +12,17 @@ export const coachService = {
       .from("coaches")
       .select(`
         *,
-        groups!groups_coach_id_fkey(*)
+        groups!groups_coach_id_fkey(*),
+        coach_branches(branch_id)
       `)
       .eq("status", "Aktif")
       .order("created_at", { ascending: false });
-    if (branchId) query = query.eq("branch_id", branchId);
+    // Şube filtresi: ana şubesi ya da çalıştığı şubelerden biri o şube olan antrenörler
+    if (branchId) {
+      const { data: rows } = await supabase.from("coach_branches").select("coach_id").eq("branch_id", branchId);
+      const ids = (rows ?? []).map((r) => r.coach_id);
+      query = ids.length > 0 ? query.or(`branch_id.eq.${branchId},id.in.(${ids.join(",")})`) : query.eq("branch_id", branchId);
+    }
     const { data, error } = await query;
 
     if (error) {
@@ -25,6 +31,15 @@ export const coachService = {
     }
 
     return data || [];
+  },
+
+  /** Antrenörün çalıştığı şubeleri değiştirir (yalnız admin) */
+  async setBranches(coachId: string, branchIds: string[]) {
+    const { error: delError } = await supabase.from("coach_branches").delete().eq("coach_id", coachId);
+    if (delError) throw delError;
+    if (branchIds.length === 0) return;
+    const { error } = await supabase.from("coach_branches").insert(branchIds.map((b) => ({ coach_id: coachId, branch_id: b })));
+    if (error) throw error;
   },
 
   // Get coach by ID
