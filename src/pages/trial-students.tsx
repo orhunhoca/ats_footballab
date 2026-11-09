@@ -151,7 +151,7 @@ function TrialStudentsPageInner() {
       <SEO title="Deneme Antrenmanları - FootbalLab Futbol Okulu" />
       <div className="min-h-screen bg-gray-50">
         <Navigation />
-        <div className="container mx-auto p-6 max-w-7xl">
+        <div className="container mx-auto px-4 py-4 sm:py-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold mb-2">Deneme Antrenmanları</h1>

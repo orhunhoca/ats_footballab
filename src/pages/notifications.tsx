@@ -212,7 +212,7 @@ function NotificationsPageInner() {
       <SEO title="Bildirimler - FootbalLab Futbol Okulu" />
       <div className="min-h-screen bg-gray-50">
         <Navigation />
-        <div className="container mx-auto max-w-6xl space-y-6 p-4 sm:p-6">
+        <div className="container mx-auto space-y-6 px-4 py-4 sm:py-8">
           <div>
             <h1 className="mb-1 text-2xl font-bold sm:text-3xl">Bildirim Merkezi</h1>
             <p className="text-muted-foreground">Bu hafta ilgilenmeniz gerekenler ve velilere hatırlatmalar</p>
