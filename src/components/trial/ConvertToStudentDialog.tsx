@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { trialStudentService } from "@/services/trialStudentService";
-import { groupService } from "@/services/groupService";
+import { useGroupDirectory } from "@/hooks/useGroupDirectory";
+import { GroupRecommendations } from "@/components/groups/GroupRecommendations";
+import { recommendGroups } from "@/lib/groupRecommendation";
+import { isFull, remaining } from "@/lib/groupRules";
 import { settingsService } from "@/services/settingsService";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
@@ -37,24 +40,29 @@ export function ConvertToStudentDialog({ trialStudent, open, onOpenChange, onSuc
     registration_end_date: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split("T")[0],
     group_id: trialStudent.assigned_group_id || ""
   });
-  const [groups, setGroups] = useState<Tables<"groups">[]>([]);
+  const { groups, occupancy, sessions, fields } = useGroupDirectory();
+  // Deneme öğrencisi kendi seansında zaten yer tutuyor: kayıtta o yer ikinci kez sayılmasın
+  const occ = useMemo(() => {
+    const id = trialStudent.assigned_group_id;
+    const cur = id ? occupancy[id] : undefined;
+    return id && cur ? { ...occupancy, [id]: { ...cur, trial_pending: Math.max(0, cur.trial_pending - 1) } } : occupancy;
+  }, [occupancy, trialStudent.assigned_group_id]);
+  const assignedGroup = groups.find((g) => g.id === trialStudent.assigned_group_id);
   const [schools, setSchools] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    loadGroups();
     loadSchools();
   }, []);
 
-  const loadGroups = async () => {
-    try {
-      const data = await groupService.getAllGroups();
-      setGroups(data);
-    } catch (error) {
-      console.error("Error loading groups:", error);
-    }
-  };
+  // Deneme seansı yoksa doğum yılına göre en uygun grup önerilir
+  useEffect(() => {
+    if (formData.group_id || groups.length === 0) return;
+    const top = recommendGroups(trialStudent.birth_date, trialStudent.branch_id, groups, occ).available[0];
+    if (top) setFormData((prev) => (prev.group_id ? prev : { ...prev, group_id: top.id }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups, occ]);
 
   const loadSchools = async () => {
     try {
@@ -218,6 +226,21 @@ export function ConvertToStudentDialog({ trialStudent, open, onOpenChange, onSuc
           </div>
 
           {/* Group Assignment */}
+          {assignedGroup && (
+            <p className="rounded-md bg-emerald-50 p-2 text-sm text-emerald-800">
+              Deneme antrenmanı <strong>{assignedGroup.name}</strong> grubunda yapıldı; kayıt, aynı gruba/seansa yapılır. İsterseniz aşağıdan başka bir grup seçebilirsiniz.
+            </p>
+          )}
+          <GroupRecommendations
+            birthDate={trialStudent.birth_date}
+            branchId={trialStudent.branch_id ?? ""}
+            groups={groups}
+            occupancy={occ}
+            sessions={sessions}
+            fields={fields}
+            selectedId={formData.group_id}
+            onSelect={(id) => setFormData((prev) => ({ ...prev, group_id: id }))}
+          />
           <div className="space-y-2">
             <Label htmlFor="group_id">Grup</Label>
             <Select
@@ -233,6 +256,7 @@ export function ConvertToStudentDialog({ trialStudent, open, onOpenChange, onSuc
                   .map((group) => (
                   <SelectItem key={group.id} value={group.id}>
                     {group.name}
+                    {isFull(occ[group.id]) ? " — DOLU" : remaining(occ[group.id]) != null ? ` — ${remaining(occ[group.id])} yer kaldı` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>

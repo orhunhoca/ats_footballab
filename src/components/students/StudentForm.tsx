@@ -8,7 +8,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { studentService } from "@/services/studentService";
 import { groupService } from "@/services/groupService";
-import { capacityErrorMessage, isAgeEligible, isFull, remaining, type Occupancy } from "@/lib/groupRules";
+import { capacityErrorMessage, isFull, remaining } from "@/lib/groupRules";
+import { recommendGroups } from "@/lib/groupRecommendation";
+import { useGroupDirectory } from "@/hooks/useGroupDirectory";
+import { GroupRecommendations } from "@/components/groups/GroupRecommendations";
 import { storageService } from "@/services/storageService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
 import { paymentService, type PaymentMethod } from "@/services/paymentService";
@@ -45,8 +48,10 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   const [kvkkConfirmed, setKvkkConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
-  const [groups, setGroups] = useState<any[]>([]);
-  const [occupancy, setOccupancy] = useState<Record<string, Occupancy>>({});
+  const { groups: dirGroups, occupancy, sessions: groupSessions, fields: groupFields, reload: reloadGroups } = useGroupDirectory(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const groups = dirGroups as any[];
+  const lastRecKey = useRef("");
   const [schools, setSchools] = useState<string[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>("");
@@ -84,7 +89,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   useEffect(() => {
     if (open) {
       loadPaymentPlans();
-      loadGroups();
+      reloadGroups();
       loadSchools();
       
       // If editing, load student data into form
@@ -193,19 +198,6 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     }
   };
 
-  const loadGroups = async () => {
-    try {
-      const [data, occ] = await Promise.all([
-        groupService.getAllGroups(),
-        groupService.getOccupancy().catch(() => ({} as Record<string, Occupancy>)),
-      ]);
-      setGroups(data);
-      setOccupancy(occ);
-    } catch (error) {
-      console.error("Gruplar yüklenemedi:", error);
-    }
-  };
-
   const loadPaymentPlans = async () => {
     try {
       const plans = await settingsService.getPaymentPlans();
@@ -226,26 +218,22 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
     return age;
   };
 
-  // Auto-assign group based on birth year
+  // Doğum yılına göre otomatik grup önerisi: yaşı uyan, kontenjanı olan en uygun grup seçilir.
+  // Doğum tarihi/şube değişince yeniden önerilir; aksi halde kullanıcının seçimi korunur.
   useEffect(() => {
-    if (formData.birth_date && !student) { 
-      // Yaşı uyan, aktif ve (varsa) dolu olmayan gruplar önce
-      const matchingGroups = groups
-        .filter((g) => g.status === "Aktif" && g.work_hour && isAgeEligible(g, { birth_date: formData.birth_date }))
-        .sort((a, b) => Number(isFull(occupancy[a.id])) - Number(isFull(occupancy[b.id])));
-
-      if (matchingGroups.length > 0) {
-        const bestMatch = matchingGroups[0];
-        setFormData(prev => ({
-          ...prev,
-          work_group_hour: bestMatch.work_hour
-        }));
-        
-        // Auto-select the group
-        setSelectedGroup(bestMatch.id);
-      }
+    if (!formData.birth_date || student) return;
+    const key = `${formData.birth_date}|${branchId}`;
+    const keyChanged = lastRecKey.current !== key;
+    lastRecKey.current = key;
+    if (!keyChanged && selectedGroup) return;
+    const top = recommendGroups(formData.birth_date, branchId, groups, occupancy).available[0];
+    if (top) {
+      setFormData((prev) => ({ ...prev, work_group_hour: top.work_hour || prev.work_group_hour }));
+      setSelectedGroup(top.id);
+    } else if (keyChanged) {
+      setSelectedGroup("");
     }
-  }, [formData.birth_date, groups, student]);
+  }, [formData.birth_date, groups, branchId, occupancy, student, selectedGroup]);
 
   // Auto-calculate end date when start date changes
   useEffect(() => {
@@ -743,6 +731,24 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                 </Select>
               </div>
               <BranchSelect value={branchId} onChange={handleBranchChange} disabled={branchLocked} />
+              {formData.birth_date && (
+                <div className="col-span-2">
+                  <GroupRecommendations
+                    birthDate={formData.birth_date}
+                    branchId={branchId}
+                    groups={dirGroups}
+                    occupancy={occupancy}
+                    sessions={groupSessions}
+                    fields={groupFields}
+                    selectedId={selectedGroup}
+                    onSelect={(id) => {
+                      setSelectedGroup(id);
+                      const g = groups.find((x) => x.id === id);
+                      if (g?.work_hour) setFormData((prev) => ({ ...prev, work_group_hour: g.work_hour }));
+                    }}
+                  />
+                </div>
+              )}
               <div className="space-y-2">
                 <Label>Grup Seçimi *</Label>
                 <Select 
