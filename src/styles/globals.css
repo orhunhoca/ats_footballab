@@ -8,6 +8,13 @@
   }
 }
 
+/* Masaüstünde yazı ve düğmeler biraz büyür (tüm ölçüler rem tabanlı, birlikte ölçeklenir) */
+@layer base {
+  html { font-size: 16px; }
+  @media (min-width: 1280px) { html { font-size: 17px; } }
+  @media (min-width: 1700px) { html { font-size: 18px; } }
+}
+
 @layer base {
   :root {
     --radius: 0.55rem;
