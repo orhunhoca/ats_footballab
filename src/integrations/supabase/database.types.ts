@@ -1182,6 +1182,33 @@ export type Database = {
           },
         ]
       }
+      reminder_rules: {
+        Row: {
+          days_before: number | null
+          enabled: boolean
+          repeat_days: number | null
+          rule_type: string
+          template_type: string
+          updated_at: string
+        }
+        Insert: {
+          days_before?: number | null
+          enabled?: boolean
+          repeat_days?: number | null
+          rule_type: string
+          template_type: string
+          updated_at?: string
+        }
+        Update: {
+          days_before?: number | null
+          enabled?: boolean
+          repeat_days?: number | null
+          rule_type?: string
+          template_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       schools: {
         Row: {
           address: string | null
@@ -1284,6 +1311,7 @@ export type Database = {
           father_name: string | null
           father_phone: string | null
           health_report_submitted: boolean | null
+          registration_form_submitted: boolean
           height_cm: number | null
           id: string
           installment_date: string | null
@@ -1324,6 +1352,7 @@ export type Database = {
           father_name?: string | null
           father_phone?: string | null
           health_report_submitted?: boolean | null
+          registration_form_submitted?: boolean
           height_cm?: number | null
           id?: string
           installment_date?: string | null
@@ -1364,6 +1393,7 @@ export type Database = {
           father_name?: string | null
           father_phone?: string | null
           health_report_submitted?: boolean | null
+          registration_form_submitted?: boolean
           height_cm?: number | null
           id?: string
           installment_date?: string | null
