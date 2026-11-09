@@ -119,7 +119,7 @@ export const whatsappService = {
     const { data, error } = await supabase
       .from("whatsapp_templates")
       .select("*")
-      .order("name");
+      .order("template_name");
 
     if (error) {
       console.error("Error fetching templates:", error);

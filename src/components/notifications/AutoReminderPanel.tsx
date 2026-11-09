@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle2, Loader2, PlayCircle, Eye } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Loader2, PlayCircle, Eye, Pencil } from "lucide-react";
+import { TemplateEditorDialog } from "@/components/notifications/TemplateEditorDialog";
+import { type WaTemplate } from "@/services/templateService";
 import { reminderService, type ReminderRule, type RuleType } from "@/services/reminderService";
 import { useToast } from "@/hooks/use-toast";
 
@@ -20,8 +23,14 @@ const LABEL: Record<RuleType, { title: string; desc: string; template: string }>
 type Preview = Awaited<ReturnType<typeof reminderService.run>>;
 
 /** Otomatik hatırlatma kuralları: aç/kapat, gün ayarları, önizleme ve "şimdi gönder" */
-export function AutoReminderPanel({ isAdmin, whatsappActive }: { isAdmin: boolean; whatsappActive: boolean }) {
+export function AutoReminderPanel({ isAdmin, whatsappActive, templates, onTemplatesChanged }: { isAdmin: boolean; whatsappActive: boolean; templates: WaTemplate[]; onTemplatesChanged: () => void }) {
   const { toast } = useToast();
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editing, setEditing] = useState<WaTemplate | null>(null);
+  const openEditor = (t: WaTemplate | null) => {
+    setEditing(t);
+    setEditorOpen(true);
+  };
   const [rules, setRules] = useState<ReminderRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<"preview" | "send" | null>(null);
@@ -102,7 +111,14 @@ export function AutoReminderPanel({ isAdmin, whatsappActive }: { isAdmin: boolea
                       <p className="text-xs text-muted-foreground">{meta.desc}</p>
                       <p className="mt-1 text-[11px] text-muted-foreground">Şablon: <code>{meta.template}</code></p>
                     </div>
-                    <Switch checked={r.enabled} disabled={!isAdmin} onCheckedChange={(v) => update(t, { enabled: v })} aria-label={`${meta.title} otomatik gönderim`} />
+                    <div className="flex shrink-0 items-center gap-3">
+                      {isAdmin && (
+                        <Button variant="outline" size="sm" onClick={() => openEditor(templates.find((x) => x.template_type === meta.template) ?? null)} disabled={!templates.some((x) => x.template_type === meta.template)}>
+                          <Pencil className="mr-1.5 h-3.5 w-3.5" /> Düzenle
+                        </Button>
+                      )}
+                      <Switch checked={r.enabled} disabled={!isAdmin} onCheckedChange={(v) => update(t, { enabled: v })} aria-label={`${meta.title} otomatik gönderim`} />
+                    </div>
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
                     {(t === "balance" || t === "trial_lesson") && (
@@ -125,6 +141,12 @@ export function AutoReminderPanel({ isAdmin, whatsappActive }: { isAdmin: boolea
             })}
           </div>
         )}
+
+        <p className="text-xs text-muted-foreground">
+          Yeni mesaj eklemek ve tüm şablonları yönetmek için: <Link href="/settings" className="underline">Ayarlar → Otomatik Mesajlar → Mesaj Şablonları</Link>. Özel mesajlarınız Bildirim Merkezi listelerinde "Kullanılacak şablon" kutusundan seçilir.
+        </p>
+
+        <TemplateEditorDialog open={editorOpen} onOpenChange={setEditorOpen} template={editing} onSaved={onTemplatesChanged} />
 
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => run("preview")} disabled={!!busy}>
