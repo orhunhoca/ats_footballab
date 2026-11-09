@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database, Tables } from "@/integrations/supabase/types";
+import type { Occupancy, Session } from "@/lib/groupRules";
 
 type Group = Tables<"groups">;
 type GroupInsert = Database["public"]["Tables"]["groups"]["Insert"];
@@ -32,6 +33,49 @@ export const groupService = {
       student_count: group.student_groups?.length || 0,
       students: group.student_groups?.map((sg: any) => sg.students).filter(Boolean) || []
     })) || [];
+  },
+
+  /** Grupların doluluğu (kayıtlı öğrenci + bekleyen deneme öğrencisi / kontenjan) */
+  async getOccupancy(): Promise<Record<string, Occupancy>> {
+    const { data, error } = await supabase.from("group_occupancy").select("*");
+    if (error) throw error;
+    const out: Record<string, Occupancy> = {};
+    for (const r of data ?? []) {
+      if (r.group_id) out[r.group_id] = { enrolled: r.enrolled ?? 0, trial_pending: r.trial_pending ?? 0, capacity: r.capacity };
+    }
+    return out;
+  },
+
+  /** Grubun haftalık antrenman seansları */
+  async getSessions(groupId: string): Promise<Session[]> {
+    const { data, error } = await supabase.from("group_schedule").select("day_of_week, start_time, end_time").eq("group_id", groupId);
+    if (error) throw error;
+    return data ?? [];
+  },
+
+  /** Tüm grupların seansları (grup id → seanslar) */
+  async getAllSessions(): Promise<Record<string, Session[]>> {
+    const { data, error } = await supabase.from("group_schedule").select("group_id, day_of_week, start_time, end_time");
+    if (error) throw error;
+    const out: Record<string, Session[]> = {};
+    for (const r of data ?? []) (out[r.group_id] ||= []).push({ day_of_week: r.day_of_week, start_time: r.start_time, end_time: r.end_time });
+    return out;
+  },
+
+  /**
+   * Seansları değiştirir. Veritabanı çakışma/saat/kontenjan kurallarını denetler; hata olursa eski seanslar geri yazılır.
+   */
+  async replaceSessions(groupId: string, next: Session[], previous: Session[]): Promise<void> {
+    const { error: delError } = await supabase.from("group_schedule").delete().eq("group_id", groupId);
+    if (delError) throw delError;
+    if (next.length === 0) return;
+    const { error } = await supabase.from("group_schedule").insert(next.map((x) => ({ group_id: groupId, ...x })));
+    if (error) {
+      if (previous.length > 0) {
+        await supabase.from("group_schedule").insert(previous.map((x) => ({ group_id: groupId, ...x })));
+      }
+      throw error;
+    }
   },
 
   // Get group by ID

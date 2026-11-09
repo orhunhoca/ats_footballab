@@ -215,9 +215,17 @@ function CoachesPageInner() {
                               <Badge className="bg-emerald-100 text-emerald-800">
                                 {coach.status}
                               </Badge>
-                              {branches.length > 1 && (
-                                <Badge variant="outline">{getBranchName(coach.branch_id)}</Badge>
-                              )}
+                              {branches.length > 1 &&
+                                Array.from(
+                                  new Set([
+                                    ...(coach.branch_id ? [coach.branch_id] : []),
+                                    ...((coach as unknown as { coach_branches?: { branch_id: string }[] }).coach_branches ?? []).map((c) => c.branch_id),
+                                  ])
+                                ).map((id) => (
+                                  <Badge key={id} variant="outline">
+                                    {getBranchName(id)}
+                                  </Badge>
+                                ))}
                               {branches.length > 1 && coach.branch_access === "all" && (
                                 <Badge className="bg-blue-100 text-blue-800">Tüm şubeler</Badge>
                               )}

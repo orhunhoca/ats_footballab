@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { studentService } from "@/services/studentService";
 import { groupService } from "@/services/groupService";
+import { capacityErrorMessage, isAgeEligible, isFull, remaining, type Occupancy } from "@/lib/groupRules";
 import { storageService } from "@/services/storageService";
 import { settingsService, type PaymentPlan } from "@/services/settingsService";
 import { paymentService, type PaymentMethod } from "@/services/paymentService";
@@ -45,6 +46,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   const [loading, setLoading] = useState(false);
   const [paymentPlans, setPaymentPlans] = useState<PaymentPlan[]>([]);
   const [groups, setGroups] = useState<any[]>([]);
+  const [occupancy, setOccupancy] = useState<Record<string, Occupancy>>({});
   const [schools, setSchools] = useState<string[]>([]);
   const [selectedPlan, setSelectedPlan] = useState<PaymentPlan | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>("");
@@ -193,8 +195,12 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
 
   const loadGroups = async () => {
     try {
-      const data = await groupService.getAllGroups();
+      const [data, occ] = await Promise.all([
+        groupService.getAllGroups(),
+        groupService.getOccupancy().catch(() => ({} as Record<string, Occupancy>)),
+      ]);
       setGroups(data);
+      setOccupancy(occ);
     } catch (error) {
       console.error("Gruplar yüklenemedi:", error);
     }
@@ -223,11 +229,10 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
   // Auto-assign group based on birth year
   useEffect(() => {
     if (formData.birth_date && !student) { 
-      const birthYear = new Date(formData.birth_date).getFullYear().toString();
-      
-      const matchingGroups = groups.filter(g => 
-        g.target_years?.split(',').map((y: string) => y.trim()).includes(birthYear) && g.work_hour
-      );
+      // Yaşı uyan, aktif ve (varsa) dolu olmayan gruplar önce
+      const matchingGroups = groups
+        .filter((g) => g.status === "Aktif" && g.work_hour && isAgeEligible(g, { birth_date: formData.birth_date }))
+        .sort((a, b) => Number(isFull(occupancy[a.id])) - Number(isFull(occupancy[b.id])));
 
       if (matchingGroups.length > 0) {
         const bestMatch = matchingGroups[0];
@@ -590,7 +595,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
       console.error("Student operation error:", error);
       toast({
         title: "Hata",
-        description: error?.message || "İşlem sırasında bir hata oluştu.",
+        description: capacityErrorMessage(error) || error?.message || "İşlem sırasında bir hata oluştu.",
         variant: "destructive"
       });
     } finally {
@@ -755,6 +760,7 @@ export function StudentForm({ open, onOpenChange, onSuccess, student }: StudentF
                     {branchGroups.map(group => (
                       <SelectItem key={group.id} value={group.id}>
                         {group.name} {group.work_hour ? `(${group.work_hour})` : ''}
+                        {isFull(occupancy[group.id]) ? " — DOLU" : remaining(occupancy[group.id]) != null ? ` — ${remaining(occupancy[group.id])} yer kaldı` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -22,6 +22,13 @@ import { useToast } from "@/hooks/use-toast";
 import { Users, Plus, TrendingUp, UserCircle, Clock, Loader2, Phone, Mail, Pencil, Trash2 } from "lucide-react";
 import { groupService } from "@/services/groupService";
 import { GroupForm } from "@/components/groups/GroupForm";
+import { AssignStudentsDialog } from "@/components/groups/AssignStudentsDialog";
+import { fieldService, formatFieldHours, type BranchField } from "@/services/fieldService";
+import { studentService } from "@/services/studentService";
+import { formatSession, isFull, occupied, remaining, sortSessions, type Occupancy, type Session } from "@/lib/groupRules";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle, UserPlus, UserMinus, LayoutGrid } from "lucide-react";
 import type { Tables } from "@/integrations/supabase/types";
 
 type Group = Tables<"groups"> & {
@@ -42,6 +49,10 @@ function GroupsPageInner() {
     blockers: { students: number; attendance: number; trialStudents: number };
   } | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [occupancy, setOccupancy] = useState<Record<string, Occupancy>>({});
+  const [sessions, setSessions] = useState<Record<string, Session[]>>({});
+  const [fieldMap, setFieldMap] = useState<Record<string, BranchField>>({});
+  const [assignGroup, setAssignGroup] = useState<Group | null>(null);
   const { toast } = useToast();
 
   const { selectedBranchId, branches, getBranchName } = useBranch();
@@ -54,8 +65,18 @@ function GroupsPageInner() {
   const loadGroups = async () => {
     try {
       setLoading(true);
-      const data = await groupService.getAllGroups(selectedBranchId);
+      const [data, occ, sess, fields] = await Promise.all([
+        groupService.getAllGroups(selectedBranchId),
+        groupService.getOccupancy().catch(() => ({} as Record<string, Occupancy>)),
+        groupService.getAllSessions().catch(() => ({} as Record<string, Session[]>)),
+        fieldService.list().catch(() => [] as BranchField[]),
+      ]);
       setGroups(data);
+      setOccupancy(occ);
+      setSessions(sess);
+      setFieldMap(Object.fromEntries(fields.map((f) => [f.id, f])));
+      // Açık öğrenci listesi güncel kalsın
+      setSelectedGroup((prev) => (prev ? data.find((g) => g.id === prev.id) ?? prev : prev));
     } catch (error) {
       console.error("Error loading groups:", error);
     } finally {
@@ -162,6 +183,20 @@ function GroupsPageInner() {
 
           <BranchFilterBar />
 
+          {groups.some((g) => g.status === "Aktif" && isFull(occupancy[g.id])) && (
+            <Alert variant="destructive" className="mb-6">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Kontenjanı dolan gruplar:</strong>{" "}
+                {groups
+                  .filter((g) => g.status === "Aktif" && isFull(occupancy[g.id]))
+                  .map((g) => g.name)
+                  .join(", ")}
+                . Bu gruplara yeni deneme öğrencisi alınamaz; başka bir saha/saat seçin ya da kontenjanı artırın.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
             <Card>
@@ -214,7 +249,11 @@ function GroupsPageInner() {
           {!loading && (
             <div className="grid md:grid-cols-2 gap-6">
               {groups.map((group) => {
-                const schedule = parseSchedule(group.schedule);
+                const schedule: string[] = sessions[group.id]?.length ? sortSessions(sessions[group.id]).map(formatSession) : parseSchedule(group.schedule);
+                const occ = occupancy[group.id];
+                const full = isFull(occ);
+                const left = remaining(occ);
+                const field = group.field_id ? fieldMap[group.field_id] : undefined;
                 const colorKey = (group.color || "emerald") as keyof typeof colorClasses;
                 
                 return (
@@ -264,8 +303,12 @@ function GroupsPageInner() {
                                 <Users className="w-5 h-5 text-blue-600" />
                               </div>
                               <div>
-                                <p className="text-xs text-gray-600">Öğrenci</p>
-                                <p className="text-lg font-bold text-gray-900">{group.student_count || 0}</p>
+                                <p className="text-xs text-gray-600">Kontenjan</p>
+                                <p className={`text-lg font-bold ${full ? "text-red-600" : "text-gray-900"}`}>
+                                  {occ ? occupied(occ) : group.student_count || 0}
+                                  {occ?.capacity != null ? ` / ${occ.capacity}` : ""}
+                                </p>
+                                {occ && occ.trial_pending > 0 && <p className="text-[11px] text-gray-500">{occ.enrolled} kayıtlı + {occ.trial_pending} deneme</p>}
                               </div>
                             </div>
                             <div className="flex items-center gap-3">
@@ -285,12 +328,27 @@ function GroupsPageInner() {
                             </div>
                           )}
 
-                          {group.coaches && (
-                            <div className="pt-3 border-t text-sm">
-                              <span className="text-gray-500">Antrenör:</span> 
-                              <span className="ml-2 font-medium">{group.coaches.name}</span>
+                          <div className="pt-3 border-t space-y-1 text-sm">
+                            <div>
+                              <span className="text-gray-500">Antrenör:</span>
+                              {group.coaches ? (
+                                <span className="ml-2 font-medium">{group.coaches.name}</span>
+                              ) : (
+                                <span className="ml-2 font-medium text-red-600">atanmamış</span>
+                              )}
                             </div>
-                          )}
+                            <div className="flex items-center gap-1.5">
+                              <LayoutGrid className="w-3.5 h-3.5 text-gray-500" />
+                              <span className="text-gray-500">Saha:</span>
+                              {field ? (
+                                <span className="ml-1 font-medium">{field.name} <span className="font-normal text-gray-500">({formatFieldHours(field)})</span></span>
+                              ) : (
+                                <span className="ml-1 font-medium text-red-600">atanmamış</span>
+                              )}
+                            </div>
+                            {full && <Badge className="bg-red-100 text-red-700 hover:bg-red-100">Kontenjan dolu</Badge>}
+                            {!full && left != null && left <= 2 && <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Son {left} yer</Badge>}
+                          </div>
                         </TabsContent>
                         
                         <TabsContent value="schedule" className="mt-4">
@@ -316,7 +374,11 @@ function GroupsPageInner() {
                         </TabsContent>
                       </Tabs>
 
-                      <div className="mt-4 pt-4 border-t">
+                      <div className="mt-4 pt-4 border-t space-y-2">
+                        <Button className="w-full bg-emerald-600 hover:bg-emerald-700" disabled={group.status !== "Aktif"} onClick={() => setAssignGroup(group)}>
+                          <UserPlus className="w-4 h-4 mr-2" />
+                          Öğrenci Ata
+                        </Button>
                         <Button 
                           className="w-full" 
                           variant="outline"
@@ -410,6 +472,14 @@ function GroupsPageInner() {
           </AlertDialogContent>
         </AlertDialog>
 
+        <AssignStudentsDialog
+          open={!!assignGroup}
+          onOpenChange={(o) => !o && setAssignGroup(null)}
+          group={assignGroup}
+          occupancy={assignGroup ? occupancy[assignGroup.id] : undefined}
+          onChanged={loadGroups}
+        />
+
         {/* Student List Dialog */}
         <Dialog open={isStudentListOpen} onOpenChange={setIsStudentListOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -440,7 +510,23 @@ function GroupsPageInner() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-right flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          aria-label={`${student.name} öğrencisini gruptan çıkar`}
+                          onClick={async () => {
+                            try {
+                              await studentService.removeFromGroup(student.id, selectedGroup.id);
+                              toast({ title: "Gruptan çıkarıldı", description: student.name });
+                              await loadGroups();
+                            } catch {
+                              toast({ title: "Hata", description: "Öğrenci gruptan çıkarılamadı.", variant: "destructive" });
+                            }
+                          }}
+                        >
+                          <UserMinus className="w-4 h-4 text-red-600" />
+                        </Button>
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                           student.status === "Aktif" 
                             ? "bg-green-100 text-green-700"

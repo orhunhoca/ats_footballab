@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { trialStudentService } from "@/services/trialStudentService";
 import { groupService } from "@/services/groupService";
+import { capacityErrorMessage, isAgeEligible, isFull, remaining, type Occupancy } from "@/lib/groupRules";
 import { useToast } from "@/hooks/use-toast";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -30,6 +31,7 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
     notes: ""
   });
   const [groups, setGroups] = useState<Group[]>([]);
+  const [occupancy, setOccupancy] = useState<Record<string, Occupancy>>({});
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { locked: branchLocked, formDefaultBranchId: defaultBranchId } = useBranchPermission();
@@ -77,17 +79,24 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
 
       setFormData(prev => ({ ...prev, age_group: ageGroup }));
 
-      const matchingGroup = branchGroups.find(g => g.age_group === ageGroup);
+      // Yaşı uyan, dolu olmayan ilk aktif grup
+      const matchingGroup = branchGroups.find(
+        (g) => g.status === "Aktif" && isAgeEligible(g, { birth_date: formData.birth_date }) && !isFull(occupancy[g.id])
+      );
       if (matchingGroup) {
         setFormData(prev => ({ ...prev, assigned_group_id: matchingGroup.id }));
       }
     }
-  }, [formData.birth_date, groups, branchId]);
+  }, [formData.birth_date, groups, branchId, occupancy]);
 
   const loadGroups = async () => {
     try {
-      const data = await groupService.getAllGroups();
+      const [data, occ] = await Promise.all([
+        groupService.getAllGroups(),
+        groupService.getOccupancy().catch(() => ({} as Record<string, Occupancy>)),
+      ]);
       setGroups(data);
+      setOccupancy(occ);
     } catch (error) {
       console.error("Error loading groups:", error);
     }
@@ -137,11 +146,13 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
 
       onSuccess();
     } catch (error) {
+      const full = capacityErrorMessage(error);
       toast({
-        title: "Hata",
-        description: "Deneme öğrenci eklenirken bir hata oluştu.",
+        title: full ? "Kontenjan dolu" : "Hata",
+        description: full ?? "Deneme öğrenci eklenirken bir hata oluştu.",
         variant: "destructive"
       });
+      if (full) await loadGroups(); // doluluk güncellensin
     } finally {
       setLoading(false);
     }
@@ -217,11 +228,18 @@ export function TrialStudentForm({ onSuccess }: TrialStudentFormProps) {
               <SelectValue placeholder="Grup seçin" />
             </SelectTrigger>
             <SelectContent>
-              {branchGroups.map((group) => (
-                <SelectItem key={group.id} value={group.id}>
-                  {group.name} ({group.age_group}) - {group.schedule}
-                </SelectItem>
-              ))}
+              {branchGroups
+                .filter((g) => g.status === "Aktif")
+                .map((group) => {
+                  const full = isFull(occupancy[group.id]);
+                  const left = remaining(occupancy[group.id]);
+                  return (
+                    <SelectItem key={group.id} value={group.id} disabled={full}>
+                      {group.name} ({group.age_group}){group.work_hour ? ` · ${group.work_hour}` : ""}
+                      {full ? " — DOLU" : left != null ? ` — ${left} yer kaldı` : ""}
+                    </SelectItem>
+                  );
+                })}
             </SelectContent>
           </Select>
         </div>

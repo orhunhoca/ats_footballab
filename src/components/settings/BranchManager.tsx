@@ -15,7 +15,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Building2, Plus, Edit, Trash2, MapPin, Phone, Loader2, Users, UserCircle2, Power } from "lucide-react";
+import { Building2, Plus, Edit, Trash2, MapPin, Phone, Loader2, Users, UserCircle2, Power, LayoutGrid } from "lucide-react";
+import { fieldService, formatFieldHours, type BranchField } from "@/services/fieldService";
+import { FieldRows, newFieldDraft, type FieldDraft } from "@/components/settings/FieldRows";
 import { branchService, type Branch, type BranchUsage } from "@/services/branchService";
 import { useBranch } from "@/contexts/BranchContext";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +38,73 @@ export function BranchManager() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [toDelete, setToDelete] = useState<Branch | null>(null);
+  const [fields, setFields] = useState<BranchField[]>([]);
+  const [fieldCount, setFieldCount] = useState("1");
+  const [fieldRows, setFieldRows] = useState<FieldDraft[]>([newFieldDraft(1)]);
+  // Tek saha ekleme/düzenleme penceresi
+  const [fieldDialog, setFieldDialog] = useState<{ branch: Branch; field: BranchField | null } | null>(null);
+  const [fieldDraft, setFieldDraft] = useState<FieldDraft>(newFieldDraft(1));
+  const [fieldSaving, setFieldSaving] = useState(false);
+
+  const loadFields = async () => {
+    try {
+      setFields(await fieldService.list());
+    } catch (error) {
+      console.error("Sahalar yüklenemedi:", error);
+    }
+  };
+  useEffect(() => {
+    loadFields();
+  }, [branches.length]);
+
+  const setCount = (v: string) => {
+    setFieldCount(v);
+    const n = Math.max(1, Math.min(12, Number(v) || 1));
+    setFieldRows((prev) => Array.from({ length: n }, (_, i) => prev[i] ?? newFieldDraft(i + 1)));
+  };
+
+  const parseRow = (r: FieldDraft) => ({ name: r.name, open_time: r.open_time, close_time: r.close_time, capacity: Number(r.capacity) });
+
+  const openFieldDialog = (branch: Branch, field: BranchField | null) => {
+    setFieldDialog({ branch, field });
+    setFieldDraft(
+      field
+        ? { name: field.name, open_time: field.open_time.slice(0, 5), close_time: field.close_time.slice(0, 5), capacity: String(field.capacity) }
+        : newFieldDraft(fields.filter((f) => f.branch_id === branch.id).length + 1)
+    );
+  };
+
+  const saveField = async () => {
+    if (!fieldDialog) return;
+    const input = parseRow(fieldDraft);
+    const problem = fieldService.validate(input);
+    if (problem) {
+      toast({ title: "Eksik Bilgi", description: problem, variant: "destructive" });
+      return;
+    }
+    setFieldSaving(true);
+    try {
+      if (fieldDialog.field) await fieldService.update(fieldDialog.field.id, input);
+      else await fieldService.createMany(fieldDialog.branch.id, [input]);
+      toast({ title: fieldDialog.field ? "Saha güncellendi" : "Saha eklendi", description: input.name.trim() });
+      setFieldDialog(null);
+      await loadFields();
+    } catch (error) {
+      toast({ title: "Hata", description: error instanceof Error ? error.message : "Saha kaydedilemedi.", variant: "destructive" });
+    } finally {
+      setFieldSaving(false);
+    }
+  };
+
+  const toggleField = async (f: BranchField) => {
+    try {
+      await fieldService.update(f.id, { is_active: !f.is_active });
+      toast({ title: f.is_active ? "Saha pasife alındı" : "Saha aktifleştirildi", description: f.name });
+      await loadFields();
+    } catch (error) {
+      toast({ title: "Hata", description: error instanceof Error ? error.message : "İşlem yapılamadı.", variant: "destructive" });
+    }
+  };
 
   const loadUsage = async () => {
     try {
@@ -52,6 +121,8 @@ export function BranchManager() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm);
+    setFieldCount("1");
+    setFieldRows([newFieldDraft(1)]);
     setIsFormOpen(true);
   };
 
@@ -67,14 +138,38 @@ export function BranchManager() {
       toast({ title: "Eksik Bilgi", description: "Şube adı zorunludur.", variant: "destructive" });
       return;
     }
+    if (!editing) {
+      for (let i = 0; i < fieldRows.length; i++) {
+        const problem = fieldService.validate(parseRow(fieldRows[i]));
+        if (problem) {
+          toast({ title: `${i + 1}. saha: eksik bilgi`, description: problem, variant: "destructive" });
+          return;
+        }
+      }
+      const names = fieldRows.map((r) => r.name.trim().toLowerCase());
+      if (new Set(names).size !== names.length) {
+        toast({ title: "Saha adları farklı olmalı", description: "Aynı şubede iki sahaya aynı ad verilemez.", variant: "destructive" });
+        return;
+      }
+    }
     setSaving(true);
     try {
       if (editing) {
         await branchService.update(editing.id, form);
         toast({ title: "Şube güncellendi", description: `${form.name.trim()} kaydedildi.` });
       } else {
-        await branchService.create(form);
-        toast({ title: "Şube eklendi", description: `${form.name.trim()} oluşturuldu.` });
+        const created = await branchService.create(form);
+        try {
+          await fieldService.createMany(created.id, fieldRows.map(parseRow));
+          toast({ title: "Şube eklendi", description: `${form.name.trim()} ve ${fieldRows.length} saha oluşturuldu.` });
+        } catch (fieldError) {
+          toast({
+            title: "Şube eklendi, sahalar eklenemedi",
+            description: `${fieldError instanceof Error ? fieldError.message : "Hata"} Şube kartındaki “Saha Ekle” ile ekleyin.`,
+            variant: "destructive",
+          });
+        }
+        await loadFields();
       }
       setIsFormOpen(false);
       await reload();
@@ -199,6 +294,40 @@ export function BranchManager() {
                         <p className="text-xs text-gray-500">Grup</p>
                       </div>
                     </div>
+                    <div className="space-y-2 rounded-md border p-2">
+                      <div className="flex items-center justify-between">
+                        <p className="flex items-center gap-1.5 text-sm font-medium">
+                          <LayoutGrid className="w-4 h-4 text-emerald-600" /> Sahalar ({fields.filter((f) => f.branch_id === b.id && f.is_active).length})
+                        </p>
+                        <Button variant="ghost" size="sm" onClick={() => openFieldDialog(b, null)}>
+                          <Plus className="w-3.5 h-3.5 mr-1" /> Saha Ekle
+                        </Button>
+                      </div>
+                      {fields.filter((f) => f.branch_id === b.id).length === 0 ? (
+                        <p className="text-xs text-amber-700">Bu şubede saha yok; grup oluşturmak için en az bir saha ekleyin.</p>
+                      ) : (
+                        fields
+                          .filter((f) => f.branch_id === b.id)
+                          .map((f) => (
+                            <div key={f.id} className={`flex items-center justify-between gap-2 text-sm ${f.is_active ? "" : "opacity-50"}`}>
+                              <span className="min-w-0">
+                                <span className="font-medium">{f.name}</span>
+                                <span className="block text-xs text-gray-500">
+                                  {formatFieldHours(f)} · {f.capacity} öğrenci/saat{f.is_active ? "" : " · pasif"}
+                                </span>
+                              </span>
+                              <span className="flex shrink-0">
+                                <Button variant="ghost" size="icon" aria-label="Sahayı düzenle" onClick={() => openFieldDialog(b, f)}>
+                                  <Edit className="w-4 h-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" aria-label={f.is_active ? "Pasife al" : "Etkinleştir"} onClick={() => toggleField(f)}>
+                                  <Power className="w-4 h-4" />
+                                </Button>
+                              </span>
+                            </div>
+                          ))
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <Button variant="outline" size="sm" onClick={() => openEdit(b)}>
                         <Edit className="w-4 h-4 mr-2" />
@@ -236,7 +365,7 @@ export function BranchManager() {
       </Card>
 
     <Dialog open={isFormOpen} onOpenChange={(o) => !saving && setIsFormOpen(o)}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto">
         <form onSubmit={handleSave} className="space-y-4">
           <DialogHeader>
             <DialogTitle>{editing ? "Şubeyi Düzenle" : "Yeni Şube"}</DialogTitle>
@@ -267,6 +396,18 @@ export function BranchManager() {
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
             />
           </div>
+          {!editing && (
+            <div className="space-y-3 rounded-md border bg-gray-50 p-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <Label htmlFor="field-count" className="font-medium">Saha sayısı *</Label>
+                  <p className="text-xs text-gray-500">Şubede kaç antrenman sahası var?</p>
+                </div>
+                <Input id="field-count" type="number" min={1} max={12} className="w-20" value={fieldCount} onChange={(e) => setCount(e.target.value)} />
+              </div>
+              <FieldRows rows={fieldRows} onChange={(i, patch) => setFieldRows((prev) => prev.map((r, k) => (k === i ? { ...r, ...patch } : r)))} />
+            </div>
+          )}
           <DialogFooter className="gap-2 sm:gap-0">
             <Button type="button" variant="outline" onClick={() => setIsFormOpen(false)} disabled={saving}>
               İptal
@@ -277,6 +418,25 @@ export function BranchManager() {
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog open={!!fieldDialog} onOpenChange={(o) => !fieldSaving && !o && setFieldDialog(null)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{fieldDialog?.field ? "Sahayı Düzenle" : "Saha Ekle"}</DialogTitle>
+          <DialogDescription>{fieldDialog?.branch.name}</DialogDescription>
+        </DialogHeader>
+        <FieldRows rows={[fieldDraft]} onChange={(_, patch) => setFieldDraft((d) => ({ ...d, ...patch }))} />
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={() => setFieldDialog(null)} disabled={fieldSaving}>
+            İptal
+          </Button>
+          <Button type="button" onClick={saveField} disabled={fieldSaving} className="bg-emerald-600 hover:bg-emerald-700">
+            {fieldSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Kaydet
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
 

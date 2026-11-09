@@ -12,6 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, UserPlus, Clock, CheckCircle2, XCircle, Phone, Calendar } from "lucide-react";
 import { trialStudentService } from "@/services/trialStudentService";
+import { groupService } from "@/services/groupService";
+import { isFull, type Occupancy } from "@/lib/groupRules";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TrialStudentForm } from "@/components/trial/TrialStudentForm";
 import { ConvertToStudentDialog } from "@/components/trial/ConvertToStudentDialog";
@@ -38,6 +42,24 @@ function TrialStudentsPageInner() {
   const { toast } = useToast();
 
   const { selectedBranchId, branches, getBranchName } = useBranch();
+  const [fullGroups, setFullGroups] = useState<string[]>([]);
+
+  // Kontenjanı dolan gruplar: yeni deneme öğrencisi alınamaz, yönetim uyarılır
+  const loadFullGroups = async () => {
+    try {
+      const [groups, occ] = await Promise.all([
+        groupService.getAllGroups(selectedBranchId),
+        groupService.getOccupancy().catch(() => ({} as Record<string, Occupancy>)),
+      ]);
+      setFullGroups(groups.filter((g) => g.status === "Aktif" && isFull(occ[g.id])).map((g) => g.name));
+    } catch {
+      setFullGroups([]);
+    }
+  };
+  useEffect(() => {
+    loadFullGroups();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBranchId]);
   // Kayda dönüştürme (ödeme planı içerir) ve silme yalnızca yönetime aittir; antrenör deneme kaydı ekler
   const { isManagement } = useUserRole();
 
@@ -199,6 +221,15 @@ function TrialStudentsPageInner() {
           </div>
 
           <BranchFilterBar />
+
+          {fullGroups.length > 0 && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <strong>Kontenjanı dolu gruplar:</strong> {fullGroups.join(", ")}. Bu gruplara yeni deneme öğrencisi alınamaz; başka bir grup/saha seçin ya da Grup Yönetimi'nden kontenjanı artırın.
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Search Bar */}
           <div className="mb-6">
