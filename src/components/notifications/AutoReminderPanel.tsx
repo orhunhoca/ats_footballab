@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const LABEL: Record<RuleType, { title: string; desc: string; template: string }> = {
   balance: { title: "Bakiye borcu", desc: "Vadesi geçmiş ya da yaklaşan borcu olan öğrencilerin velilerine; veli adı, öğrenci adı, bakiye ve vade tarihi otomatik doldurulur.", template: "payment_reminder" },
+  clothing: { title: "Kıyafet ücreti ödenmemiş", desc: "Yazlık/kışlık kıyafet ücreti ödenmemiş öğrencilerin velilerine.", template: "clothing_reminder" },
   health_report: { title: "Sağlık raporu eksik", desc: "Sağlık raporu teslim edilmemiş öğrencilerin velilerine.", template: "health_report_reminder" },
   registration_form: { title: "Kayıt formu eksik", desc: "Kayıt formu teslim edilmemiş öğrencilerin velilerine.", template: "registration_form_reminder" },
   trial_lesson: { title: "Deneme antrenmanı", desc: "Deneme öğrencisinin velisine, antrenmandan önce grup, gün/saat ve saha bilgisiyle.", template: "trial_reminder" },

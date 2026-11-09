@@ -3,7 +3,7 @@
  * Girdi: öğrenciler, bakiyeler, deneme öğrencileri, gönderim günlüğü, kurallar → gönderilecek/atlanacak mesajlar.
  */
 
-export type RuleType = "balance" | "health_report" | "registration_form" | "trial_lesson";
+export type RuleType = "balance" | "health_report" | "registration_form" | "trial_lesson" | "clothing";
 
 export interface Rule {
   rule_type: RuleType;
@@ -23,6 +23,51 @@ export interface StudentRow {
   father_phone: string | null;
   health_report_submitted: boolean | null;
   registration_form_submitted: boolean | null;
+  clothing_payment_status?: string | null;
+  summer_clothing_paid?: boolean | null;
+  winter_clothing_paid?: boolean | null;
+  summer_clothing_price?: number | null;
+  winter_clothing_price?: number | null;
+}
+
+/** Açık (ödenmemiş) kıyafet borç kalemi: student_charge_status satırı */
+export interface ClothingChargeRow {
+  student_id: string;
+  charge_type: string;
+  remaining_amount: number;
+}
+
+export interface ClothingOwed {
+  student_id: string;
+  /** "Yazlık" / "Kışlık" */
+  items: string[];
+  amount: number | null;
+}
+
+/**
+ * Kıyafet ücreti ödenmemiş öğrenciler: önce açık borç kalemleri; kalemi olmayanlar için öğrenci kaydındaki
+ * "Ödenmedi" durumu + işaretli yazlık/kışlık kıyafet (tutar = girilen fiyatlar).
+ */
+export function clothingOwed(students: StudentRow[], charges: ClothingChargeRow[]): ClothingOwed[] {
+  const out = new Map<string, ClothingOwed>();
+  const SEASON: Record<string, string> = { summer_clothing: "Yazlık", winter_clothing: "Kışlık" };
+  for (const c of charges) {
+    const season = SEASON[c.charge_type];
+    if (!season || !(Number(c.remaining_amount) > 0)) continue;
+    const cur = out.get(c.student_id) ?? { student_id: c.student_id, items: [], amount: 0 };
+    if (!cur.items.includes(season)) cur.items.push(season);
+    cur.amount = (cur.amount ?? 0) + Number(c.remaining_amount);
+    out.set(c.student_id, cur);
+  }
+  for (const s of students) {
+    if (out.has(s.id) || s.clothing_payment_status !== "Ödenmedi") continue;
+    const items: string[] = [];
+    let amount = 0;
+    if (s.summer_clothing_paid) { items.push("Yazlık"); amount += Number(s.summer_clothing_price ?? 0); }
+    if (s.winter_clothing_paid) { items.push("Kışlık"); amount += Number(s.winter_clothing_price ?? 0); }
+    if (items.length) out.set(s.id, { student_id: s.id, items, amount: amount > 0 ? amount : null });
+  }
+  return [...out.values()];
 }
 
 export interface BalanceRow {
@@ -109,6 +154,7 @@ export interface PlanInput {
   rules: Rule[];
   students: StudentRow[];
   balances: BalanceRow[];
+  clothingCharges?: ClothingChargeRow[];
   trials: TrialRow[];
   log: LogRow[];
   now: Date;
@@ -118,7 +164,8 @@ export interface PlanInput {
 
 export function planReminders(input: PlanInput): Record<RuleType, PlannedItem[]> {
   const { rules, students, balances, trials, log, now, onlyEnabled } = input;
-  const out: Record<RuleType, PlannedItem[]> = { balance: [], health_report: [], registration_form: [], trial_lesson: [] };
+  const clothingCharges = input.clothingCharges ?? [];
+  const out: Record<RuleType, PlannedItem[]> = { balance: [], health_report: [], registration_form: [], trial_lesson: [], clothing: [] };
   const active = students.filter((s) => s.status === "Aktif");
   const byId = new Map(students.map((s) => [s.id, s]));
 
@@ -150,6 +197,16 @@ export function planReminders(input: PlanInput): Record<RuleType, PlannedItem[]>
         if (!missing) continue;
         const parent = pickParent(s);
         const variables = { parent_name: parent?.name ?? "Sayın Veli", student_name: s.name };
+        if (!parent) push({ student_id: s.id, student_name: s.name, recipient_name: "-", phone: null, variables, skipReason: "Veli telefonu yok" });
+        else if (alreadySent(log, rule.template_type, parent.phone, rule.repeat_days, now)) push({ student_id: s.id, student_name: s.name, recipient_name: parent.name, phone: parent.phone, variables, skipReason: `Son ${rule.repeat_days} günde gönderildi` });
+        else push({ student_id: s.id, student_name: s.name, recipient_name: parent.name, phone: parent.phone, variables });
+      }
+    } else if (rule.rule_type === "clothing") {
+      for (const o of clothingOwed(active, clothingCharges)) {
+        const s = byId.get(o.student_id);
+        if (!s || s.status !== "Aktif") continue;
+        const parent = pickParent(s);
+        const variables = { parent_name: parent?.name ?? "Sayın Veli", student_name: s.name, clothing_info: o.items.join(" + ") + " kıyafet", amount: o.amount ? formatMoney(o.amount) : "-" };
         if (!parent) push({ student_id: s.id, student_name: s.name, recipient_name: "-", phone: null, variables, skipReason: "Veli telefonu yok" });
         else if (alreadySent(log, rule.template_type, parent.phone, rule.repeat_days, now)) push({ student_id: s.id, student_name: s.name, recipient_name: parent.name, phone: parent.phone, variables, skipReason: `Son ${rule.repeat_days} günde gönderildi` });
         else push({ student_id: s.id, student_name: s.name, recipient_name: parent.name, phone: parent.phone, variables });

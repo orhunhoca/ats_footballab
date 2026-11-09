@@ -166,6 +166,14 @@ Merhaba {{1}} 👋
 
 FootbalLab Futbol Okulu
 ```
+**`clothing_reminder`** — örnekler: Ayşe Hanım · Ali Yılmaz
+```
+Merhaba {{1}} 👋
+
+{{2}} için kıyafet ücreti henüz ödenmemiş görünüyor. Ödemeyi okulumuza iletmenizi rica ederiz.
+
+FootbalLab Futbol Okulu
+```
 Gönderim her gün 09:00'da (Türkiye) kendiliğinden yapılır; kurallar Bildirimler sayfasında (yalnız admin) açılır. WhatsApp bağlanmadan ya da şablonlar onaylanmadan açılırsa mesaj gitmez/başarısız olur; önce **Önizleme** ile kime ne gideceğine bakın.
 
 ## D. Veliye gönderim

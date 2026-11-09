@@ -9,7 +9,7 @@ import {
   safeEqual,
   serviceClient,
 } from "../_shared/security.ts";
-import { type BalanceRow, type LogRow, type PlannedItem, planReminders, type Rule, type RuleType, type StudentRow, type TrialRow } from "./plan.ts";
+import { type BalanceRow, type ClothingChargeRow, type LogRow, type PlannedItem, planReminders, type Rule, type RuleType, type StudentRow, type TrialRow } from "./plan.ts";
 
 /**
  * Otomatik hatırlatmalar: bakiye borcu, sağlık raporu, kayıt formu, deneme antrenmanı.
@@ -57,10 +57,11 @@ serve(async (req) => {
     if (rulesError) throw new HttpError(500, "Hatırlatma kuralları okunamadı");
     const rules = (rulesData ?? []) as Rule[];
 
-    const [studentsRes, balancesRes, dueRes, trialsRes, groupsRes, schedRes, fieldsRes, logRes] = await Promise.all([
-      supabase.from("students").select("id, name, status, mother_name, mother_phone, father_name, father_phone, health_report_submitted, registration_form_submitted").eq("status", "Aktif"),
+    const [studentsRes, balancesRes, dueRes, clothRes, trialsRes, groupsRes, schedRes, fieldsRes, logRes] = await Promise.all([
+      supabase.from("students").select("id, name, status, mother_name, mother_phone, father_name, father_phone, health_report_submitted, registration_form_submitted, clothing_payment_status, summer_clothing_paid, winter_clothing_paid, summer_clothing_price, winter_clothing_price").eq("status", "Aktif"),
       supabase.from("student_balances").select("student_id, balance, overdue_amount, next_due_date").gt("balance", 0),
       supabase.from("student_charge_status").select("student_id, due_date, remaining_amount").gt("remaining_amount", 0),
+      supabase.from("student_charge_status").select("student_id, charge_type, remaining_amount").in("charge_type", ["summer_clothing", "winter_clothing"]).gt("remaining_amount", 0),
       supabase.from("trial_students").select("id, name, parent_name, parent_phone, trial_date, status, assigned_group_id").eq("status", "Beklemede"),
       supabase.from("groups").select("id, name, field_id"),
       supabase.from("group_schedule").select("group_id, day_of_week, start_time, end_time"),
@@ -68,7 +69,7 @@ serve(async (req) => {
       supabase.from("whatsapp_messages").select("template_name, recipient_phone, created_at, status, template_variables")
         .gte("created_at", new Date(now.getTime() - 100 * 86_400_000).toISOString()),
     ]);
-    for (const r of [studentsRes, balancesRes, dueRes, trialsRes, groupsRes, schedRes, fieldsRes, logRes]) {
+    for (const r of [studentsRes, balancesRes, dueRes, clothRes, trialsRes, groupsRes, schedRes, fieldsRes, logRes]) {
       if (r.error) throw new HttpError(500, `Veri okunamadı: ${r.error.message}`);
     }
 
@@ -106,6 +107,7 @@ serve(async (req) => {
       rules,
       students: (studentsRes.data ?? []) as StudentRow[],
       balances,
+      clothingCharges: (clothRes.data ?? []) as ClothingChargeRow[],
       trials,
       log: (logRes.data ?? []) as LogRow[],
       now: today,
@@ -116,7 +118,7 @@ serve(async (req) => {
     const whatsappActive = !!settings.isActive && !!settings.phoneNumberId && !!settings.accessToken;
 
     const results: Record<RuleType, (PlannedItem & { result?: "sent" | "failed" | "not_sent"; error?: string })[]> = {
-      balance: [], health_report: [], registration_form: [], trial_lesson: [],
+      balance: [], health_report: [], registration_form: [], trial_lesson: [], clothing: [],
     };
     let sent = 0;
     let failed = 0;

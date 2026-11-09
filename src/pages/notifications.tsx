@@ -17,6 +17,7 @@ import {
   Loader2,
   MessageCircle,
   Phone,
+  Shirt,
   ShieldCheck,
   Timer,
   Users,
@@ -28,7 +29,7 @@ import { whatsappService } from "@/services/whatsappService";
 import { AutoReminderPanel } from "@/components/notifications/AutoReminderPanel";
 import { useToast } from "@/hooks/use-toast";
 
-type Category = "trials" | "debts" | "health" | "form" | "kvkk" | "expiry";
+type Category = "trials" | "debts" | "clothing" | "health" | "form" | "kvkk" | "expiry";
 
 interface Row {
   key: string;
@@ -54,6 +55,7 @@ function fillBody(body: string, order: string[], vars: Record<string, string>) {
 const CATEGORIES: { id: Category; label: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
   { id: "trials", label: "Bu hafta deneme", icon: CalendarClock, color: "text-blue-700 bg-blue-50 border-blue-200" },
   { id: "debts", label: "Bakiye borcu", icon: Wallet, color: "text-red-700 bg-red-50 border-red-200" },
+  { id: "clothing", label: "Kıyafet ücreti ödenmemiş", icon: Shirt, color: "text-teal-700 bg-teal-50 border-teal-200" },
   { id: "health", label: "Sağlık raporu eksik", icon: FileHeart, color: "text-orange-700 bg-orange-50 border-orange-200" },
   { id: "form", label: "Kayıt formu eksik", icon: FileText, color: "text-amber-700 bg-amber-50 border-amber-200" },
   { id: "kvkk", label: "KVKK onayı eksik", icon: ShieldCheck, color: "text-purple-700 bg-purple-50 border-purple-200" },
@@ -95,7 +97,7 @@ function NotificationsPageInner() {
   }, []);
 
   const rows = useMemo<Record<Category, Row[]>>(() => {
-    const empty = { trials: [], debts: [], health: [], form: [], kvkk: [], expiry: [] } as Record<Category, Row[]>;
+    const empty = { trials: [], debts: [], clothing: [], health: [], form: [], kvkk: [], expiry: [] } as Record<Category, Row[]>;
     if (!data) return empty;
     const parents = (m: ParentContact | null, f: ParentContact | null) => [m, f].filter((x): x is ParentContact => !!x);
     const primary = (m: ParentContact | null, f: ParentContact | null) => m ?? f;
@@ -117,6 +119,14 @@ function NotificationsPageInner() {
         studentId: d.id,
         contacts: parents(d.mother, d.father),
         template: { type: "payment_reminder", variables: { parent_name: primary(d.mother, d.father)?.name ?? "Sayın Veli", student_name: d.name, payment_date: d.earliestDue ? fmtDate(d.earliestDue) : fmtDate(new Date().toISOString()), amount: fmtMoney(d.balance) } },
+      })),
+      clothing: data.clothing.map((c) => ({
+        key: c.id,
+        title: c.name,
+        detail: `${c.items.join(" + ")} kıyafet ücreti ödenmemiş${c.amount ? ` · ${fmtMoney(c.amount)} TL` : ""}`,
+        studentId: c.id,
+        contacts: parents(c.mother, c.father),
+        template: { type: "clothing_reminder", variables: { parent_name: primary(c.mother, c.father)?.name ?? "Sayın Veli", student_name: c.name, clothing_info: `${c.items.join(" + ")} kıyafet`, amount: c.amount ? fmtMoney(c.amount) : "-" } },
       })),
       health: data.healthMissing.map((s) => ({
         key: s.id, title: s.name, detail: "Sağlık raporu teslim edilmemiş", studentId: s.id, contacts: parents(s.mother, s.father),
@@ -142,6 +152,7 @@ function NotificationsPageInner() {
   const counts: Record<Category, number> = {
     trials: rows.trials.length,
     debts: rows.debts.length,
+    clothing: rows.clothing.length,
     health: rows.health.length,
     form: rows.form.length,
     kvkk: rows.kvkk.length,
