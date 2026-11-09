@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { Button } from "@/components/ui/button";
-import { Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera, UserCircle2, CalendarCheck, ShieldCheck } from "lucide-react";
+import { ChevronDown, Home, Users, ClipboardCheck, BarChart3, UserCog, Users as GroupIcon, Bell, Settings, LogOut, Menu, X, TrendingUp, CreditCard, Dumbbell, Camera, UserCircle2, CalendarCheck, ShieldCheck } from "lucide-react";
 import { type User } from "@/services/userService";
 import { useUserRole } from "@/hooks/useUserRole";
 import { authService } from "@/services/authService";
@@ -10,6 +10,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Brand } from "@/components/Brand";
 import { BranchSwitcher } from "@/components/BranchSwitcher";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export function Navigation() {
   const router = useRouter();
@@ -35,22 +36,23 @@ export function Navigation() {
 
   // Rol bazlı menü: admin = her şey; yönetici = tüm operasyon (şube/ayar/kullanıcı hariç);
   // antrenör = öğrenci ve deneme öğrencisi kaydı, yoklama, performans, raporlar
-  type MenuItem = { href: string; label: string; icon: typeof Users; roles: ("admin" | "manager" | "coach" | "parent")[] };
+  // priority: 1 = hep çubukta, 2 = geniş ekranda çubukta (dar ekranda "Diğer" menüsünde), 3 = hep "Diğer" menüsünde
+  type MenuItem = { href: string; label: string; icon: typeof Users; roles: ("admin" | "manager" | "coach" | "parent")[]; priority: 1 | 2 | 3 };
   const allItems: MenuItem[] = [
-    { href: "/students", label: "Öğrenciler", icon: Users, roles: ["admin", "manager", "coach"] },
-    { href: "/trial-students", label: "Deneme Öğrencileri", icon: Users, roles: ["admin", "manager", "coach"] },
-    { href: "/groups", label: "Gruplar", icon: Users, roles: ["admin", "manager"] },
-    { href: "/coaches", label: "Antrenörler", icon: UserCircle2, roles: ["admin", "manager"] },
-    { href: "/attendance", label: "Yoklama", icon: CalendarCheck, roles: ["admin", "manager", "coach"] },
-    { href: "/performance", label: "Performans", icon: TrendingUp, roles: ["admin", "manager", "coach"] },
-    { href: "/payments", label: "Ödemeler", icon: CreditCard, roles: ["admin", "manager"] },
-    { href: "/training", label: "Antrenman Programları", icon: Dumbbell, roles: ["admin", "manager", "coach"] },
-    { href: "/gallery", label: "Galeri", icon: Camera, roles: ["admin", "manager"] },
-    { href: "/notifications", label: "Bildirimler", icon: Bell, roles: ["admin", "manager"] },
-    { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "manager", "coach"] },
-    { href: "/users", label: "Kullanıcılar", icon: ShieldCheck, roles: ["admin"] },
-    { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"] },
-    { href: "/portal", label: "Veli Portalı", icon: Home, roles: ["parent"] },
+    { href: "/students", label: "Öğrenciler", icon: Users, roles: ["admin", "manager", "coach"], priority: 1 },
+    { href: "/trial-students", label: "Deneme Öğrencileri", icon: Users, roles: ["admin", "manager", "coach"], priority: 1 },
+    { href: "/groups", label: "Gruplar", icon: Users, roles: ["admin", "manager"], priority: 1 },
+    { href: "/coaches", label: "Antrenörler", icon: UserCircle2, roles: ["admin", "manager"], priority: 1 },
+    { href: "/attendance", label: "Yoklama", icon: CalendarCheck, roles: ["admin", "manager", "coach"], priority: 1 },
+    { href: "/performance", label: "Performans", icon: TrendingUp, roles: ["admin", "manager", "coach"], priority: 1 },
+    { href: "/payments", label: "Ödemeler", icon: CreditCard, roles: ["admin", "manager"], priority: 2 },
+    { href: "/training", label: "Antrenman Programları", icon: Dumbbell, roles: ["admin", "manager", "coach"], priority: 3 },
+    { href: "/gallery", label: "Galeri", icon: Camera, roles: ["admin", "manager"], priority: 3 },
+    { href: "/notifications", label: "Bildirimler", icon: Bell, roles: ["admin", "manager"], priority: 2 },
+    { href: "/reports", label: "Raporlar", icon: BarChart3, roles: ["admin", "manager", "coach"], priority: 3 },
+    { href: "/users", label: "Kullanıcılar", icon: ShieldCheck, roles: ["admin"], priority: 3 },
+    { href: "/settings", label: "Ayarlar", icon: Settings, roles: ["admin"], priority: 3 },
+    { href: "/portal", label: "Veli Portalı", icon: Home, roles: ["parent"], priority: 1 },
   ];
   const menuItems = allItems.filter((item) => role !== null && item.roles.includes(role));
 
@@ -64,17 +66,44 @@ export function Navigation() {
             </Link>
 
             <nav className="hidden xl:flex items-center gap-1">
-              {menuItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link key={item.href} href={item.href}>
-                    <Button variant={router.pathname === item.href ? "default" : "ghost"} className="gap-2">
-                      <Icon className="w-4 h-4" />
-                      {item.label}
+              {menuItems
+                .filter((i) => i.priority < 3)
+                .map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link key={item.href} href={item.href} className={item.priority === 2 ? "hidden min-[2100px]:block" : undefined}>
+                      <Button variant={router.pathname === item.href ? "default" : "ghost"} className="gap-2">
+                        <Icon className="w-4 h-4" />
+                        {item.label}
+                      </Button>
+                    </Link>
+                  );
+                })}
+              {menuItems.some((i) => i.priority >= 2) && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant={menuItems.some((i) => i.priority >= 2 && router.pathname === i.href) ? "default" : "ghost"} className="gap-1.5">
+                      Diğer
+                      <ChevronDown className="w-4 h-4" />
                     </Button>
-                  </Link>
-                );
-              })}
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[14rem]">
+                    {menuItems
+                      .filter((i) => i.priority >= 2)
+                      .map((item) => {
+                        const Icon = item.icon;
+                        return (
+                          <DropdownMenuItem key={item.href} asChild className={item.priority === 2 ? "min-[2100px]:hidden" : undefined}>
+                            <Link href={item.href} className="flex items-center gap-2">
+                              <Icon className="w-4 h-4" />
+                              {item.label}
+                            </Link>
+                          </DropdownMenuItem>
+                        );
+                      })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </nav>
           </div>
 
