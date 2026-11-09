@@ -28,6 +28,8 @@ import { reminderService, type Overview, type ParentContact } from "@/services/r
 import { whatsappService } from "@/services/whatsappService";
 import { AutoReminderPanel } from "@/components/notifications/AutoReminderPanel";
 import { useToast } from "@/hooks/use-toast";
+import type { WaTemplate } from "@/services/templateService";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type Category = "trials" | "debts" | "clothing" | "health" | "form" | "kvkk" | "expiry";
 
@@ -71,7 +73,11 @@ function NotificationsPageInner() {
   const [error, setError] = useState(false);
   const [active, setActive] = useState<Category>("debts");
   const [waActive, setWaActive] = useState(false);
-  const [templates, setTemplates] = useState<{ template_type: string; message_content: string; variables: unknown }[]>([]);
+  const [templates, setTemplates] = useState<WaTemplate[]>([]);
+  const [customId, setCustomId] = useState<string>("default");
+  const loadTemplates = useCallback(() => {
+    whatsappService.getTemplates().then((t) => setTemplates(t as WaTemplate[])).catch(() => undefined);
+  }, []);
   const [sending, setSending] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -93,7 +99,8 @@ function NotificationsPageInner() {
 
   useEffect(() => {
     whatsappService.getSettings().then((s) => setWaActive(!!s?.is_active));
-    whatsappService.getTemplates().then((t) => setTemplates(t as never)).catch(() => undefined);
+    loadTemplates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const rows = useMemo<Record<Category, Row[]>>(() => {
@@ -163,7 +170,7 @@ function NotificationsPageInner() {
 
   const messageText = (row: Row): string => {
     if (!row.template) return `Merhaba ${row.contacts[0]?.name ?? ""}, ${row.title} ile ilgili bilgilendirme: ${row.detail}.\n\nFootbalLab Futbol Okulu`;
-    const t = templates.find((x) => x.template_type === row.template!.type);
+    const t = templates.find((x) => (x.template_type === "custom" ? x.template_id : x.template_type) === row.template!.type);
     const order = Array.isArray(t?.variables) ? (t!.variables as string[]) : Object.keys(row.template.variables);
     return t?.message_content ? fillBody(t.message_content, order, row.template.variables) : Object.values(row.template.variables).join(" · ");
   };
@@ -215,7 +222,14 @@ function NotificationsPageInner() {
     toast({ title: "Toplu hatırlatma bitti", description: `${ok} gönderildi, ${fail} başarısız.`, variant: fail > 0 ? "destructive" : "default" });
   };
 
-  const list = rows[active];
+  // Seçili özel şablon varsa liste satırlarının şablonu onunla değişir (veli adı + öğrenci adı + kategoriye özgü bilgiler dolar)
+  const customTemplates = templates.filter((t) => t.template_type === "custom" && t.status !== "rejected" && t.template_id);
+  const custom = customTemplates.find((t) => t.id === customId) ?? null;
+  const list = rows[active].map((r) =>
+    custom
+      ? { ...r, template: { type: custom.template_id as string, variables: { parent_name: r.contacts[0]?.name ?? "Sayın Veli", student_name: r.title, ...(r.template?.variables ?? {}) } } }
+      : r,
+  );
   const canSendTemplate = list.some((r) => r.template);
 
   return (
@@ -278,6 +292,18 @@ function NotificationsPageInner() {
                 <Users className="h-5 w-5" />
                 {CATEGORIES.find((c) => c.id === active)?.label} ({counts[active]})
               </CardTitle>
+              {customTemplates.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Kullanılacak şablon:</span>
+                  <Select value={custom ? custom.id : "default"} onValueChange={(v) => v && setCustomId(v)}>
+                    <SelectTrigger className="h-8 w-52"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Varsayılan (kategoriye göre)</SelectItem>
+                      {customTemplates.map((t) => <SelectItem key={t.id} value={t.id}>{t.template_name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               {canSendTemplate && list.length > 0 && (
                 <Button variant="outline" size="sm" disabled={sending !== null || !waActive} onClick={() => sendAll(list)} title={waActive ? undefined : "WhatsApp bağlandığında toplu gönderim açılır"}>
                   {sending === "all" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
@@ -337,7 +363,7 @@ function NotificationsPageInner() {
             </CardContent>
           </Card>
 
-          <AutoReminderPanel isAdmin={isAdmin} whatsappActive={waActive} />
+          <AutoReminderPanel isAdmin={isAdmin} whatsappActive={waActive} templates={templates} onTemplatesChanged={loadTemplates} />
         </div>
       </div>
     </>
