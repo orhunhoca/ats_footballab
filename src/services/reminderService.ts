@@ -3,7 +3,7 @@ import type { Tables } from "@/integrations/supabase/types";
 import { groupService } from "@/services/groupService";
 import { isFull } from "@/lib/groupRules";
 
-export type RuleType = "balance" | "health_report" | "registration_form" | "trial_lesson";
+export type RuleType = "balance" | "health_report" | "registration_form" | "trial_lesson" | "clothing";
 export type ReminderRule = Tables<"reminder_rules">;
 
 export interface ParentContact {
@@ -25,6 +25,12 @@ export interface DebtItem extends StudentItem {
   earliestDue: string | null;
 }
 
+export interface ClothingItem extends StudentItem {
+  /** "Yazlık" / "Kışlık" */
+  items: string[];
+  amount: number | null;
+}
+
 export interface TrialItem {
   id: string;
   name: string;
@@ -41,6 +47,7 @@ export interface ExpiryItem extends StudentItem {
 export interface Overview {
   trials: TrialItem[];
   debts: DebtItem[];
+  clothing: ClothingItem[];
   healthMissing: StudentItem[];
   formMissing: StudentItem[];
   kvkkMissing: StudentItem[];
@@ -61,7 +68,7 @@ export const reminderService = {
 
     let sq = supabase
       .from("students")
-      .select("id, name, branch_id, mother_name, mother_phone, father_name, father_phone, health_report_submitted, registration_form_submitted, kvkk_consent_at, registration_end_date")
+      .select("id, name, branch_id, mother_name, mother_phone, father_name, father_phone, health_report_submitted, registration_form_submitted, kvkk_consent_at, registration_end_date, clothing_payment_status, summer_clothing_paid, winter_clothing_paid, summer_clothing_price, winter_clothing_price")
       .eq("status", "Aktif");
     let tq = supabase
       .from("trial_students")
@@ -75,11 +82,12 @@ export const reminderService = {
       tq = tq.eq("branch_id", branchId);
     }
 
-    const [sRes, tRes, bRes, dRes, groups, occ] = await Promise.all([
+    const [sRes, tRes, bRes, dRes, cRes, groups, occ] = await Promise.all([
       sq,
       tq,
       supabase.from("student_balances").select("student_id, balance, overdue_amount").gt("balance", 0),
       supabase.from("student_charge_status").select("student_id, due_date").gt("remaining_amount", 0),
+      supabase.from("student_charge_status").select("student_id, charge_type, remaining_amount").in("charge_type", ["summer_clothing", "winter_clothing"]).gt("remaining_amount", 0),
       groupService.getAllGroups(branchId).catch(() => []),
       groupService.getOccupancy().catch(() => ({})),
     ]);
@@ -107,6 +115,26 @@ export const reminderService = {
       .map((b) => ({ ...toItem(byId.get(b.student_id)!), balance: Number(b.balance), overdue: Number(b.overdue_amount ?? 0), earliestDue: earliest.get(b.student_id) ?? null }))
       .sort((a, b) => b.overdue - a.overdue || b.balance - a.balance);
 
+    // Kıyafet: önce açık borç kalemleri; kalemi olmayanlar için öğrenci kaydındaki "Ödenmedi" + işaretli kıyafet
+    const clothMap = new Map<string, { items: string[]; amount: number | null }>();
+    for (const c of cRes.data ?? []) {
+      if (!byId.has(c.student_id)) continue;
+      const season = c.charge_type === "summer_clothing" ? "Yazlık" : "Kışlık";
+      const cur = clothMap.get(c.student_id) ?? { items: [], amount: 0 };
+      if (!cur.items.includes(season)) cur.items.push(season);
+      cur.amount = (cur.amount ?? 0) + Number(c.remaining_amount);
+      clothMap.set(c.student_id, cur);
+    }
+    for (const s of students) {
+      if (clothMap.has(s.id) || s.clothing_payment_status !== "Ödenmedi") continue;
+      const items: string[] = [];
+      let amount = 0;
+      if (s.summer_clothing_paid) { items.push("Yazlık"); amount += Number(s.summer_clothing_price ?? 0); }
+      if (s.winter_clothing_paid) { items.push("Kışlık"); amount += Number(s.winter_clothing_price ?? 0); }
+      if (items.length) clothMap.set(s.id, { items, amount: amount > 0 ? amount : null });
+    }
+    const clothing: ClothingItem[] = [...clothMap.entries()].map(([id, c]) => ({ ...toItem(byId.get(id)!), ...c }));
+
     const groupName = new Map((groups as { id: string; name: string }[]).map((g) => [g.id, g.name]));
     const trials: TrialItem[] = (tRes.data ?? []).map((t) => ({
       id: t.id,
@@ -126,6 +154,7 @@ export const reminderService = {
     return {
       trials,
       debts,
+      clothing,
       healthMissing: students.filter((s) => !s.health_report_submitted).map(toItem),
       formMissing: students.filter((s) => !s.registration_form_submitted).map(toItem),
       kvkkMissing: students.filter((s) => !s.kvkk_consent_at).map(toItem),
@@ -137,7 +166,7 @@ export const reminderService = {
   async getRules(): Promise<ReminderRule[]> {
     const { data, error } = await supabase.from("reminder_rules").select("*");
     if (error) throw error;
-    const order: RuleType[] = ["balance", "health_report", "registration_form", "trial_lesson"];
+    const order: RuleType[] = ["balance", "clothing", "health_report", "registration_form", "trial_lesson"];
     return (data ?? []).sort((a, b) => order.indexOf(a.rule_type as RuleType) - order.indexOf(b.rule_type as RuleType));
   },
 
